@@ -1,4 +1,3 @@
-
 {
     "version": 2,
     "builds": [
@@ -27,10 +26,5 @@
         "src": "/(.*)",
         "dest": "/dist/$1"
       }
-    ],
-    "functions": {
-      "server.js": {
-        "includeFiles": "server/**"
-      }
-    }
+    ]
   }
