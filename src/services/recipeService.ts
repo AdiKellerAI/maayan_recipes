@@ -29,6 +29,8 @@ const isAPIAvailable = async (): Promise<boolean> => {
       headers: {
         'Content-Type': 'application/json',
       },
+      // Add timeout to prevent hanging requests
+      signal: AbortSignal.timeout(5000)
     });
     
     if (!response.ok) {
@@ -41,7 +43,11 @@ const isAPIAvailable = async (): Promise<boolean> => {
     
     return result.connected === true || result.success === true || result.message?.includes('connected');
   } catch (error) {
-    console.warn('❌ SERVICE: API connection test failed:', error);
+    if (error.name === 'AbortError') {
+      console.warn('❌ SERVICE: API connection timeout');
+    } else {
+      console.warn('❌ SERVICE: API connection test failed:', error);
+    }
     console.log('📦 Using localStorage fallback');
     return false;
   }
@@ -122,10 +128,12 @@ export const recipeService = {
     if (isAvailable) {
       try {
         console.log('📊 Fetching recipes from API...');
-        const response = await fetch('/api/recipes');
+        const response = await fetch('/api/recipes', {
+          signal: AbortSignal.timeout(10000) // 10 second timeout
+        });
         
         if (!response.ok) {
-          throw new Error(`API request failed: ${response.status}`);
+          throw new Error(`API request failed: ${response.status} ${response.statusText}`);
         }
         
         const recipes = await response.json();
@@ -166,11 +174,13 @@ export const recipeService = {
     
     if (isAvailable) {
       try {
-        const response = await fetch(`/api/recipes/${id}`);
+        const response = await fetch(`/api/recipes/${id}`, {
+          signal: AbortSignal.timeout(10000)
+        });
         
         if (response.status === 404) return null;
         if (!response.ok) {
-          throw new Error(`API request failed: ${response.status}`);
+          throw new Error(`API request failed: ${response.status} ${response.statusText}`);
         }
         
         const recipe = await response.json();
@@ -208,10 +218,12 @@ export const recipeService = {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(recipe),
+          signal: AbortSignal.timeout(15000) // 15 second timeout for creation
         });
         
         if (!response.ok) {
-          throw new Error(`API request failed: ${response.status}`);
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorData.error || ''}`);
         }
         
         const savedRecipe = await response.json();
@@ -292,13 +304,15 @@ export const recipeService = {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(updates),
+          signal: AbortSignal.timeout(15000)
         });
         
         if (response.status === 404) {
           throw new Error('Recipe not found');
         }
         if (!response.ok) {
-          throw new Error(`API request failed: ${response.status}`);
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorData.error || ''}`);
         }
         
         const updatedRecipe = await response.json();
@@ -428,6 +442,7 @@ export const recipeService = {
         console.log('💾 Deleting via API...');
         const response = await fetch(`/api/recipes/${id}`, {
           method: 'DELETE',
+          signal: AbortSignal.timeout(10000)
         });
         
         if (response.status === 404) {
@@ -437,7 +452,8 @@ export const recipeService = {
         }
         
         if (!response.ok) {
-          throw new Error(`API request failed: ${response.status}`);
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorData.error || ''}`);
         }
         
         console.log(`✅ Recipe ${id} deleted via API`);
@@ -590,7 +606,7 @@ export const recipeService = {
 
   // Sync with database - check for changes
   async syncWithDatabase(): Promise<{ hasChanges: boolean; newRecipes: Recipe[] }> {
-    const isAvailable = await isPostgreSQLAvailable();
+    const isAvailable = await isAPIAvailable();
     
     if (isAvailable) {
       try {
