@@ -1,0 +1,452 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { Timer, Play, Pause, Square, Plus, Minus, X, Volume2, RotateCcw, Minimize2, Maximize2 } from 'lucide-react';
+
+interface CookingTimerProps {
+  isVisible: boolean;
+  onClose: () => void;
+}
+
+const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
+  const [hours, setHours] = useState(0);
+  const [minutes, setMinutes] = useState(5);
+  const [seconds, setSeconds] = useState(0);
+  const [isRunning, setIsRunning] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [showAlert, setShowAlert] = useState(false);
+  const [showFloatingTimer, setShowFloatingTimer] = useState(false);
+  const [isMinimized, setIsMinimized] = useState(false);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Listen for global timer open events
+  useEffect(() => {
+    const handleShowTimer = () => {
+      // This will be handled by the parent component
+    };
+
+    window.addEventListener('showTimer', handleShowTimer);
+    return () => window.removeEventListener('showTimer', handleShowTimer);
+  }, []);
+
+  // Create audio context for beep sound
+  const playBeepSound = () => {
+    try {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Play 3 beeps
+      for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+          const oscillator = audioContext.createOscillator();
+          const gainNode = audioContext.createGain();
+          
+          oscillator.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          
+          oscillator.frequency.value = 800; // 800Hz beep
+          oscillator.type = 'sine';
+          
+          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+          
+          oscillator.start(audioContext.currentTime);
+          oscillator.stop(audioContext.currentTime + 0.5);
+        }, i * 600);
+      }
+    } catch (error) {
+      console.warn('Could not play beep sound:', error);
+    }
+  };
+
+  useEffect(() => {
+    if (isRunning && timeLeft > 0) {
+      intervalRef.current = setInterval(() => {
+        setTimeLeft(prev => {
+          if (prev <= 1) {
+            setIsRunning(false);
+            setShowFloatingTimer(false);
+            setShowAlert(true);
+            playBeepSound();
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [isRunning, timeLeft]);
+
+  const startTimer = () => {
+    if (timeLeft === 0) {
+      const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+      if (totalSeconds === 0) return;
+      setTimeLeft(totalSeconds);
+    }
+    setIsRunning(true);
+    setShowAlert(false);
+    setShowFloatingTimer(true);
+    onClose(); // Close the main timer window
+  };
+
+  const pauseTimer = () => {
+    setIsRunning(false);
+  };
+
+  const stopTimer = () => {
+    setIsRunning(false);
+    setTimeLeft(0);
+    setShowAlert(false);
+    setShowFloatingTimer(false);
+    setIsMinimized(false);
+  };
+
+  const resetTimer = () => {
+    setIsRunning(false);
+    const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+    setTimeLeft(totalSeconds);
+    setShowAlert(false);
+  };
+
+  const formatTime = (totalSeconds: number) => {
+    const hrs = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const secs = totalSeconds % 60;
+    
+    if (hrs > 0) {
+      return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    }
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  const adjustHours = (delta: number) => {
+    setHours(prev => Math.max(0, Math.min(24, prev + delta)));
+  };
+
+  const adjustMinutes = (delta: number) => {
+    setMinutes(prev => {
+      const newMinutes = prev + delta;
+      if (newMinutes >= 60) {
+        setHours(h => Math.min(24, h + 1));
+        return 0;
+      } else if (newMinutes < 0) {
+        if (hours > 0) {
+          setHours(h => Math.max(0, h - 1));
+          return 59;
+        }
+        return 0;
+      }
+      return newMinutes;
+    });
+  };
+
+  const adjustSeconds = (delta: number) => {
+    setSeconds(prev => {
+      const newSeconds = prev + delta;
+      if (newSeconds >= 60) {
+        setMinutes(m => {
+          if (m >= 59) {
+            setHours(h => Math.min(24, h + 1));
+            return 0;
+          }
+          return m + 1;
+        });
+        return 0;
+      } else if (newSeconds < 0) {
+        if (minutes > 0) {
+          setMinutes(m => m - 1);
+          return 59;
+        } else if (hours > 0) {
+          setHours(h => h - 1);
+          setMinutes(59);
+          return 59;
+        }
+        return 0;
+      }
+      return newSeconds;
+    });
+  };
+
+  const dismissAlert = () => {
+    setShowAlert(false);
+    setTimeLeft(0);
+    setShowFloatingTimer(false);
+    setIsMinimized(false);
+  };
+
+  const restartTimer = () => {
+    const totalSeconds = hours * 3600 + minutes * 60 + seconds;
+    setTimeLeft(totalSeconds);
+    setIsRunning(true);
+    setShowAlert(false);
+    setShowFloatingTimer(true);
+    setIsMinimized(false);
+  };
+
+  const toggleMinimize = () => {
+    setIsMinimized(!isMinimized);
+  };
+
+  // Floating Timer Component
+  const FloatingTimer = () => {
+    if (!showFloatingTimer || timeLeft === 0) return null;
+
+    // Minimized view
+    if (isMinimized) {
+      return (
+        <div className="fixed bottom-4 right-4 rtl:left-4 rtl:right-auto z-50 bg-gradient-to-br from-orange-500/95 to-red-500/95 rounded-full shadow-2xl border border-orange-300/50 backdrop-blur-md cursor-pointer hover:scale-105 transition-all duration-200"
+             onClick={toggleMinimize}>
+          <div className="p-3 flex items-center justify-center">
+            <div className="flex flex-col items-center">
+              <span className="text-lg mb-1">⏰</span>
+              <div className="text-xs font-mono font-bold text-white tracking-tight leading-none">
+                {formatTime(timeLeft)}
+              </div>
+              {/* Pulsing indicator when running */}
+              {isRunning && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Full view
+    return (
+      <div className="fixed bottom-4 right-4 rtl:left-4 rtl:right-auto z-50 bg-gradient-to-br from-white/90 to-gray-50/90 rounded-2xl shadow-2xl border border-gray-100/50 p-4 min-w-[240px] backdrop-blur-md">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center space-x-2 rtl:space-x-reverse">
+            <div className="w-8 h-8 bg-orange-100/80 rounded-full flex items-center justify-center">
+              <span className="text-lg">⏰</span>
+            </div>
+            <span className="text-sm font-semibold text-gray-900">טיימר בישול</span>
+          </div>
+          <div className="flex items-center space-x-1 rtl:space-x-reverse">
+            <button
+              onClick={toggleMinimize}
+              className="p-1.5 hover:bg-gray-100/80 rounded-full transition-colors"
+              title="מזער טיימר"
+            >
+              <Minimize2 className="h-4 w-4 text-gray-500" />
+            </button>
+            <button
+              onClick={() => setShowFloatingTimer(false)}
+              className="p-1.5 hover:bg-gray-100/80 rounded-full transition-colors"
+              title="סגור טיימר"
+            >
+              <X className="h-4 w-4 text-gray-500" />
+            </button>
+          </div>
+        </div>
+        
+        <div className="text-center">
+          <div className="text-3xl font-mono font-bold text-gray-900 mb-4 tracking-wider">
+            {formatTime(timeLeft)}
+          </div>
+          
+          <div className="flex items-center justify-center space-x-2 rtl:space-x-reverse">
+            {!isRunning ? (
+              <button
+                onClick={() => setIsRunning(true)}
+                className="p-3 bg-green-500/90 text-white rounded-full hover:bg-green-600 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+              >
+                <Play className="h-5 w-5" />
+              </button>
+            ) : (
+              <button
+                onClick={pauseTimer}
+                className="p-3 bg-yellow-500/90 text-white rounded-full hover:bg-yellow-600 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+              >
+                <Pause className="h-5 w-5" />
+              </button>
+            )}
+            
+            <button
+              onClick={stopTimer}
+              className="p-3 bg-red-500/90 text-white rounded-full hover:bg-red-600 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+            >
+              <Square className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  if (!isVisible && !showFloatingTimer && !showAlert) return null;
+
+  return (
+    <>
+      {/* Main Timer Setup Window */}
+      {isVisible && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                <span className="text-2xl">⏰</span>
+                <h3 className="text-xl font-semibold text-gray-900">הגדרת טיימר</h3>
+              </div>
+              <button
+                onClick={onClose}
+                className="p-1 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+
+            {/* Time Display */}
+            <div className="text-center mb-6">
+              <div className="text-4xl font-mono font-bold text-gray-900 mb-4">
+                {hours > 0 ? `${hours.toString().padStart(2, '0')}:` : ''}
+                {minutes.toString().padStart(2, '0')}:
+                {seconds.toString().padStart(2, '0')}
+              </div>
+              
+              {/* Time Setters */}
+              <div className="flex items-center justify-center space-x-8 rtl:space-x-reverse mb-6">
+                {/* Seconds */}
+                <div className="flex flex-col items-center">
+                  <button
+                    onClick={() => adjustSeconds(15)}
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                  <span className="text-sm text-gray-600 mx-2 py-2">שניות</span>
+                  <button
+                    onClick={() => adjustSeconds(-15)}
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                </div>
+                
+                {/* Minutes */}
+                <div className="flex flex-col items-center">
+                  <button
+                    onClick={() => adjustMinutes(1)}
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                  <span className="text-sm text-gray-600 mx-2 py-2">דקות</span>
+                  <button
+                    onClick={() => adjustMinutes(-1)}
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                </div>
+                
+                {/* Hours */}
+                <div className="flex flex-col items-center">
+                  <button
+                    onClick={() => adjustHours(1)}
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                  <span className="text-sm text-gray-600 mx-2 py-2">שעות</span>
+                  <button
+                    onClick={() => adjustHours(-1)}
+                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  >
+                    <Minus className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Time Buttons */}
+              <div className="grid grid-cols-4 gap-2 mb-6">
+                {[
+                  { label: '1 דק', h: 0, m: 1, s: 0 },
+                  { label: '5 דק', h: 0, m: 5, s: 0 },
+                  { label: '10 דק', h: 0, m: 10, s: 0 },
+                  { label: '15 דק', h: 0, m: 15, s: 0 },
+                  { label: '30 דק', h: 0, m: 30, s: 0 },
+                  { label: '45 דק', h: 0, m: 45, s: 0 },
+                  { label: '1 שעה', h: 1, m: 0, s: 0 },
+                  { label: '2 שעות', h: 2, m: 0, s: 0 }
+                ].map((preset) => (
+                  <button
+                    key={preset.label}
+                    onClick={() => {
+                      setHours(preset.h);
+                      setMinutes(preset.m);
+                      setSeconds(preset.s);
+                    }}
+                    className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Controls */}
+            <div className="flex items-center justify-center space-x-3 rtl:space-x-reverse">
+              <button
+                onClick={startTimer}
+                disabled={hours === 0 && minutes === 0 && seconds === 0}
+                className="flex items-center space-x-2 rtl:space-x-reverse bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              >
+                <Play className="h-4 w-4" />
+                <span>התחל</span>
+              </button>
+              
+              <button
+                onClick={onClose}
+                className="flex items-center space-x-2 rtl:space-x-reverse bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 transition-colors"
+              >
+                <span>ביטול</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Timer */}
+      <FloatingTimer />
+
+      {/* Alert Modal */}
+      {showAlert && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg p-6 max-w-sm w-full text-center animate-pulse">
+            <div className="text-6xl mb-4">⏰</div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">הטיימר הסתיים!</h2>
+            <p className="text-gray-600 mb-6">הזמן שהגדרת הסתיים</p>
+            <div className="flex items-center justify-center space-x-2 rtl:space-x-reverse mb-6">
+              <Volume2 className="h-5 w-5 text-orange-500" />
+              <span className="text-sm text-gray-500">מושמע צפצוף התראה</span>
+            </div>
+            <div className="flex space-x-3 rtl:space-x-reverse">
+              <button
+                onClick={dismissAlert}
+                className="flex-1 bg-gray-500 text-white py-3 px-4 rounded-lg hover:bg-gray-600 transition-colors font-medium"
+              >
+                סגור
+              </button>
+              <button
+                onClick={restartTimer}
+                className="flex-1 bg-orange-500 text-white py-3 px-4 rounded-lg hover:bg-orange-600 transition-colors font-medium flex items-center justify-center space-x-2 rtl:space-x-reverse"
+              >
+                <RotateCcw className="h-4 w-4" />
+                <span>הפעל שוב</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+};
+
+export default CookingTimer;
