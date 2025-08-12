@@ -16,7 +16,7 @@ console.log('Middleware configured...');
 
 // PostgreSQL connection
 const pool = new Pool({
-  connectionString: 'postgres://postgres:MaayanRecipes2025@34.132.167.99:5432/recipes',
+  connectionString: process.env.DATABASE_URL || 'postgres://postgres:MaayanRecipes2025@34.132.167.99:5432/recipes',
   ssl: { rejectUnauthorized: false },
   max: 20,
   idleTimeoutMillis: 30000,
