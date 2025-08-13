@@ -183,7 +183,6 @@ const EditRecipePage: React.FC = () => {
     setIsSaving(true);
     const updatedRecipe = {
       ...formData,
-      description: '',
       ingredients: filteredIngredients,
       directions: filteredDirections,
       images: images,
@@ -417,20 +416,7 @@ const EditRecipePage: React.FC = () => {
             </div>
           </div>
 
-          <div>
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-2">
-              תיאור המתכון *
-            </label>
-            <textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              required
-              rows={3}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
-            />
-          </div>
+
 
           {/* Additional Instructions */}
           <div>

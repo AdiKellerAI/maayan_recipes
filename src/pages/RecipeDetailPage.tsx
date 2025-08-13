@@ -1,6 +1,6 @@
 import React from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Heart, ChefHat, Share2, Edit, ArrowRight, ChevronLeft, ChevronRight, Trash2, X, Timer, RotateCcw } from 'lucide-react';
+import { Heart, ChefHat, Share2, Edit, ArrowRight, ChevronLeft, ChevronRight, Trash2, X, RotateCcw } from 'lucide-react';
 import { useRecipes } from '../contexts/RecipeContext';
 import { categories } from '../data/categories';
 import { getCategoryColor } from '../data/categories';
@@ -9,11 +9,15 @@ import ProgressTracker from '../components/Recipe/ProgressTracker';
 const RecipeDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { recipes, toggleFavorite, deleteRecipe, updateRecipe } = useRecipes();
+  const { recipes, toggleFavorite, deleteRecipe } = useRecipes();
   const [currentImageIndex, setCurrentImageIndex] = React.useState(0);
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   const [showImageModal, setShowImageModal] = React.useState(false);
   const [additionalCurrentSteps, setAdditionalCurrentSteps] = React.useState<{ [key: string]: number }>({});
+  
+  // Touch gesture states
+  const [touchStart, setTouchStart] = React.useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = React.useState<number | null>(null);
   
   // Scroll to top when component mounts
   React.useEffect(() => {
@@ -27,17 +31,6 @@ const RecipeDetailPage: React.FC = () => {
   const currentImage = images.length > 0 ? images[currentImageIndex] : null;
 
   if (!recipe) {
-    // Initialize additional steps from recipe data
-    React.useEffect(() => {
-      if (recipe?.additional_instructions) {
-        const initialSteps: { [key: string]: number } = {};
-        Object.keys(recipe.additional_instructions).forEach(sectionName => {
-          initialSteps[sectionName] = 0;
-        });
-        setAdditionalCurrentSteps(initialSteps);
-      }
-    }, [recipe]);
-
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -91,7 +84,7 @@ const RecipeDetailPage: React.FC = () => {
     if (navigator.share) {
       navigator.share({
         title: recipe.title,
-        text: recipe.description,
+        text: `מתכון: ${recipe.title}`,
         url: window.location.href
       });
     } else {
@@ -128,6 +121,33 @@ const RecipeDetailPage: React.FC = () => {
   const prevImage = () => {
     if (images.length > 1) {
       setCurrentImageIndex((prev) => (prev - 1 + images.length) % images.length);
+    }
+  };
+
+  // Touch gesture handlers
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e: React.TouchEvent) => {
+    setTouchEnd(null);
+    setTouchStart(e.targetTouches[0].clientX);
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setTouchEnd(e.targetTouches[0].clientX);
+  };
+
+  const onTouchEnd = () => {
+    if (!touchStart || !touchEnd) return;
+    
+    const distance = touchStart - touchEnd;
+    const isLeftSwipe = distance > minSwipeDistance;
+    const isRightSwipe = distance < -minSwipeDistance;
+
+    if (isLeftSwipe && images.length > 1) {
+      nextImage(); // Swipe left = next image
+    }
+    if (isRightSwipe && images.length > 1) {
+      prevImage(); // Swipe right = previous image
     }
   };
 
@@ -187,7 +207,12 @@ const RecipeDetailPage: React.FC = () => {
         <div className="bg-white rounded-lg shadow-sm overflow-hidden">
           {/* Hero Image */}
           {currentImage ? (
-          <div className="relative h-64 md:h-80 group">
+          <div 
+            className="relative h-64 md:h-80 group"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+          >
             <img
               src={currentImage}
               alt={recipe.title}
@@ -362,7 +387,12 @@ const RecipeDetailPage: React.FC = () => {
       {/* Image Modal for Full Size View */}
       {showImageModal && currentImage && (
         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center p-2 sm:p-4 z-50">
-          <div className="relative w-full h-full flex items-center justify-center">
+          <div 
+            className="relative w-full h-full flex items-center justify-center"
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+          >
             {/* Close Button */}
             <button
               onClick={() => setShowImageModal(false)}

@@ -1,7 +1,6 @@
 export interface Recipe {
   id: string;
   title: string;
-  description: string;
   images: string[];
   category: string;
   ingredients: string[];
@@ -17,7 +16,6 @@ export interface Recipe {
 
 export interface RecipeInsert {
   title: string;
-  description?: string;
   images?: string[];
   category: string;
   ingredients: string[];
@@ -31,7 +29,6 @@ export interface RecipeInsert {
 
 export interface RecipeUpdate {
   title?: string;
-  description?: string;
   images?: string[];
   category?: string;
   ingredients?: string[];

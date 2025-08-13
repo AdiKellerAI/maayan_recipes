@@ -6,7 +6,6 @@ import type { Recipe, RecipeInsert, RecipeUpdate } from '../types/recipe';
 const mapRowToRecipe = (row: any): Recipe => ({
   id: row.id,
   title: row.title,
-  description: row.description,
   images: row.images || [],
   category: row.category,
   ingredients: row.ingredients,
@@ -112,7 +111,6 @@ const getFallbackRecipes = (): Recipe[] => {
   const sampleAsRecipes: Recipe[] = sampleRecipes.map((recipe, index) => ({
     id: `sample-${index}`,
     title: recipe.title,
-    description: recipe.description || '',
     images: recipe.images || [],
     category: recipe.category,
     ingredients: recipe.ingredients,
@@ -183,7 +181,6 @@ export const recipeService = {
         const processedRecipes = recipes.map((recipe: any) => ({
           id: recipe.id,
           title: recipe.title,
-          description: recipe.description || '',
           images: recipe.images || [],
           category: recipe.category,
           ingredients: recipe.ingredients,
@@ -311,7 +308,6 @@ export const recipeService = {
       const newRecipe: Recipe = {
         id: newId,
         title: recipe.title,
-        description: '',
         category: recipe.category,
         ingredients: recipe.ingredients,
         directions: recipe.directions,

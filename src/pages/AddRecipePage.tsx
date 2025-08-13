@@ -144,7 +144,7 @@ const AddRecipePage: React.FC = () => {
     
     let parsedTitle = '';
     let parsedCategory = '';
-    let parsedDifficulty = '';
+    let parsedDifficulty: "קל" | "בינוני" | "קשה" | "" = '';
     let parsedIngredients: string[] = [];
     let parsedDirections: string[] = [];
     let parsedAdditionalInstructions: { [key: string]: string[] } = {};
@@ -275,7 +275,6 @@ const AddRecipePage: React.FC = () => {
         
         // Try to extract recipe data from common recipe schema formats
         let extractedTitle = '';
-        let extractedDescription = '';
         let extractedIngredients: string[] = [];
         let extractedDirections: string[] = [];
         
@@ -288,7 +287,6 @@ const AddRecipePage: React.FC = () => {
               const recipe = Array.isArray(jsonData) ? jsonData.find(item => item['@type'] === 'Recipe') : jsonData;
               if (recipe) {
                 extractedTitle = recipe.name || '';
-                extractedDescription = recipe.description || '';
                 if (recipe.recipeIngredient) {
                   extractedIngredients = Array.isArray(recipe.recipeIngredient) ? recipe.recipeIngredient : [recipe.recipeIngredient];
                 }
@@ -311,16 +309,13 @@ const AddRecipePage: React.FC = () => {
           extractedTitle = titleElement?.textContent?.trim() || '';
         }
         
-        if (!extractedDescription) {
-          const descElement = doc.querySelector('meta[name="description"]') || doc.querySelector('.recipe-description') || doc.querySelector('p');
-          extractedDescription = descElement?.getAttribute('content') || descElement?.textContent?.trim() || '';
-        }
+
         
         if (extractedIngredients.length === 0) {
           const ingredientElements = doc.querySelectorAll('.recipe-ingredient, .ingredient, li');
           extractedIngredients = Array.from(ingredientElements)
             .map(el => el.textContent?.trim())
-            .filter(text => text && text.length > 0)
+            .filter((text): text is string => text !== undefined && text.length > 0)
             .slice(0, 20); // Limit to reasonable number
         }
         
@@ -328,7 +323,7 @@ const AddRecipePage: React.FC = () => {
           const directionElements = doc.querySelectorAll('.recipe-instruction, .instruction, .step, ol li');
           extractedDirections = Array.from(directionElements)
             .map(el => el.textContent?.trim())
-            .filter(text => text && text.length > 0)
+            .filter((text): text is string => text !== undefined && text.length > 0)
             .slice(0, 20); // Limit to reasonable number
         }
         
@@ -378,7 +373,7 @@ const AddRecipePage: React.FC = () => {
       const newRecipe: RecipeInsert = {
         title: title.trim(),
         category,
-        difficulty: difficulty || '',
+        difficulty: difficulty || undefined,
         ingredients: filteredIngredients,
         directions: filteredDirections,
         images,
