@@ -18,6 +18,8 @@ interface RecipeContextType {
   imageFilter: string;
   flourFilter: string;
   sortBy: string;
+  lastSyncTime: Date | null;
+  isInitialized: boolean;
   addRecipe: (recipe: RecipeInsert) => Promise<Recipe>;
   updateRecipe: (id: string, recipe: Partial<Recipe>) => void;
   deleteRecipe: (id: string) => void;
@@ -32,8 +34,9 @@ interface RecipeContextType {
   setFlourFilter: (filter: string) => void;
   setSortBy: (sort: string) => void;
   getFilteredRecipes: () => Recipe[];
-  refreshRecipes: () => Promise<void>;
+  refreshRecipes: (forceRefresh?: boolean) => Promise<void>;
   resetFilters: () => void;
+  getSyncStatus: () => { lastSync: string; isStale: boolean; cacheAge: number };
 }
 
 const RecipeContext = createContext<RecipeContextType | undefined>(undefined);
@@ -60,11 +63,20 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [flourFilter, setFlourFilter] = useState('');
   const [sortBy, setSortBy] = useState('');
   const [postgresqlStatus, setPostgresqlStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
+  const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
+  const [isInitialized, setIsInitialized] = useState(false);
   const location = useLocation();
 
-  // Load recipes from Supabase
-  const loadRecipes = async () => {
+  // Smart loading with caching and incremental updates
+  const loadRecipes = async (forceRefresh = false) => {
     try {
+      // Don't reload if we have recent data and not forcing refresh
+      if (!forceRefresh && isInitialized && lastSyncTime && 
+          Date.now() - lastSyncTime.getTime() < 5 * 60 * 1000) { // 5 minutes cache
+        console.log('🔄 Using cached recipes (last sync:', lastSyncTime.toLocaleTimeString(), ')');
+        return;
+      }
+
       setLoading(true);
       setError(null);
       setPostgresqlStatus('checking');
@@ -76,6 +88,10 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       // Check if we got data from PostgreSQL or fallback
       const isUsingPostgreSQL = await recipeService.checkPostgreSQLConnection();
       setPostgresqlStatus(isUsingPostgreSQL ? 'connected' : 'disconnected');
+      
+      setLastSyncTime(new Date());
+      setIsInitialized(true);
+      
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'שגיאה בטעינת המתכונים';
       setError(errorMessage);
@@ -87,11 +103,17 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   };
 
-  const syncWithDatabase = async () => {
+  // Incremental sync - only fetch changes since last sync
+  const syncWithDatabase = async (incremental = true) => {
     try {
-      // Always sync with database to ensure consistency
-      console.log('Syncing with database...');
-      await loadRecipes();
+      if (incremental && lastSyncTime) {
+        console.log('🔄 Incremental sync since:', lastSyncTime.toLocaleTimeString());
+        // For now, we'll do a full refresh, but in the future this could be incremental
+        await loadRecipes(false); // Use cache if available
+      } else {
+        console.log('🔄 Full sync with database...');
+        await loadRecipes(true); // Force refresh
+      }
     } catch (err) {
       console.warn('Error syncing with database:', err);
       // Don't show error to user for sync failures
@@ -106,10 +128,14 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   useEffect(() => {
-    // Only sync if we don't have recipes yet
+    // Only sync if we don't have recipes yet or if it's been a while
     if (recipes.length === 0 && !loading) {
       console.log('🔄 ROUTE CHANGE: Loading recipes for first time...');
       loadRecipes();
+    } else if (isInitialized && lastSyncTime && 
+               Date.now() - lastSyncTime.getTime() > 10 * 60 * 1000) { // 10 minutes
+      console.log('🔄 ROUTE CHANGE: Recipes are stale, refreshing...');
+      syncWithDatabase(true); // Incremental sync
     }
   }, [location.pathname]);
 
@@ -117,10 +143,15 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   useEffect(() => {
     const handleFocus = async () => {
       // Only sync if we haven't loaded recently (avoid excessive syncing)
-      if (!loading) {
+      if (!loading && isInitialized) {
         try {
-          console.log('👁️ WINDOW FOCUS: Syncing with PostgreSQL...');
-          await loadRecipes();
+          console.log('👁️ WINDOW FOCUS: Checking if sync needed...');
+          if (!lastSyncTime || Date.now() - lastSyncTime.getTime() > 5 * 60 * 1000) {
+            console.log('👁️ WINDOW FOCUS: Syncing with PostgreSQL...');
+            await syncWithDatabase(true); // Incremental sync
+          } else {
+            console.log('👁️ WINDOW FOCUS: Using cached data');
+          }
         } catch (err) {
           console.warn('Error syncing on focus:', err);
         }
@@ -129,7 +160,7 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const handleVisibilityChange = () => {
       if (!document.hidden) {
-        console.log('📱 VISIBILITY CHANGE: App became visible - syncing...');
+        console.log('📱 VISIBILITY CHANGE: App became visible - checking sync...');
         // Debounce visibility changes
         setTimeout(handleFocus, 500);
       }
@@ -146,16 +177,27 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       window.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('pageshow', handleFocus);
     };
-  }, [recipes.length, loading]);
+  }, [recipes.length, loading, isInitialized, lastSyncTime]);
 
   const addRecipe = async (recipe: RecipeInsert): Promise<Recipe> => {
     try {
       console.log('➕ Context: Adding recipe', recipe.title);
       const newRecipe = await recipeService.addRecipe(recipe);
       console.log('✅ Context: Recipe added, refreshing list...');
-      // Force refresh to ensure the UI shows the new recipe
-      await loadRecipes();
-      console.log('✅ Context: Recipe list refreshed');
+      
+      // Add to local state immediately for instant UI update
+      setRecipes(prev => [newRecipe, ...prev]);
+      
+      // Then sync with database in background
+      setTimeout(async () => {
+        try {
+          await syncWithDatabase(true);
+        } catch (err) {
+          console.warn('Background sync failed:', err);
+        }
+      }, 100);
+      
+      console.log('✅ Context: Recipe list updated');
       return newRecipe;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to add recipe';
@@ -167,40 +209,67 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const updateRecipe = async (id: string, updates: Partial<Recipe>) => {
     try {
+      // Optimistically update local state first
+      setRecipes(prev => prev.map(recipe => 
+        recipe.id === id ? { ...recipe, ...updates } : recipe
+      ));
+      
+      // Then update backend
       const updatedRecipe = await recipeService.updateRecipe(id, updates);
+      
+      // Update with the actual response from backend
       setRecipes(prev => prev.map(recipe => 
         recipe.id === id ? updatedRecipe : recipe
       ));
+      
+      // Sync with database in background
+      setTimeout(async () => {
+        try {
+          await syncWithDatabase(true);
+        } catch (err) {
+          console.warn('Background sync after update failed:', err);
+        }
+      }, 100);
+      
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update recipe';
       setError(errorMessage);
+      
+      // Revert optimistic update on error
+      await loadRecipes(true);
       throw err;
     }
   };
 
   const deleteRecipe = async (id: string) => {
+    // Save the recipe before deletion for potential restoration
+    const recipeToDelete = recipes.find(r => r.id === id);
+    
     try {
       console.log('🗑️ CONTEXT DEBUG: Starting deletion for recipe', id);
       console.log('🗑️ CONTEXT DEBUG: Current recipes count:', recipes.length);
       console.log('🗑️ CONTEXT DEBUG: Recipe exists in context:', recipes.some(r => r.id === id));
       
       // Immediately remove from local state for instant UI update
-      const originalRecipes = [...recipes];
       setRecipes(prev => prev.filter(recipe => recipe.id !== id));
       console.log('🗑️ CONTEXT DEBUG: Removed from local state, new count should be:', recipes.length - 1);
       
+      // Delete from backend without waiting for sync
       await recipeService.deleteRecipe(id);
-      console.log('✅ CONTEXT DEBUG: Service deletion completed, refreshing list...');
-      // Force refresh to ensure the UI is updated
-      await loadRecipes();
-      console.log('✅ CONTEXT DEBUG: Recipe list refreshed');
+      console.log('✅ CONTEXT DEBUG: Service deletion completed');
+      
+      // Don't sync immediately to avoid loading states
+      // The UI is already updated, so no need to refresh
+      
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to delete recipe';
       console.error('❌ CONTEXT DEBUG: Delete recipe error:', err);
       setError(errorMessage);
-      // If deletion failed, restore the recipe in UI and refresh
-      console.log('🔄 CONTEXT DEBUG: Deletion failed, refreshing to restore correct state');
-      await loadRecipes();
+      // If deletion failed, restore the recipe in UI
+      console.log('🔄 CONTEXT DEBUG: Deletion failed, restoring recipe in UI');
+      if (recipeToDelete) {
+        setRecipes(prev => [...prev, recipeToDelete]);
+      }
     }
   };
 
@@ -227,6 +296,16 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setRecipes(prev => prev.map(r => 
           r.id === id ? updatedRecipe : r
         ));
+        
+        // Sync with database in background
+        setTimeout(async () => {
+          try {
+            await syncWithDatabase(true);
+          } catch (err) {
+            console.warn('Background sync after favorite toggle failed:', err);
+          }
+        }, 100);
+        
       } catch (updateError) {
         console.error('❌ CONTEXT: Backend update failed:', updateError);
         
@@ -322,8 +401,12 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return filtered;
   };
 
-  const refreshRecipes = async () => {
-    await loadRecipes();
+  const refreshRecipes = async (forceRefresh = false) => {
+    if (forceRefresh) {
+      await loadRecipes(true);
+    } else {
+      await syncWithDatabase(true); // Incremental sync
+    }
   };
 
   const resetFilters = () => {
@@ -335,6 +418,19 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setImageFilter('');
     setFlourFilter('');
     setSortBy('');
+  };
+
+  const getSyncStatus = () => {
+    if (!lastSyncTime) {
+      return { lastSync: 'Never synced', isStale: true, cacheAge: 0 };
+    }
+    const cacheAge = Date.now() - lastSyncTime.getTime();
+    const isStale = cacheAge > 10 * 60 * 1000; // 10 minutes stale
+    return {
+      lastSync: lastSyncTime.toLocaleTimeString(),
+      isStale,
+      cacheAge: Math.round(cacheAge / (1000 * 60)) // minutes
+    };
   };
 
   return (
@@ -352,6 +448,8 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       imageFilter,
       flourFilter,
       sortBy,
+      lastSyncTime,
+      isInitialized,
       addRecipe,
       updateRecipe,
       deleteRecipe,
@@ -367,7 +465,8 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setSortBy,
       getFilteredRecipes,
       refreshRecipes,
-      resetFilters
+      resetFilters,
+      getSyncStatus
     }}>
       {children}
     </RecipeContext.Provider>

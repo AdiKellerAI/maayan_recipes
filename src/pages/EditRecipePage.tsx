@@ -209,12 +209,13 @@ const EditRecipePage: React.FC = () => {
   const confirmDelete = async () => {
     try {
       await deleteRecipe(recipe.id);
-      navigate('/');
+      // Return to previous page immediately after successful deletion
+      setShowDeleteModal(false);
+      navigate(-1);
     } catch (error) {
       console.error('Failed to delete recipe:', error);
       // You could add a toast notification here instead of alert
     }
-    setShowDeleteModal(false);
   };
 
   const cancelDelete = () => {

@@ -43,7 +43,7 @@ const isAPIAvailable = async (): Promise<boolean> => {
     
     return result.connected === true || result.success === true || result.message?.includes('connected');
   } catch (error) {
-    if (error.name === 'AbortError') {
+    if (error instanceof Error && error.name === 'AbortError') {
       console.warn('❌ SERVICE: API connection timeout');
     } else {
       console.warn('❌ SERVICE: API connection test failed:', error);
@@ -51,6 +51,32 @@ const isAPIAvailable = async (): Promise<boolean> => {
     console.log('📦 Using localStorage fallback');
     return false;
   }
+};
+
+// Retry logic for API calls
+const retryApiCall = async <T>(
+  apiCall: () => Promise<T>, 
+  maxRetries: number = 3, 
+  delay: number = 1000
+): Promise<T> => {
+  let lastError: Error;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      return await apiCall();
+    } catch (error) {
+      lastError = error as Error;
+      console.warn(`❌ API call attempt ${attempt} failed:`, error);
+      
+      if (attempt < maxRetries) {
+        console.log(`🔄 Retrying in ${delay}ms... (attempt ${attempt + 1}/${maxRetries})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 2; // Exponential backoff
+      }
+    }
+  }
+  
+  throw lastError!;
 };
 
 // Get fallback recipes from localStorage or sample data
@@ -83,9 +109,19 @@ const getFallbackRecipes = (): Recipe[] => {
   
   // Return sample data as last resort and SAVE IT to localStorage
   console.log('🔍 No recipes in localStorage, using sample data and saving it');
-  const sampleAsRecipes = sampleRecipes.map((recipe, index) => ({
-    ...recipe,
+  const sampleAsRecipes: Recipe[] = sampleRecipes.map((recipe, index) => ({
     id: `sample-${index}`,
+    title: recipe.title,
+    description: recipe.description || '',
+    images: recipe.images || [],
+    category: recipe.category,
+    ingredients: recipe.ingredients,
+    directions: recipe.directions,
+    additional_instructions: recipe.additional_instructions || {},
+    prep_time: recipe.prep_time || '',
+    difficulty: recipe.difficulty,
+    is_favorite: recipe.is_favorite || false,
+    current_step: recipe.current_step || 0,
     created_at: new Date(Date.now() - index * 24 * 60 * 60 * 1000),
     updated_at: new Date(Date.now() - index * 24 * 60 * 60 * 1000)
   }));
@@ -128,23 +164,37 @@ export const recipeService = {
     if (isAvailable) {
       try {
         console.log('📊 Fetching recipes from API...');
-        const response = await fetch('/api/recipes', {
-          signal: AbortSignal.timeout(10000) // 10 second timeout
+        
+        const recipes = await retryApiCall(async () => {
+          const response = await fetch('/api/recipes', {
+            signal: AbortSignal.timeout(10000) // 10 second timeout
+          });
+          
+          if (!response.ok) {
+            throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+          }
+          
+          return await response.json();
         });
         
-        if (!response.ok) {
-          throw new Error(`API request failed: ${response.status} ${response.statusText}`);
-        }
-        
-        const recipes = await response.json();
         console.log(`✅ Loaded ${recipes.length} recipes from API`);
         
-        // Convert date strings back to Date objects
+        // Convert date strings back to Recipe type
         const processedRecipes = recipes.map((recipe: any) => ({
-          ...recipe,
+          id: recipe.id,
+          title: recipe.title,
+          description: recipe.description || '',
+          images: recipe.images || [],
+          category: recipe.category,
+          ingredients: recipe.ingredients,
+          directions: recipe.directions,
+          additional_instructions: recipe.additional_instructions || {},
+          prep_time: recipe.prep_time || '',
+          difficulty: recipe.difficulty as 'קל' | 'בינוני' | 'קשה' | undefined,
+          is_favorite: recipe.is_favorite || false,
           created_at: new Date(recipe.created_at),
           updated_at: new Date(recipe.updated_at)
-        }));
+        })) as Recipe[];
         
         // Save to localStorage as backup
         saveFallbackRecipes(processedRecipes);
@@ -428,7 +478,8 @@ export const recipeService = {
       return updatedRecipe;
     } catch (error) {
       console.error('❌ Failed to update recipe in localStorage:', error);
-      throw new Error(`Failed to update recipe: ${error.message}`);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to update recipe: ${errorMessage}`);
     }
   },
 

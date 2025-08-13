@@ -12,6 +12,7 @@ const RecipeDetailPage: React.FC = () => {
   const { recipes, toggleFavorite, deleteRecipe, updateRecipe } = useRecipes();
   const [currentImageIndex, setCurrentImageIndex] = React.useState(0);
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
+  const [showImageModal, setShowImageModal] = React.useState(false);
   const [additionalCurrentSteps, setAdditionalCurrentSteps] = React.useState<{ [key: string]: number }>({});
   
   // Scroll to top when component mounts
@@ -105,12 +106,13 @@ const RecipeDetailPage: React.FC = () => {
   const confirmDelete = async () => {
     try {
       await deleteRecipe(recipe.id);
-      navigate('/');
+      // Return to previous page immediately after successful deletion
+      setShowDeleteModal(false);
+      navigate(-1);
     } catch (error) {
       console.error('Failed to delete recipe:', error);
       // You could add a toast notification here instead of alert
     }
-    setShowDeleteModal(false);
   };
 
   const cancelDelete = () => {
@@ -189,7 +191,8 @@ const RecipeDetailPage: React.FC = () => {
             <img
               src={currentImage}
               alt={recipe.title}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
+              onClick={() => setShowImageModal(true)}
             />
             
             {/* Image Navigation */}
@@ -352,6 +355,51 @@ const RecipeDetailPage: React.FC = () => {
                 מחק מתכון
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Modal for Full Size View */}
+      {showImageModal && currentImage && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center p-2 sm:p-4 z-50">
+          <div className="relative w-full h-full flex items-center justify-center">
+            {/* Close Button */}
+            <button
+              onClick={() => setShowImageModal(false)}
+              className="absolute top-4 right-4 rtl:left-4 rtl:right-auto z-10 bg-white/20 backdrop-blur-sm text-white p-2 rounded-full hover:bg-white/30 transition-colors"
+            >
+              <X className="h-6 w-6" />
+            </button>
+            
+            {/* Image */}
+            <img
+              src={currentImage}
+              alt={recipe.title}
+              className="max-w-full max-h-full object-contain rounded-lg"
+            />
+            
+            {/* Navigation Arrows */}
+            {images.length > 1 && (
+              <>
+                <button
+                  onClick={prevImage}
+                  className="absolute left-4 rtl:right-4 rtl:left-auto top-1/2 transform -translate-y-1/2 bg-white/20 backdrop-blur-sm text-white p-3 rounded-full hover:bg-white/30 transition-colors z-10"
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </button>
+                <button
+                  onClick={nextImage}
+                  className="absolute right-4 rtl:left-4 rtl:right-auto top-1/2 transform -translate-y-1/2 bg-white/20 backdrop-blur-sm text-white p-3 rounded-full hover:bg-white/30 transition-colors z-10"
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </button>
+                
+                {/* Image Counter */}
+                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-black/50 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm">
+                  {currentImageIndex + 1} / {images.length}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

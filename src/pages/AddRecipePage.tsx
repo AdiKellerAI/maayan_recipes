@@ -13,7 +13,7 @@ const AddRecipePage: React.FC = () => {
   
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState(searchParams.get('category') || '');
-  const [difficulty, setDifficulty] = useState('');
+  const [difficulty, setDifficulty] = useState<"קל" | "בינוני" | "קשה" | "">('');
   const [ingredients, setIngredients] = useState(['']);
   const [directions, setDirections] = useState(['']);
   const [images, setImages] = useState<string[]>([]);
@@ -63,19 +63,31 @@ const AddRecipePage: React.FC = () => {
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files) {
+      console.log('📸 Uploading images:', files.length);
+      
       compressImages(files, 800, 0.6) // 60% quality for better compression
         .then(compressedImages => {
-          setImages(prev => [...prev, ...compressedImages]);
+          console.log('✅ Images compressed successfully:', compressedImages.length);
+          setImages(prev => {
+            const newImages = [...prev, ...compressedImages];
+            console.log('📸 Total images after upload:', newImages.length);
+            return newImages;
+          });
         })
         .catch(error => {
-          console.error('Error compressing images:', error);
+          console.error('❌ Error compressing images:', error);
           alert('שגיאה בדחיסת התמונות');
         });
     }
   };
 
   const removeImage = (index: number) => {
-    setImages(images.filter((_, i) => i !== index));
+    console.log('🗑️ Removing image at index:', index);
+    setImages(prev => {
+      const newImages = prev.filter((_, i) => i !== index);
+      console.log('📸 Images after removal:', newImages.length);
+      return newImages;
+    });
   };
 
   const addAdditionalInstructionSection = () => {
@@ -361,31 +373,54 @@ const AddRecipePage: React.FC = () => {
     }
 
     setIsSaving(true);
-    const newRecipe: RecipeInsert = {
-      title: title.trim(),
-      category,
-      difficulty: difficulty || '',
-      ingredients: filteredIngredients,
-      directions: filteredDirections,
-      images,
-      additional_instructions: Object.keys(additionalInstructions).length > 0 ? additionalInstructions : undefined,
-      is_favorite: false
-    };
-
+    
     try {
+      const newRecipe: RecipeInsert = {
+        title: title.trim(),
+        category,
+        difficulty: difficulty || '',
+        ingredients: filteredIngredients,
+        directions: filteredDirections,
+        images,
+        additional_instructions: Object.keys(additionalInstructions).length > 0 ? additionalInstructions : undefined,
+        is_favorite: false
+      };
+
+      console.log('🔄 Submitting recipe:', newRecipe);
+      
       const savedRecipe = await addRecipe(newRecipe);
+      console.log('✅ Recipe saved successfully:', savedRecipe);
+      
       // Force refresh recipes in context to ensure the new recipe is visible
       await refreshRecipes();
+      
       setPreviewRecipe({
         ...savedRecipe,
         is_favorite: savedRecipe.is_favorite,
         created_at: savedRecipe.created_at,
         updated_at: savedRecipe.updated_at
       });
+      
+      console.log('✅ Recipe submission completed successfully');
+      
     } catch (error) {
-      console.error('Error adding recipe:', error);
-      alert('שגיאה בשמירת המתכון');
-    } finally {
+      console.error('❌ Error adding recipe:', error);
+      
+      // Better error handling for mobile
+      let errorMessage = 'שגיאה בשמירת המתכון';
+      if (error instanceof Error) {
+        if (error.message.includes('network') || error.message.includes('fetch')) {
+          errorMessage = 'בעיית חיבור לאינטרנט. המתכון נשמר במכשיר ויסונכרן כשהחיבור יחזור.';
+        } else if (error.message.includes('timeout')) {
+          errorMessage = 'הבקשה לקחה זמן רב מדי. המתכון נשמר במכשיר ויסונכרן בהמשך.';
+        } else {
+          errorMessage = `שגיאה: ${error.message}`;
+        }
+      }
+      
+      alert(errorMessage);
+      
+      // Reset saving state
       setIsSaving(false);
     }
   };
@@ -561,7 +596,7 @@ const AddRecipePage: React.FC = () => {
               </label>
               <select
                 value={difficulty}
-                onChange={(e) => setDifficulty(e.target.value)}
+                onChange={(e) => setDifficulty(e.target.value as "קל" | "בינוני" | "קשה" | "")}
                 className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
               >
                 <option value="">בחר רמת קושי</option>

@@ -1,9 +1,9 @@
-import React from 'react';
-import { Heart, Users, ChefHat, Images } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Heart, Users, ChefHat, Images, Edit, Trash2, Share2, Eye } from 'lucide-react';
 import { Recipe, ViewMode } from '../../types/recipe';
 import { useRecipes } from '../../contexts/RecipeContext';
 import { getCategoryColor } from '../../data/categories';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { categories } from '../../data/categories';
 
 // Category illustrations as emoji/unicode characters
@@ -32,7 +32,95 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
   recipe,
   viewMode
 }) => {
-  const { toggleFavorite } = useRecipes();
+  const { toggleFavorite, deleteRecipe } = useRecipes();
+  const navigate = useNavigate();
+  const [showMobileOptions, setShowMobileOptions] = useState(false);
+  const [isLongPress, setIsLongPress] = useState(false);
+  const longPressTimer = useRef<NodeJS.Timeout | null>(null);
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+  // Long press handler for mobile
+  const handleTouchStart = () => {
+    if (!isMobile) return;
+    
+    longPressTimer.current = setTimeout(() => {
+      setIsLongPress(true);
+      setShowMobileOptions(true);
+    }, 500); // 500ms for long press
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  const handleTouchMove = () => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  };
+
+  const handleCardClick = () => {
+    if (showMobileOptions) {
+      setShowMobileOptions(false);
+      setIsLongPress(false);
+      return;
+    }
+    
+    if (isLongPress) {
+      setIsLongPress(false);
+      return;
+    }
+    
+    // Normal click - navigate to recipe
+    navigate(`/recipe/${recipe.id}`);
+  };
+
+  const handleDelete = async () => {
+    if (confirm('האם אתה בטוח שברצונך למחוק את המתכון הזה?')) {
+      try {
+        await deleteRecipe(recipe.id);
+        setShowMobileOptions(false);
+        setIsLongPress(false);
+        // Don't navigate - let the user stay on the current page
+        // The recipe will be removed from the list automatically
+      } catch (error) {
+        console.error('Failed to delete recipe:', error);
+      }
+    }
+  };
+
+  const handleShare = async () => {
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: recipe.title,
+          text: `מתכון: ${recipe.title}`,
+          url: window.location.origin + `/recipe/${recipe.id}`
+        });
+      } catch (error) {
+        console.log('Error sharing:', error);
+      }
+    } else {
+      // Fallback for browsers that don't support Web Share API
+      navigator.clipboard.writeText(window.location.origin + `/recipe/${recipe.id}`);
+      alert('הקישור הועתק ללוח');
+    }
+    setShowMobileOptions(false);
+    setIsLongPress(false);
+  };
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+      }
+    };
+  }, []);
 
   const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -63,17 +151,17 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
   };
 
   const primaryImage = recipe.images && recipe.images.length > 0 ? recipe.images[0] : null;
+  const imageCount = recipe.images ? recipe.images.length : 0;
 
   // List view (no images)
   if (viewMode === 'list') {
     return (
-      <Link 
-        to={`/recipe/${recipe.id}`} 
+      <div 
         className="block"
-        onClick={(e) => {
-          // Prevent any potential page refresh
-          e.stopPropagation();
-        }}
+        onClick={handleCardClick}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchMove={handleTouchMove}
       >
         <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer p-4 border border-gray-200">
           <div className="flex items-center justify-between">
@@ -106,18 +194,65 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
             </div>
           </div>
         </div>
-      </Link>
+        
+        {/* Mobile Options Overlay */}
+        {showMobileOptions && isMobile && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 mx-4 max-w-sm w-full">
+              <h3 className="text-lg font-semibold text-center mb-4">{recipe.title}</h3>
+              <div className="space-y-3">
+                <button
+                  onClick={() => navigate(`/recipe/${recipe.id}`)}
+                  className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse p-3 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"
+                >
+                  <Eye className="h-5 w-5" />
+                  <span>פתח מתכון</span>
+                </button>
+                <button
+                  onClick={() => navigate(`/edit/${recipe.id}`)}
+                  className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse p-3 bg-yellow-50 text-yellow-600 rounded-lg hover:bg-yellow-100"
+                >
+                  <Edit className="h-5 w-5" />
+                  <span>ערוך מתכון</span>
+                </button>
+                <button
+                  onClick={handleShare}
+                  className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse p-3 bg-green-50 text-green-600 rounded-lg hover:bg-green-100"
+                >
+                  <Share2 className="h-5 w-5" />
+                  <span>שתף מתכון</span>
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse p-3 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
+                >
+                  <Trash2 className="h-5 w-5" />
+                  <span>מחק מתכון</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setShowMobileOptions(false);
+                    setIsLongPress(false);
+                  }}
+                  className="w-full p-3 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200"
+                >
+                  ביטול
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     );
   }
   if (viewMode === 'large') {
     return (
-      <Link 
-        to={`/recipe/${recipe.id}`} 
+      <div 
         className="block h-full"
-        onClick={(e) => {
-          // Prevent any potential page refresh
-          e.stopPropagation();
-        }}
+        onClick={handleCardClick}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+        onTouchMove={handleTouchMove}
       >
         <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden h-full flex flex-col">
         {primaryImage ? (
@@ -130,7 +265,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
             {recipe.images && recipe.images.length > 1 && (
               <div className="absolute bottom-3 left-3 rtl:right-3 rtl:left-auto bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs flex items-center space-x-1 rtl:space-x-reverse">
                 <Images className="h-3 w-3" />
-                <span>{recipe.images.length}</span>
+                <span>{imageCount}</span>
               </div>
             )}
             <button
@@ -175,12 +310,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
           
           <div className="flex items-center justify-between text-sm text-gray-500 mt-auto">
             <div className="flex items-center space-x-4">
-              {recipe.servings && (
-                <div className="flex items-center">
-                  <Users className="h-4 w-4 mr-1" />
-                  <span>{recipe.servings}</span>
-                </div>
-              )}
+              {/* Removed servings as it doesn't exist in Recipe type */}
             </div>
             
             <div className="flex items-center">
@@ -192,19 +322,66 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
           </div>
         </div>
         </div>
-      </Link>
+        
+        {/* Mobile Options Overlay */}
+        {showMobileOptions && isMobile && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 mx-4 max-w-sm w-full">
+              <h3 className="text-lg font-semibold text-center mb-4">{recipe.title}</h3>
+              <div className="space-y-3">
+                <button
+                  onClick={() => navigate(`/recipe/${recipe.id}`)}
+                  className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse p-3 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"
+                >
+                  <Eye className="h-5 w-5" />
+                  <span>פתח מתכון</span>
+                </button>
+                <button
+                  onClick={() => navigate(`/edit/${recipe.id}`)}
+                  className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse p-3 bg-yellow-50 text-yellow-600 rounded-lg hover:bg-yellow-100"
+                >
+                  <Edit className="h-5 w-5" />
+                  <span>ערוך מתכון</span>
+                </button>
+                <button
+                  onClick={handleShare}
+                  className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse p-3 bg-green-50 text-green-600 rounded-lg hover:bg-green-100"
+                >
+                  <Share2 className="h-5 w-5" />
+                  <span>שתף מתכון</span>
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse p-3 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
+                >
+                  <Trash2 className="h-5 w-5" />
+                  <span>מחק מתכון</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setShowMobileOptions(false);
+                    setIsLongPress(false);
+                  }}
+                  className="w-full p-3 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200"
+                >
+                  ביטול
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     );
   }
 
   // Medium view
   return (
-    <Link 
-      to={`/recipe/${recipe.id}`} 
+    <div 
       className="block h-full"
-      onClick={(e) => {
-        // Prevent any potential page refresh
-        e.stopPropagation();
-      }}
+      onClick={handleCardClick}
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+      onTouchMove={handleTouchMove}
     >
       <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden h-full flex flex-col transform hover:scale-[1.02] hover:-translate-y-1">
       {primaryImage ? (
@@ -217,7 +394,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
           {recipe.images && recipe.images.length > 1 && (
             <div className="absolute bottom-1 left-1 rtl:right-1 rtl:left-auto bg-black/60 backdrop-blur-sm text-white px-1.5 py-0.5 rounded-full text-xs flex items-center space-x-1 rtl:space-x-reverse">
               <Images className="h-2.5 w-2.5" />
-              <span>{recipe.images.length}</span>
+              <span>{imageCount}</span>
             </div>
           )}
           <button
@@ -268,7 +445,55 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
         </div>
       </div>
       </div>
-    </Link>
+      
+      {/* Mobile Options Overlay */}
+      {showMobileOptions && isMobile && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 mx-4 max-w-sm w-full">
+            <h3 className="text-lg font-semibold text-center mb-4">{recipe.title}</h3>
+            <div className="space-y-3">
+              <button
+                onClick={() => navigate(`/recipe/${recipe.id}`)}
+                className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse p-3 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"
+              >
+                <Eye className="h-5 w-5" />
+                <span>פתח מתכון</span>
+              </button>
+              <button
+                onClick={() => navigate(`/edit/${recipe.id}`)}
+                className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse p-3 bg-yellow-50 text-yellow-600 rounded-lg hover:bg-yellow-100"
+              >
+                <Edit className="h-5 w-5" />
+                <span>ערוך מתכון</span>
+              </button>
+              <button
+                onClick={handleShare}
+                className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse p-3 bg-green-50 text-green-600 rounded-lg hover:bg-green-100"
+              >
+                <Share2 className="h-5 w-5" />
+                <span>שתף מתכון</span>
+              </button>
+              <button
+                onClick={handleDelete}
+                className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse p-3 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
+              >
+                <Trash2 className="h-5 w-5" />
+                <span>מחק מתכון</span>
+              </button>
+              <button
+                onClick={() => {
+                  setShowMobileOptions(false);
+                  setIsLongPress(false);
+                }}
+                className="w-full p-3 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200"
+              >
+                ביטול
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

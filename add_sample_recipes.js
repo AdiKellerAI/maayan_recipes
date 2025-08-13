@@ -1,6 +1,20 @@
-import type { RecipeInsert } from '../types/recipe';
+const { Pool } = require('pg');
 
-export const sampleRecipes: RecipeInsert[] = [
+// PostgreSQL connection configuration
+const pool = new Pool({
+  host: '34.132.167.99',
+  port: 5432,
+  database: 'recipes',
+  user: 'postgres',
+  password: 'MaayanRecipes2025',
+  ssl: { rejectUnauthorized: false },
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 30000,
+  max: 10
+});
+
+// Sample recipes data (copied from src/data/sampleRecipes.ts)
+const sampleRecipes = [
   {
     title: 'סלט בורגול וסלק',
     category: 'salads',
@@ -17,15 +31,14 @@ export const sampleRecipes: RecipeInsert[] = [
     ],
     additional_instructions: {
       'רכיבים לרוטב': [
-        'מיץ לימון',
+        'מיץ לימין',
         'סילאן',
         'פלפל, מלח'
       ]
     },
     prep_time: '75 דקות',
     difficulty: 'קל',
-    is_favorite: false,
-    current_step: 0
+    is_favorite: false
   },
   {
     title: 'סלט עגבניות שרי ובייבי מוצרלה (נעמה)',
@@ -53,8 +66,7 @@ export const sampleRecipes: RecipeInsert[] = [
     },
     prep_time: '20 דקות',
     difficulty: 'קל',
-    is_favorite: false,
-    current_step: 0
+    is_favorite: false
   },
   {
     title: 'ירקות שורש אפויים (אהרוני)',
@@ -81,8 +93,7 @@ export const sampleRecipes: RecipeInsert[] = [
     },
     prep_time: '60 דקות',
     difficulty: 'קל',
-    is_favorite: false,
-    current_step: 0
+    is_favorite: false
   },
   {
     title: 'סלט כרוב של גלוריה',
@@ -115,8 +126,7 @@ export const sampleRecipes: RecipeInsert[] = [
     },
     prep_time: '30 דקות',
     difficulty: 'קל',
-    is_favorite: false,
-    current_step: 0
+    is_favorite: false
   },
   {
     title: 'סלט סלרי עם בוטנים',
@@ -143,8 +153,7 @@ export const sampleRecipes: RecipeInsert[] = [
     },
     prep_time: '20 דקות',
     difficulty: 'קל',
-    is_favorite: false,
-    current_step: 0
+    is_favorite: false
   },
   {
     title: 'עוגת שוקולד של סבתא מרתה',
@@ -172,7 +181,6 @@ export const sampleRecipes: RecipeInsert[] = [
     prep_time: '75 דקות',
     difficulty: 'בינוני',
     is_favorite: true,
-    current_step: 0,
     images: ['https://images.pexels.com/photos/291528/pexels-photo-291528.jpeg?auto=compress&cs=tinysrgb&w=800']
   },
   {
@@ -200,7 +208,6 @@ export const sampleRecipes: RecipeInsert[] = [
     prep_time: '20 דקות',
     difficulty: 'קל',
     is_favorite: false,
-    current_step: 0,
     images: ['https://images.pexels.com/photos/1059905/pexels-photo-1059905.jpeg?auto=compress&cs=tinysrgb&w=800']
   },
   {
@@ -232,7 +239,6 @@ export const sampleRecipes: RecipeInsert[] = [
     prep_time: '150 דקות',
     difficulty: 'בינוני',
     is_favorite: true,
-    current_step: 0,
     images: ['https://images.pexels.com/photos/539451/pexels-photo-539451.jpeg?auto=compress&cs=tinysrgb&w=800']
   },
   {
@@ -263,7 +269,6 @@ export const sampleRecipes: RecipeInsert[] = [
     prep_time: '180 דקות',
     difficulty: 'קשה',
     is_favorite: false,
-    current_step: 0,
     images: ['https://images.pexels.com/photos/1775043/pexels-photo-1775043.jpeg?auto=compress&cs=tinysrgb&w=800']
   },
   {
@@ -294,7 +299,6 @@ export const sampleRecipes: RecipeInsert[] = [
     prep_time: '35 דקות',
     difficulty: 'קל',
     is_favorite: true,
-    current_step: 0,
     images: ['https://images.pexels.com/photos/6210959/pexels-photo-6210959.jpeg?auto=compress&cs=tinysrgb&w=800']
   },
   {
@@ -324,7 +328,6 @@ export const sampleRecipes: RecipeInsert[] = [
     prep_time: '90 דקות',
     difficulty: 'קל',
     is_favorite: false,
-    current_step: 0,
     images: ['https://images.pexels.com/photos/230325/pexels-photo-230325.jpeg?auto=compress&cs=tinysrgb&w=800']
   },
   {
@@ -353,7 +356,6 @@ export const sampleRecipes: RecipeInsert[] = [
     prep_time: '45 דקות',
     difficulty: 'בינוני',
     is_favorite: true,
-    current_step: 0,
     images: ['https://images.pexels.com/photos/361184/asparagus-steak-veal-steak-veal-361184.jpeg?auto=compress&cs=tinysrgb&w=800']
   },
   {
@@ -385,7 +387,6 @@ export const sampleRecipes: RecipeInsert[] = [
     prep_time: '40 דקות',
     difficulty: 'בינוני',
     is_favorite: false,
-    current_step: 0,
     images: ['https://images.pexels.com/photos/2474661/pexels-photo-2474661.jpeg?auto=compress&cs=tinysrgb&w=800']
   },
   {
@@ -416,7 +417,6 @@ export const sampleRecipes: RecipeInsert[] = [
     prep_time: '30 דקות + 4 שעות קירור',
     difficulty: 'בינוני',
     is_favorite: true,
-    current_step: 0,
     images: ['https://images.pexels.com/photos/6880219/pexels-photo-6880219.jpeg?auto=compress&cs=tinysrgb&w=800']
   },
   {
@@ -446,7 +446,6 @@ export const sampleRecipes: RecipeInsert[] = [
     prep_time: '24 שעות (כולל השריה)',
     difficulty: 'בינוני',
     is_favorite: false,
-    current_step: 0,
     images: ['https://images.pexels.com/photos/6275093/pexels-photo-6275093.jpeg?auto=compress&cs=tinysrgb&w=800']
   },
   {
@@ -466,8 +465,7 @@ export const sampleRecipes: RecipeInsert[] = [
     ],
     prep_time: '10 דקות',
     difficulty: 'קל',
-    is_favorite: false,
-    current_step: 0
+    is_favorite: false
   },
   {
     title: 'סלט כרוב ונודלס',
@@ -497,7 +495,85 @@ export const sampleRecipes: RecipeInsert[] = [
     },
     prep_time: '15 דקות',
     difficulty: 'קל',
-    is_favorite: false,
-    current_step: 0
+    is_favorite: false
   }
 ];
+
+async function addSampleRecipes() {
+  let client;
+  try {
+    console.log('🔌 Connecting to PostgreSQL...');
+    client = await pool.connect();
+    
+    console.log('📊 Checking current recipes count...');
+    const countResult = await client.query('SELECT COUNT(*) as count FROM recipes');
+    const currentCount = parseInt(countResult.rows[0].count);
+    console.log(`📊 Current recipes in database: ${currentCount}`);
+    
+    if (currentCount > 0) {
+      console.log('⚠️ Database already has recipes. Clearing existing recipes...');
+      await client.query('DELETE FROM recipes');
+      console.log('🗑️ Cleared existing recipes');
+    }
+    
+    console.log(`➕ Adding ${sampleRecipes.length} sample recipes to database...`);
+    
+    for (let i = 0; i < sampleRecipes.length; i++) {
+      const recipe = sampleRecipes[i];
+      console.log(`➕ Adding recipe ${i + 1}/${sampleRecipes.length}: ${recipe.title}`);
+      
+      const result = await client.query(
+        `INSERT INTO recipes (
+          title, description, category, ingredients, directions, 
+          additional_instructions, prep_time, difficulty, is_favorite, images
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
+        RETURNING id`,
+        [
+          recipe.title,
+          recipe.description || '',
+          recipe.category,
+          JSON.stringify(recipe.ingredients),
+          JSON.stringify(recipe.directions),
+          JSON.stringify(recipe.additional_instructions || {}),
+          recipe.prep_time || '',
+          recipe.difficulty || '',
+          recipe.is_favorite || false,
+          JSON.stringify(recipe.images || [])
+        ]
+      );
+      
+      console.log(`✅ Added recipe: ${recipe.title} (ID: ${result.rows[0].id})`);
+    }
+    
+    console.log('📊 Verifying final count...');
+    const finalCountResult = await client.query('SELECT COUNT(*) as count FROM recipes');
+    const finalCount = parseInt(finalCountResult.rows[0].count);
+    console.log(`✅ Successfully added recipes. Total in database: ${finalCount}`);
+    
+    // Show some sample data
+    const sampleResult = await client.query('SELECT title, category FROM recipes LIMIT 5');
+    console.log('📋 Sample recipes in database:');
+    sampleResult.rows.forEach(row => {
+      console.log(`  - ${row.title} (${row.category})`);
+    });
+    
+  } catch (error) {
+    console.error('❌ Error adding sample recipes:', error);
+    throw error;
+  } finally {
+    if (client) {
+      client.release();
+    }
+  }
+}
+
+// Run the script
+addSampleRecipes()
+  .then(() => {
+    console.log('🎉 Sample recipes added successfully!');
+    process.exit(0);
+  })
+  .catch((error) => {
+    console.error('💥 Failed to add sample recipes:', error);
+    process.exit(1);
+  });

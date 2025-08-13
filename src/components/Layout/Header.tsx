@@ -80,24 +80,10 @@ const Header: React.FC = () => {
               navigate('/');
             }}
           >
-            <div className="relative">
-              {/* PostgreSQL Status Indicator */}
-              <div className="absolute -top-1 -right-1 z-10">
-                <div className={`w-3 h-3 rounded-full border-2 border-white ${
-                  postgresqlStatus === 'connected' ? 'bg-green-500' :
-                  postgresqlStatus === 'disconnected' ? 'bg-red-500' :
-                  'bg-yellow-500 animate-pulse'
-                }`} title={
-                  postgresqlStatus === 'connected' ? 'PostgreSQL מחובר' :
-                  postgresqlStatus === 'disconnected' ? 'PostgreSQL לא זמין - משתמש ב-localStorage' :
-                  'בודק חיבור PostgreSQL...'
-                }></div>
-              </div>
-              <div className="bg-primary-500 px-4 py-2 rounded-lg shadow-md border border-primary-600 h-10 flex items-center justify-center">
-                <ChefHat className="h-5 w-5 text-white mr-3 rtl:ml-3 rtl:mr-0" />
-                <div className="text-base font-bold text-white tracking-wide">
-                  המטבח של מעיין
-                </div>
+            <div className="bg-primary-500 px-4 py-2 rounded-lg shadow-md border border-primary-600 h-10 flex items-center justify-center">
+              <ChefHat className="h-5 w-5 text-white mr-3 rtl:ml-3 rtl:mr-0" />
+              <div className="text-base font-bold text-white tracking-wide">
+                המטבח של מעיין
               </div>
             </div>
           </Link>
@@ -163,28 +149,6 @@ const Header: React.FC = () => {
               
               {isFilterOpen && (
                 <div className="absolute right-0 rtl:left-0 rtl:right-auto mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 p-4 z-50">
-                  {/* PostgreSQL Status in Filter Menu */}
-                  <div className="mb-4 p-2 bg-gray-50 rounded-lg">
-                    <div className="flex items-center space-x-2 rtl:space-x-reverse text-sm">
-                      <Database className="h-4 w-4" />
-                      <span className="font-medium">מסד נתונים:</span>
-                      <div className={`w-2 h-2 rounded-full ${
-                        postgresqlStatus === 'connected' ? 'bg-green-500' :
-                        postgresqlStatus === 'disconnected' ? 'bg-red-500' :
-                        'bg-yellow-500 animate-pulse'
-                      }`}></div>
-                      <span className={`text-xs ${
-                        postgresqlStatus === 'connected' ? 'text-green-700' :
-                        postgresqlStatus === 'disconnected' ? 'text-red-700' :
-                        'text-yellow-700'
-                      }`}>
-                        {postgresqlStatus === 'connected' ? 'PostgreSQL' :
-                         postgresqlStatus === 'disconnected' ? 'localStorage' :
-                         'בודק...'}
-                      </span>
-                    </div>
-                  </div>
-                  
                   <div className="space-y-4">
                     <h4 className="text-sm font-semibold text-gray-800 mb-3">סינון</h4>
                     <div>
