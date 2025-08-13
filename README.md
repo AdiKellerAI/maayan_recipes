@@ -9,16 +9,28 @@ http://localhost:5173/
 ✅ You should now see the app running locally!
 
 
-## 🚀 Publish to production
-1. **Commit everything to dev branch**
-git add .
-git commit -m 'update last features'
-git push origin dev
-2. **Merge with main branch**
-git checkout main
-git merge dev
+## 🚀 Publish to Production
+
+1. **Commit everything to `dev` branch**
+    ```
+    git add .
+    git commit -m "update last features"
+    git push origin dev
+    ```
+
+2. **Merge with `main` branch**
+    ```
+    git checkout main
+    git merge dev
+    git add .
+    git commit -m "get all dev new commits into main"
+    git push origin main
+    ```
+
 3. **Deploy to production**
-   vercel --prod
+    ```
+    vercel --prod
+    ```
 
 ---
 ---
