@@ -16,6 +16,36 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
   const [showFloatingTimer, setShowFloatingTimer] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+
+  // Initialize audio context on user interaction (required for mobile)
+  useEffect(() => {
+    const initAudioContext = () => {
+      if (!audioContextRef.current) {
+        try {
+          audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        } catch (e) {
+          console.warn('Could not create audio context:', e);
+        }
+      }
+    };
+
+    // Initialize on any user interaction
+    const handleUserInteraction = () => {
+      initAudioContext();
+      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+        audioContextRef.current.resume();
+      }
+    };
+
+    document.addEventListener('touchstart', handleUserInteraction);
+    document.addEventListener('click', handleUserInteraction);
+    
+    return () => {
+      document.removeEventListener('touchstart', handleUserInteraction);
+      document.removeEventListener('click', handleUserInteraction);
+    };
+  }, []);
 
   // Listen for global timer open events
   useEffect(() => {
@@ -27,12 +57,24 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
     return () => window.removeEventListener('showTimer', handleShowTimer);
   }, []);
 
-  // Create audio context for beep sound
+  // Enhanced audio system for mobile and silent mode
   const playBeepSound = () => {
     try {
-      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      // Method 1: Web Audio API (works even on silent mode on many devices)
+      let audioContext = audioContextRef.current;
       
-      // Play 3 beeps
+      // Create audio context if not exists
+      if (!audioContext) {
+        audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioContextRef.current = audioContext;
+      }
+      
+      // Ensure audio context is running (required for mobile)
+      if (audioContext.state === 'suspended') {
+        audioContext.resume();
+      }
+      
+      // Play 3 beeps with Web Audio API
       for (let i = 0; i < 3; i++) {
         setTimeout(() => {
           const oscillator = audioContext.createOscillator();
@@ -44,15 +86,33 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
           oscillator.frequency.value = 800; // 800Hz beep
           oscillator.type = 'sine';
           
-          gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+          gainNode.gain.setValueAtTime(0.5, audioContext.currentTime); // Increased volume
+          gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.8);
           
           oscillator.start(audioContext.currentTime);
-          oscillator.stop(audioContext.currentTime + 0.5);
-        }, i * 600);
+          oscillator.stop(audioContext.currentTime + 0.8);
+        }, i * 800);
       }
+      
+      // Method 2: HTML Audio Element as fallback
+      try {
+        // Create a data URL for a beep sound
+        const beepDataUrl = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAg==';
+        const audio = new Audio(beepDataUrl);
+        audio.volume = 1.0; // Maximum volume
+        audio.play().catch(e => console.warn('HTML Audio fallback failed:', e));
+      } catch (audioError) {
+        console.warn('HTML Audio fallback failed:', audioError);
+      }
+      
     } catch (error) {
       console.warn('Could not play beep sound:', error);
+      
+      // Method 3: Vibration as final fallback (mobile only)
+      if ('vibrate' in navigator) {
+        // Vibrate pattern: vibrate for 200ms, pause 100ms, repeat 3 times
+        navigator.vibrate([200, 100, 200, 100, 200]);
+      }
     }
   };
 
