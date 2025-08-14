@@ -30,6 +30,7 @@ http://localhost:5173/
 3. **Deploy to production**
     ```
     vercel --prod
+    git checkout dev
     ```
 
 ---

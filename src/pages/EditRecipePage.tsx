@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Plus, X, ArrowRight, Trash2, Upload, Camera } from 'lucide-react';
 import { useRecipes } from '../contexts/RecipeContext';
+import { useProtectedAction } from '../hooks/useProtectedAction';
 import { categories } from '../data/categories';
 
 const EditRecipePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { recipes, updateRecipe, deleteRecipe } = useRecipes();
+  const { executeProtectedAction } = useProtectedAction();
   
   const recipe = recipes.find(r => r.id === id);
   
@@ -41,6 +43,14 @@ const EditRecipePage: React.FC = () => {
       setShowAdditionalInstructions(Object.keys(recipe.additional_instructions || {}).length > 0);
     }
   }, [recipe]);
+
+  // Check authentication when page loads
+  useEffect(() => {
+    executeProtectedAction(() => {
+      // If not authenticated, the modal will show
+      // If authenticated, nothing happens and user can proceed
+    });
+  }, []);
 
   if (!recipe) {
     return (
@@ -171,34 +181,36 @@ const EditRecipePage: React.FC = () => {
     
     if (isSaving) return;
     
-    const filteredIngredients = ingredients.filter(item => item.trim());
-    const filteredDirections = directions.filter(item => item.trim());
-    
-    if (!formData.title || !formData.category || 
-        filteredIngredients.length === 0 || filteredDirections.length === 0) {
-      alert('נא למלא את שם המתכון, הקטגוריה, הרכיבים וההוראות');
-      return;
-    }
+    executeProtectedAction(async () => {
+      const filteredIngredients = ingredients.filter(item => item.trim());
+      const filteredDirections = directions.filter(item => item.trim());
+      
+      if (!formData.title || !formData.category || 
+          filteredIngredients.length === 0 || filteredDirections.length === 0) {
+        alert('נא למלא את שם המתכון, הקטגוריה, הרכיבים וההוראות');
+        return;
+      }
 
-    setIsSaving(true);
-    const updatedRecipe = {
-      ...formData,
-      ingredients: filteredIngredients,
-      directions: filteredDirections,
-      images: images,
-      difficulty: formData.difficulty || undefined,
-      additional_instructions: additionalInstructions
-    };
+      setIsSaving(true);
+      const updatedRecipe = {
+        ...formData,
+        ingredients: filteredIngredients,
+        directions: filteredDirections,
+        images: images,
+        difficulty: formData.difficulty || undefined,
+        additional_instructions: additionalInstructions
+      };
 
-    try {
-      await updateRecipe(recipe.id, updatedRecipe);
-      navigate(`/recipe/${recipe.id}`);
-    } catch (error) {
-      console.error('Failed to update recipe:', error);
-      // Error is already handled in the context
-    } finally {
-      setIsSaving(false);
-    }
+      try {
+        await updateRecipe(recipe.id, updatedRecipe);
+        navigate(`/recipe/${recipe.id}`);
+      } catch (error) {
+        console.error('Failed to update recipe:', error);
+        // Error is already handled in the context
+      } finally {
+        setIsSaving(false);
+      }
+    });
   };
 
   const handleDelete = async () => {
@@ -206,15 +218,17 @@ const EditRecipePage: React.FC = () => {
   };
 
   const confirmDelete = async () => {
-    try {
-      await deleteRecipe(recipe.id);
-      // Return to previous page immediately after successful deletion
-      setShowDeleteModal(false);
-      navigate(-1);
-    } catch (error) {
-      console.error('Failed to delete recipe:', error);
-      // You could add a toast notification here instead of alert
-    }
+    executeProtectedAction(async () => {
+      try {
+        await deleteRecipe(recipe.id);
+        // Return to previous page immediately after successful deletion
+        setShowDeleteModal(false);
+        navigate(-1);
+      } catch (error) {
+        console.error('Failed to delete recipe:', error);
+        // You could add a toast notification here instead of alert
+      }
+    });
   };
 
   const cancelDelete = () => {

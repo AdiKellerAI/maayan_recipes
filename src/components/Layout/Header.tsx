@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Heart, Plus, Menu, X, Clock, ChefHat, Filter, Database, ArrowUpDown, Timer } from 'lucide-react';
 import { useRecipes } from '../../contexts/RecipeContext';
+import { useProtectedAction } from '../../hooks/useProtectedAction';
 import { Link, useNavigate } from 'react-router-dom';
 
 const Header: React.FC = () => {
@@ -26,6 +27,7 @@ const Header: React.FC = () => {
   const [isSortOpen, setIsSortOpen] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   const navigate = useNavigate();
+  const { executeProtectedAction } = useProtectedAction();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -204,13 +206,13 @@ const Header: React.FC = () => {
               )}
             </div>
             
-            <Link
-              to="/add"
+            <button
+              onClick={() => executeProtectedAction(() => navigate('/add'))}
               className="bg-primary-500 text-white p-2 rounded-lg hover:bg-primary-600 active:bg-primary-700 transition-colors transform active:scale-95"
               title="הוספת מתכון"
             >
               <Plus className="h-5 w-5" />
-            </Link>
+            </button>
             
           </div>
 
@@ -257,13 +259,13 @@ const Header: React.FC = () => {
               )}
             </button>
 
-            <Link
-              to="/add"
+            <button
+              onClick={() => executeProtectedAction(() => navigate('/add'))}
               className="bg-primary-500 text-white p-2 rounded-lg hover:bg-primary-600 active:bg-primary-700 transition-colors transform active:scale-95"
               title="הוספת מתכון"
             >
               <Plus className="h-5 w-5" />
-            </Link>
+            </button>
           </div>
 
 

@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Heart, ChefHat, Images, Edit, Trash2, Share2, Eye } from 'lucide-react';
 import { Recipe, ViewMode } from '../../types/recipe';
 import { useRecipes } from '../../contexts/RecipeContext';
+import { useProtectedAction } from '../../hooks/useProtectedAction';
 import { getCategoryColor } from '../../data/categories';
 import { useNavigate } from 'react-router-dom';
 import { categories } from '../../data/categories';
@@ -33,6 +34,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
   viewMode
 }) => {
   const { toggleFavorite, deleteRecipe } = useRecipes();
+  const { executeProtectedAction } = useProtectedAction();
   const navigate = useNavigate();
   const [showMobileOptions, setShowMobileOptions] = useState(false);
   const [showDesktopOptions, setShowDesktopOptions] = useState(false);
@@ -110,7 +112,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
     
     switch (action) {
       case 'edit':
-        navigate(`/edit/${recipe.id}`);
+        executeProtectedAction(() => navigate(`/edit/${recipe.id}`));
         break;
       case 'share':
         handleShare();
@@ -122,14 +124,16 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
   };
 
   const handleDelete = async () => {
-    if (confirm('האם אתה בטוח שברצונך למחוק את המתכון הזה?')) {
-      try {
-        await deleteRecipe(recipe.id);
-        // Recipe will be removed from the list automatically
-      } catch (error) {
-        console.error('Failed to delete recipe:', error);
+    executeProtectedAction(async () => {
+      if (confirm('האם אתה בטוח שברצונך למחוק את המתכון הזה?')) {
+        try {
+          await deleteRecipe(recipe.id);
+          // Recipe will be removed from the list automatically
+        } catch (error) {
+          console.error('Failed to delete recipe:', error);
+        }
       }
-    }
+    });
   };
 
   const handleShare = async () => {
@@ -174,7 +178,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
     console.log('🔄 Toggling favorite for recipe:', recipe.id, 'Current state:', recipe.is_favorite);
     
     try {
-      await toggleFavorite(recipe.id);
+      await executeProtectedAction(() => toggleFavorite(recipe.id));
       console.log('✅ Favorite toggled successfully');
     } catch (error) {
       console.error('❌ Error toggling favorite:', error);
@@ -313,7 +317,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                   <span>פתח מתכון</span>
                 </button>
                 <button
-                  onClick={() => navigate(`/edit/${recipe.id}`)}
+                  onClick={() => executeProtectedAction(() => navigate(`/edit/${recipe.id}`))}
                   className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse p-3 bg-yellow-50 text-yellow-600 rounded-lg hover:bg-yellow-100"
                 >
                   <Edit className="h-5 w-5" />
@@ -570,7 +574,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                   <span>פתח מתכון</span>
                 </button>
                 <button
-                  onClick={() => navigate(`/edit/${recipe.id}`)}
+                  onClick={() => executeProtectedAction(() => navigate(`/edit/${recipe.id}`))}
                   className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse p-3 bg-yellow-50 text-yellow-600 rounded-lg hover:bg-yellow-100"
                 >
                   <Edit className="h-5 w-5" />

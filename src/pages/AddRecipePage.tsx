@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useRecipes } from '../contexts/RecipeContext';
+import { useProtectedAction } from '../hooks/useProtectedAction';
 import type { RecipeInsert, Recipe } from '../types/recipe';
 import { categories } from '../data/categories';
 import { Plus, X, Upload, Camera, Sparkles, Link, Eye, Edit, Trash2 } from 'lucide-react';
@@ -10,6 +11,7 @@ const AddRecipePage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { addRecipe, refreshRecipes } = useRecipes();
+  const { executeProtectedAction } = useProtectedAction();
   
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState(searchParams.get('category') || '');
@@ -27,6 +29,14 @@ const AddRecipePage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showSectionNameModal, setShowSectionNameModal] = useState(false);
   const [newSectionName, setNewSectionName] = useState('');
+
+  // Check authentication when page loads
+  useEffect(() => {
+    executeProtectedAction(() => {
+      // If not authenticated, the modal will show
+      // If authenticated, nothing happens and user can proceed
+    });
+  }, []);
 
   const addIngredient = () => {
     setIngredients([...ingredients, '']);
@@ -354,70 +364,73 @@ const AddRecipePage: React.FC = () => {
     
     if (isSaving) return;
     
-    if (!title.trim() || !category) {
-      alert('אנא מלא את שם המתכון והקטגוריה');
-      return;
-    }
-
-    const filteredIngredients = ingredients.filter(ing => ing.trim());
-    const filteredDirections = directions.filter(dir => dir.trim());
-
-    if (filteredIngredients.length === 0 || filteredDirections.length === 0) {
-      alert('אנא הוסף לפחות רכיב אחד והוראה אחת');
-      return;
-    }
-
-    setIsSaving(true);
-    
-    try {
-      const newRecipe: RecipeInsert = {
-        title: title.trim(),
-        category,
-        difficulty: difficulty || undefined,
-        ingredients: filteredIngredients,
-        directions: filteredDirections,
-        images,
-        additional_instructions: Object.keys(additionalInstructions).length > 0 ? additionalInstructions : undefined,
-        is_favorite: false
-      };
-
-      console.log('🔄 Submitting recipe:', newRecipe);
-      
-      const savedRecipe = await addRecipe(newRecipe);
-      console.log('✅ Recipe saved successfully:', savedRecipe);
-      
-      // Force refresh recipes in context to ensure the new recipe is visible
-      await refreshRecipes();
-      
-      setPreviewRecipe({
-        ...savedRecipe,
-        is_favorite: savedRecipe.is_favorite,
-        created_at: savedRecipe.created_at,
-        updated_at: savedRecipe.updated_at
-      });
-      
-      console.log('✅ Recipe submission completed successfully');
-      
-    } catch (error) {
-      console.error('❌ Error adding recipe:', error);
-      
-      // Better error handling for mobile
-      let errorMessage = 'שגיאה בשמירת המתכון';
-      if (error instanceof Error) {
-        if (error.message.includes('network') || error.message.includes('fetch')) {
-          errorMessage = 'בעיית חיבור לאינטרנט. המתכון נשמר במכשיר ויסונכרן כשהחיבור יחזור.';
-        } else if (error.message.includes('timeout')) {
-          errorMessage = 'הבקשה לקחה זמן רב מדי. המתכון נשמר במכשיר ויסונכרן בהמשך.';
-        } else {
-          errorMessage = `שגיאה: ${error.message}`;
-        }
+    // Protect the submit action
+    executeProtectedAction(async () => {
+      if (!title.trim() || !category) {
+        alert('אנא מלא את שם המתכון והקטגוריה');
+        return;
       }
+
+      const filteredIngredients = ingredients.filter(ing => ing.trim());
+      const filteredDirections = directions.filter(dir => dir.trim());
+
+      if (filteredIngredients.length === 0 || filteredDirections.length === 0) {
+        alert('אנא הוסף לפחות רכיב אחד והוראה אחת');
+        return;
+      }
+
+      setIsSaving(true);
       
-      alert(errorMessage);
-      
-      // Reset saving state
-      setIsSaving(false);
-    }
+      try {
+        const newRecipe: RecipeInsert = {
+          title: title.trim(),
+          category,
+          difficulty: difficulty || undefined,
+          ingredients: filteredIngredients,
+          directions: filteredDirections,
+          images,
+          additional_instructions: Object.keys(additionalInstructions).length > 0 ? additionalInstructions : undefined,
+          is_favorite: false
+        };
+
+        console.log('🔄 Submitting recipe:', newRecipe);
+        
+        const savedRecipe = await addRecipe(newRecipe);
+        console.log('✅ Recipe saved successfully:', savedRecipe);
+        
+        // Force refresh recipes in context to ensure the new recipe is visible
+        await refreshRecipes();
+        
+        setPreviewRecipe({
+          ...savedRecipe,
+          is_favorite: savedRecipe.is_favorite,
+          created_at: savedRecipe.created_at,
+          updated_at: savedRecipe.updated_at
+        });
+        
+        console.log('✅ Recipe submission completed successfully');
+        
+      } catch (error) {
+        console.error('❌ Error adding recipe:', error);
+        
+        // Better error handling for mobile
+        let errorMessage = 'שגיאה בשמירת המתכון';
+        if (error instanceof Error) {
+          if (error.message.includes('network') || error.message.includes('fetch')) {
+            errorMessage = 'בעיית חיבור לאינטרנט. המתכון נשמר במכשיר ויסונכרן כשהחיבור יחזור.';
+          } else if (error.message.includes('timeout')) {
+            errorMessage = 'הבקשה לקחה זמן רב מדי. המתכון נשמר במכשיר ויסונכרן בהמשך.';
+          } else {
+            errorMessage = `שגיאה: ${error.message}`;
+          }
+        }
+        
+        alert(errorMessage);
+        
+        // Reset saving state
+        setIsSaving(false);
+      }
+    });
   };
 
   const handlePreviewAction = (action: 'view' | 'edit' | 'delete') => {
@@ -431,15 +444,17 @@ const AddRecipePage: React.FC = () => {
         navigate(`/edit/${previewRecipe.id}`);
         break;
       case 'delete':
-        // Delete the recipe and reset form
-        setPreviewRecipe(null);
-        setTitle('');
-        setCategory('');
-        setDifficulty('');
-        setIngredients(['']);
-        setDirections(['']);
-        setImages([]);
-        setAdditionalInstructions({});
+        executeProtectedAction(() => {
+          // Delete the recipe and reset form
+          setPreviewRecipe(null);
+          setTitle('');
+          setCategory('');
+          setDifficulty('');
+          setIngredients(['']);
+          setDirections(['']);
+          setImages([]);
+          setAdditionalInstructions({});
+        });
         break;
     }
   };
