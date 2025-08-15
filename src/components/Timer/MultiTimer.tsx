@@ -440,22 +440,12 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
                 <span className="text-2xl">⏰</span>
                 <h3 className="text-xl font-semibold text-gray-900">ניהול טיימרים</h3>
               </div>
-              <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                <button
-                  onClick={addTimer}
-                  disabled={timers.length >= 5}
-                  className="flex items-center space-x-2 rtl:space-x-reverse bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-                >
-                  <Plus className="h-4 w-4" />
-                  <span>הוסף טיימר</span>
-                </button>
-                <button
-                  onClick={handleClose}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                >
-                  <X className="h-5 w-5 text-gray-500" />
-                </button>
-              </div>
+              <button
+                onClick={handleClose}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
             </div>
           </div>
 
@@ -463,19 +453,19 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
           <div className="overflow-y-auto max-h-[calc(90vh-120px)]">
             <div className="p-6">
               {/* Global Time Selection */}
-              <div className="bg-gray-50 rounded-lg p-6 border border-gray-200 mb-6">
-                <h4 className="text-lg font-semibold text-gray-900 mb-4 text-center">בחירת זמן טיימר</h4>
+              <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 mb-6">
+                <h4 className="text-lg font-semibold text-gray-900 mb-3 text-center">בחירת זמן טיימר</h4>
                 
                 {/* Time Display */}
-                <div className="text-center mb-4">
-                  <div className="text-3xl font-mono font-bold text-gray-900 mb-4">
+                <div className="text-center mb-3">
+                  <div className="text-3xl font-mono font-bold text-gray-900 mb-3">
                     {globalHours > 0 ? `${globalHours.toString().padStart(2, '0')}:` : ''}
                     {globalMinutes.toString().padStart(2, '0')}:
                     {globalSeconds.toString().padStart(2, '0')}
                   </div>
                   
                   {/* Time Setters */}
-                  <div className="flex items-center justify-center space-x-6 rtl:space-x-reverse mb-4">
+                  <div className="flex items-center justify-center space-x-6 rtl:space-x-reverse mb-3">
                     <div className="flex flex-col items-center">
                       <button
                         onClick={() => updateGlobalTime('seconds', Math.min(59, globalSeconds + 15))}
@@ -483,7 +473,7 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
                       >
                         <Plus className="h-4 w-4" />
                       </button>
-                      <span className="text-sm text-gray-600 mx-2 py-2">שניות</span>
+                      <span className="text-sm text-gray-600 mx-2 py-1">שניות</span>
                       <button
                         onClick={() => updateGlobalTime('seconds', Math.max(0, globalSeconds - 15))}
                         className="p-2 hover:bg-gray-200 rounded-full transition-colors"
@@ -499,7 +489,7 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
                       >
                         <Plus className="h-4 w-4" />
                       </button>
-                      <span className="text-sm text-gray-600 mx-2 py-2">דקות</span>
+                      <span className="text-sm text-gray-600 mx-2 py-1">דקות</span>
                       <button
                         onClick={() => updateGlobalTime('minutes', Math.max(0, globalMinutes - 1))}
                         className="p-2 hover:bg-gray-200 rounded-full transition-colors"
@@ -515,7 +505,7 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
                       >
                         <Plus className="h-4 w-4" />
                       </button>
-                      <span className="text-sm text-gray-600 mx-2 py-2">שעות</span>
+                      <span className="text-sm text-gray-600 mx-2 py-1">שעות</span>
                       <button
                         onClick={() => updateGlobalTime('hours', Math.max(0, globalHours - 1))}
                         className="p-2 hover:bg-gray-200 rounded-full transition-colors"
@@ -524,33 +514,16 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
                       </button>
                     </div>
                   </div>
-
-                  {/* Quick Time Buttons */}
-                  <div className="grid grid-cols-4 gap-2 mb-4">
-                    {quickTimePresets.map((preset) => (
-                      <button
-                        key={preset.label}
-                        onClick={() => {
-                          setGlobalHours(preset.h);
-                          setGlobalMinutes(preset.m);
-                          setGlobalSeconds(preset.s);
-                        }}
-                        className="px-2 py-1 text-xs bg-gray-200 hover:bg-gray-300 rounded transition-colors"
-                      >
-                        {preset.label}
-                      </button>
-                    ))}
-                  </div>
                 </div>
-
+                
                 {/* Add Timer Button */}
                 <div className="text-center">
                   <button
                     onClick={addTimer}
-                    disabled={timers.length >= 5 || (globalHours === 0 && globalMinutes === 0 && globalSeconds === 0)}
-                    className="flex items-center justify-center space-x-2 rtl:space-x-reverse bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors mx-auto"
+                    disabled={timers.length >= 5}
+                    className="flex items-center space-x-2 rtl:space-x-reverse bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors mx-auto"
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-5 w-5" />
                     <span>הוסף טיימר</span>
                   </button>
                 </div>

@@ -116,15 +116,15 @@ const LandingPage: React.FC = () => {
                 onClick={() => handleNavigation('recipes')}
                 className="group cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-2xl"
               >
-                <div className="relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-md shadow-lg border border-white/30 p-4 md:p-6 hover:shadow-xl transition-all duration-300 hover:bg-white/90">
+                <div className="relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-md shadow-lg border border-white/30 p-3 md:p-6 hover:shadow-xl transition-all duration-300 hover:bg-white/90 max-w-sm md:max-w-none mx-auto md:mx-0">
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-600/10 group-hover:from-blue-500/20 group-hover:to-purple-600/20 transition-all duration-300"></div>
                   <div className="relative z-10">
-                    <div className="flex items-center space-x-3 md:space-x-4 rtl:space-x-reverse mb-3 md:mb-4">
+                    <div className="flex items-center space-x-3 md:space-x-4 rtl:space-x-reverse mb-2 md:mb-4">
                       <div className="p-2 md:p-3 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-lg">
-                        <BookOpen className="h-5 w-5 md:h-6 md:w-6" />
+                        <BookOpen className="h-4 w-4 md:h-6 md:w-6" />
                       </div>
                       <div>
-                        <h3 className="text-lg md:text-xl font-semibold text-gray-900 group-hover:text-gray-800 transition-colors">
+                        <h3 className="text-base md:text-xl font-semibold text-gray-900 group-hover:text-gray-800 transition-colors">
                           מתכונים
                         </h3>
                         <p className="text-xs md:text-sm text-gray-600 group-hover:text-gray-700 transition-colors">
@@ -143,15 +143,15 @@ const LandingPage: React.FC = () => {
                 onClick={() => handleNavigation('favorites')}
                 className="group cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-2xl"
               >
-                <div className="relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-md shadow-lg border border-white/30 p-4 md:p-6 hover:shadow-xl transition-all duration-300 hover:bg-white/90">
+                <div className="relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-md shadow-lg border border-white/30 p-3 md:p-6 hover:shadow-xl transition-all duration-300 hover:bg-white/90 max-w-sm md:max-w-none mx-auto md:mx-0">
                   <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-pink-600/10 group-hover:from-red-500/20 group-hover:to-pink-600/20 transition-all duration-300"></div>
                   <div className="relative z-10">
-                    <div className="flex items-center space-x-3 md:space-x-4 rtl:space-x-reverse mb-3 md:mb-4">
+                    <div className="flex items-center space-x-3 md:space-x-4 rtl:space-x-reverse mb-2 md:mb-4">
                       <div className="p-2 md:p-3 rounded-xl bg-gradient-to-br from-red-500 to-pink-600 text-white shadow-lg">
-                        <Heart className="h-5 w-5 md:h-6 md:w-6" />
+                        <Heart className="h-4 w-4 md:h-6 md:w-6" />
                       </div>
                       <div>
-                        <h3 className="text-lg md:text-xl font-semibold text-gray-900 group-hover:text-gray-800 transition-colors">
+                        <h3 className="text-base md:text-xl font-semibold text-gray-900 group-hover:text-gray-800 transition-colors">
                           מועדפים
                         </h3>
                         <p className="text-xs md:text-sm text-gray-600 group-hover:text-gray-700 transition-colors">
@@ -170,15 +170,15 @@ const LandingPage: React.FC = () => {
                 onClick={() => handleNavigation('categories')}
                 className="group cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-2xl"
               >
-                <div className="relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-md shadow-lg border border-white/30 p-4 md:p-6 hover:shadow-xl transition-all duration-300 hover:bg-white/90">
+                <div className="relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-md shadow-lg border border-white/30 p-3 md:p-6 hover:shadow-xl transition-all duration-300 hover:bg-white/90 max-w-sm md:max-w-none mx-auto md:mx-0">
                   <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-teal-600/10 group-hover:from-green-500/20 group-hover:to-teal-600/20 transition-all duration-300"></div>
                   <div className="relative z-10">
-                    <div className="flex items-center space-x-3 md:space-x-4 rtl:space-x-reverse mb-3 md:mb-4">
+                    <div className="flex items-center space-x-3 md:space-x-4 rtl:space-x-reverse mb-2 md:mb-4">
                       <div className="p-2 md:p-3 rounded-xl bg-gradient-to-br from-green-500 to-teal-600 text-white shadow-lg">
-                        <Layers className="h-5 w-5 md:h-6 md:w-6" />
+                        <Layers className="h-4 w-4 md:h-6 md:w-6" />
                       </div>
                       <div>
-                        <h3 className="text-lg md:text-xl font-semibold text-gray-900 group-hover:text-gray-800 transition-colors">
+                        <h3 className="text-base md:text-xl font-semibold text-gray-900 group-hover:text-gray-800 transition-colors">
                           קטגוריות
                         </h3>
                         <p className="text-xs md:text-sm text-gray-600 group-hover:text-gray-700 transition-colors">
@@ -197,15 +197,15 @@ const LandingPage: React.FC = () => {
                 onClick={() => handleNavigation('search')}
                 className="group cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-2xl"
               >
-                <div className="relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-md shadow-lg border border-white/30 p-4 md:p-6 hover:shadow-xl transition-all duration-300 hover:bg-white/90">
+                <div className="relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-md shadow-lg border border-white/30 p-3 md:p-6 hover:shadow-xl transition-all duration-300 hover:bg-white/90 max-w-sm md:max-w-none mx-auto md:mx-0">
                   <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-yellow-600/10 group-hover:from-orange-500/20 group-hover:to-yellow-600/20 transition-all duration-300"></div>
                   <div className="relative z-10">
-                    <div className="flex items-center space-x-3 md:space-x-4 rtl:space-x-reverse mb-3 md:mb-4">
+                    <div className="flex items-center space-x-3 md:space-x-4 rtl:space-x-reverse mb-2 md:mb-4">
                       <div className="p-2 md:p-3 rounded-xl bg-gradient-to-br from-orange-500 to-yellow-600 text-white shadow-lg">
-                        <Search className="h-5 w-5 md:h-6 md:w-6" />
+                        <Search className="h-4 w-4 md:h-6 md:w-6" />
                       </div>
                       <div>
-                        <h3 className="text-lg md:text-xl font-semibold text-gray-900 group-hover:text-gray-800 transition-colors">
+                        <h3 className="text-base md:text-xl font-semibold text-gray-900 group-hover:text-gray-800 transition-colors">
                           חיפוש
                         </h3>
                         <p className="text-xs md:text-sm text-gray-600 group-hover:text-gray-700 transition-colors">
