@@ -99,12 +99,12 @@ const Header: React.FC = () => {
 
           {/* Logo - Right side */}
           <Link 
-            to="/" 
+            to="/landing" 
             className="flex items-center"
             onClick={(e) => {
               e.preventDefault();
               resetFilters();
-              navigate('/');
+              navigate('/landing');
             }}
           >
             <div className="bg-primary-500 px-4 py-2 rounded-lg shadow-md border border-primary-600 h-10 flex items-center justify-center">

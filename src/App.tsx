@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { RecipeProvider } from './contexts/RecipeContext';
 import { AuthProvider } from './contexts/AuthContext';
 import Header from './components/Layout/Header';
+import LandingPage from './pages/LandingPage';
 import HomePage from './pages/HomePage';
 import RecipeDetailPage from './pages/RecipeDetailPage';
 import AddRecipePage from './pages/AddRecipePage';
@@ -35,6 +36,7 @@ function App() {
               <main>
                 <Routes>
                   <Route path="/" element={<HomePage />} />
+                  <Route path="/landing" element={<LandingPage />} />
                   <Route path="/recipe/:id" element={<RecipeDetailPage />} />
                   <Route path="/add" element={<AddRecipePage />} />
                   <Route path="/edit/:id" element={<EditRecipePage />} />

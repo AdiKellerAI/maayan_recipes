@@ -67,6 +67,38 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isInitialized, setIsInitialized] = useState(false);
   const location = useLocation();
 
+  // Handle URL parameters for navigation from landing page
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const favoritesParam = urlParams.get('favorites');
+    const categoryParam = urlParams.get('category');
+    const searchParam = urlParams.get('search');
+    
+    // Handle favorites parameter
+    if (favoritesParam === 'true') {
+      setShowFavoritesOnly(true);
+      setShowRecentOnly(false);
+      setSelectedCategory('');
+      setSearchQuery('');
+    }
+    
+    // Handle category parameter
+    if (categoryParam) {
+      setSelectedCategory(categoryParam);
+      setShowFavoritesOnly(false);
+      setShowRecentOnly(false);
+      setSearchQuery('');
+    }
+    
+    // Handle search parameter
+    if (searchParam) {
+      setSearchQuery(decodeURIComponent(searchParam));
+      setShowFavoritesOnly(false);
+      setShowRecentOnly(false);
+      setSelectedCategory('');
+    }
+  }, [location.search]);
+
   // Smart loading with caching and incremental updates
   const loadRecipes = async (forceRefresh = false) => {
     try {

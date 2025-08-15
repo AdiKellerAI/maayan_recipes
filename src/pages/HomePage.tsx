@@ -1,6 +1,6 @@
 import React from 'react';
 import { useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { Plus, ArrowUpDown } from 'lucide-react';
 import { useRecipes } from '../contexts/RecipeContext';
 import CategoryNav from '../components/Layout/CategoryNav';
@@ -13,6 +13,39 @@ const HomePage: React.FC = () => {
   const recipes = getFilteredRecipes();
   const selectedCategoryData = categories.find(c => c.id === selectedCategory);
   const [isSortOpen, setIsSortOpen] = React.useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Check if user came from landing page or has valid navigation
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const favoritesParam = urlParams.get('favorites');
+    const categoryParam = urlParams.get('category');
+    const searchParam = urlParams.get('search');
+    const recipesParam = urlParams.get('recipes');
+    
+    // Handle URL parameters
+    if (favoritesParam === 'true') {
+      // Set favorites filter
+      // This will be handled by the RecipeContext
+    } else if (categoryParam) {
+      // Set category filter
+      // This will be handled by the RecipeContext
+    } else if (searchParam) {
+      // Set search query
+      // This will be handled by the RecipeContext
+    } else if (recipesParam === 'true') {
+      // Show all recipes - no special filters needed
+    }
+    
+    const hasValidNavigation = searchQuery || showFavoritesOnly || showRecentOnly || selectedCategory || 
+                              favoritesParam || categoryParam || searchParam || recipesParam;
+    
+    // If no valid navigation and no direct access, redirect to landing
+    if (!hasValidNavigation && location.pathname === '/' && !location.search) {
+      navigate('/landing');
+    }
+  }, [navigate, location, searchQuery, showFavoritesOnly, showRecentOnly, selectedCategory]);
 
 
   return (
