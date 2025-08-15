@@ -50,6 +50,9 @@ const EditRecipePage: React.FC = () => {
       // If not authenticated, the modal will show
       // If authenticated, nothing happens and user can proceed
     });
+    
+    // Always scroll to top when page loads
+    window.scrollTo(0, 0);
   }, []);
 
   if (!recipe) {

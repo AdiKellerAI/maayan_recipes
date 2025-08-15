@@ -115,9 +115,9 @@ const LandingPage: React.FC = () => {
               {/* Logo Image */}
               <div className="flex justify-center">
                 <img 
-                  src="/logo_new.svg" 
+                  src="/site_logo.svg" 
                   alt="Maayan Kitchen Logo" 
-                  className="h-64 md:h-80 w-auto object-contain"
+                  className="h-52 md:h-64 w-auto object-contain"
                 />
               </div>
             </div>

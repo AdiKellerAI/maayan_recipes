@@ -11,6 +11,8 @@ const SearchResultsPage: React.FC = () => {
 
   useEffect(() => {
     setSearchQuery(query);
+    // Always scroll to top when search results page loads
+    window.scrollTo(0, 0);
     return () => setSearchQuery('');
   }, [query, setSearchQuery]);
 

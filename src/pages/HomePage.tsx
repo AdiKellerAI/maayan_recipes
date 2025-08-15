@@ -47,6 +47,12 @@ const HomePage: React.FC = () => {
     }
   }, [navigate, location, searchQuery, showFavoritesOnly, showRecentOnly, selectedCategory]);
 
+  // Separate useEffect for scrolling to top when URL parameters change
+  useEffect(() => {
+    // Always scroll to top when navigating to recipes page
+    window.scrollTo(0, 0);
+  }, [location.search]);
+
 
   return (
     <div className="min-h-screen">
