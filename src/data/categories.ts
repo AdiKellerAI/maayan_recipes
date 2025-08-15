@@ -11,7 +11,8 @@ export const categories: RecipeCategory[] = [
   { id: 'breakfast', name: 'ארוחות בוקר', icon: '🥚', description: '' },
   { id: 'sides', name: 'תוספות', icon: '🥘', description: '' },
   { id: 'sauces', name: 'רטבים', icon: '🥣', description: '' },
-  { id: 'healthy', name: 'בריא', icon: '🥑', description: '' }
+  { id: 'healthy', name: 'בריא', icon: '🥑', description: '' },
+  { id: 'drinks', name: 'משקאות', icon: '🥤', description: '' }
 ];
 
 export const getCategoryColor = (categoryId: string) => {
@@ -26,7 +27,8 @@ export const getCategoryColor = (categoryId: string) => {
     breakfast: 'bg-accent-100 text-accent-700',
     sides: 'bg-neutral-100 text-neutral-700',
     sauces: 'bg-orange-100 text-orange-700',
-    healthy: 'bg-green-100 text-green-700'
+    healthy: 'bg-green-100 text-green-700',
+    drinks: 'bg-blue-100 text-blue-700'
   };
   return colors[categoryId as keyof typeof colors] || 'bg-neutral-100 text-neutral-700';
 };
