@@ -50,12 +50,14 @@ const Header: React.FC = () => {
     setShowFavoritesOnly(!showFavoritesOnly);
     setShowRecentOnly(false);
     navigate('/');
+    setIsMenuOpen(false);
   };
 
   const toggleRecent = () => {
     setShowRecentOnly(!showRecentOnly);
     setShowFavoritesOnly(false);
     navigate('/');
+    setIsMenuOpen(false);
   };
 
   const clearFilters = () => {
@@ -72,7 +74,30 @@ const Header: React.FC = () => {
       <header className="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
+          {/* Menu Button - Left side for both mobile and desktop */}
+          <div className="flex items-center space-x-2 rtl:space-x-reverse">
+            <button
+              onClick={() => setIsMenuOpen(!isMenuOpen)}
+              className="p-2 rounded-lg transition-colors text-gray-600 hover:bg-gray-100"
+            >
+              <Menu className="h-6 w-6" />
+            </button>
+            
+            {/* Timer Button - Right to menu button */}
+            <button
+              onClick={() => {
+                // Open timer
+                const timerEvent = new CustomEvent('showTimer');
+                window.dispatchEvent(timerEvent);
+              }}
+              className="p-2 rounded-lg transition-colors text-gray-600 hover:bg-gray-100 hover:text-orange-600"
+              title="טיימר בישול"
+            >
+              <span className="text-xl">⏰</span>
+            </button>
+          </div>
+
+          {/* Logo - Right side */}
           <Link 
             to="/" 
             className="flex items-center"
@@ -106,20 +131,6 @@ const Header: React.FC = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-4 rtl:space-x-reverse">
-
-            <button
-              onClick={() => {
-                // Open timer for desktop
-                const timerEvent = new CustomEvent('showTimer');
-                window.dispatchEvent(timerEvent);
-              }}
-              className={`p-2 rounded-lg transition-colors transform active:scale-95 ${
-                'text-gray-600 hover:bg-gray-100 hover:text-orange-600'
-              }`}
-              title="טיימר בישול"
-            >
-              <span className="text-xl">⏰</span>
-            </button>
 
             <button
               onClick={toggleFavorites}
@@ -215,118 +226,68 @@ const Header: React.FC = () => {
             </button>
             
           </div>
-
-          {/* Mobile Menu Button */}
-          {/* Mobile Icons - Always Visible */}
-          <div className="md:hidden flex items-center space-x-2 rtl:space-x-reverse">
-
-            <button
-              onClick={() => {
-                // Open timer for mobile
-                const timerEvent = new CustomEvent('showTimer');
-                window.dispatchEvent(timerEvent);
-              }}
-              className="p-2 rounded-lg transition-colors transform active:scale-95 text-gray-600 hover:bg-gray-100 hover:text-orange-600 timer-button"
-              title="טיימר בישול"
-            >
-              <span className="text-xl">⏰</span>
-            </button>
-
-            <button
-              onClick={toggleFavorites}
-              className={`p-2 rounded-lg transition-colors transform active:scale-95 ${
-                showFavoritesOnly 
-                  ? 'bg-red-100 text-red-600' 
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-              title="מתכונים מועדפים"
-            >
-              <Heart className={`h-5 w-5 ${showFavoritesOnly ? 'fill-current' : ''}`} />
-            </button>
-
-            <button
-              onClick={(e) => { e.stopPropagation(); setIsFilterOpen(!isFilterOpen); }}
-              className={`p-2 rounded-lg transition-colors relative transform active:scale-95 ${
-                hasActiveFilters || isFilterOpen
-                  ? 'bg-primary-100 text-primary-600' 
-                  : 'text-gray-600 hover:bg-gray-100'
-              }`}
-              title="סינון מתכונים"
-            >
-              <Filter className="h-5 w-5" />
-              {hasActiveFilters && (
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></div>
-              )}
-            </button>
-
-            <button
-              onClick={() => executeProtectedAction(() => navigate('/add'))}
-              className="bg-primary-500 text-white p-2 rounded-lg hover:bg-primary-600 active:bg-primary-700 transition-colors transform active:scale-95"
-              title="הוספת מתכון"
-            >
-              <Plus className="h-5 w-5" />
-            </button>
-          </div>
-
-
-          {/* Mobile Filter Dropdown */}
-          {isFilterOpen && (
-            <div className="md:hidden absolute top-full left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50 max-h-[70vh] overflow-y-auto">
-              <div className="p-4 space-y-4">
-                <h4 className="text-base font-semibold text-gray-800 mb-3">סינון</h4>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">רמת קושי</label>
-                  <select
-                    value={difficultyFilter}
-                    onChange={(e) => setDifficultyFilter(e.target.value)}
-                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base bg-white"
-                  >
-                    <option value="">כל הרמות</option>
-                    <option value="קל">קל</option>
-                    <option value="בינוני">בינוני</option>
-                    <option value="קשה">קשה</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">תמונות</label>
-                  <select
-                    value={imageFilter}
-                    onChange={(e) => setImageFilter(e.target.value)}
-                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base bg-white"
-                  >
-                    <option value="">הכל</option>
-                    <option value="with">עם תמונות</option>
-                    <option value="without">ללא תמונות</option>
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">קמח</label>
-                  <select
-                    value={flourFilter}
-                    onChange={(e) => setFlourFilter(e.target.value)}
-                    className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base bg-white"
-                  >
-                    <option value="">הכל</option>
-                    <option value="with">עם קמח</option>
-                    <option value="without">ללא קמח</option>
-                  </select>
-                </div>
-                
-                {hasActiveFilters && (
-                  <button
-                    onClick={clearFilters}
-                    className="w-full px-3 py-3 text-base text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                  >
-                    נקה פילטרים
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
         </div>
 
+        {/* Mobile Menu Overlay */}
+        {isMenuOpen && (
+          <div className="md:hidden absolute top-full left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
+            <div className="p-4 space-y-4">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-lg font-semibold text-gray-800">תפריט</h4>
+                <button
+                  onClick={() => setIsMenuOpen(false)}
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                >
+                  <X className="h-5 w-5 text-gray-500" />
+                </button>
+              </div>
+              
+              {/* Add Recipe Button */}
+              <button
+                onClick={() => {
+                  executeProtectedAction(() => navigate('/add'));
+                  setIsMenuOpen(false);
+                }}
+                className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse bg-primary-500 text-white py-3 px-4 rounded-lg hover:bg-primary-600 transition-colors"
+              >
+                <Plus className="h-5 w-5" />
+                <span>הוספת מתכון</span>
+              </button>
+              
+              {/* Favorites Button */}
+              <button
+                onClick={toggleFavorites}
+                className={`w-full flex items-center justify-center space-x-2 rtl:space-x-reverse py-3 px-4 rounded-lg transition-colors ${
+                  showFavoritesOnly 
+                    ? 'bg-red-100 text-red-600' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <Heart className={`h-5 w-5 ${showFavoritesOnly ? 'fill-current' : ''}`} />
+                <span>מועדפים</span>
+              </button>
+              
+              {/* Filter Button */}
+              <button
+                onClick={() => {
+                  setIsFilterOpen(!isFilterOpen);
+                  setIsMenuOpen(false);
+                }}
+                className={`w-full flex items-center justify-center space-x-2 rtl:space-x-reverse py-3 px-4 rounded-lg transition-colors ${
+                  hasActiveFilters
+                    ? 'bg-primary-100 text-primary-600' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                <Filter className="h-5 w-5" />
+                <span>סינון מתכונים</span>
+                {hasActiveFilters && (
+                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Fixed Mobile Search Bar */}
@@ -357,12 +318,67 @@ const Header: React.FC = () => {
       
       {/* Mobile Filter Overlay - Separate from desktop */}
       {isFilterOpen && (
-        <div 
-          className="fixed inset-0 bg-black bg-opacity-25 z-30 md:hidden"
-          onClick={() => {
-            setIsFilterOpen(false);
-          }}
-        />
+        <div className="md:hidden absolute top-full left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50 max-h-[70vh] overflow-y-auto">
+          <div className="p-4 space-y-4">
+            <div className="flex items-center justify-between mb-4">
+              <h4 className="text-base font-semibold text-gray-800">סינון מתכונים</h4>
+              <button
+                onClick={() => setIsFilterOpen(false)}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">רמת קושי</label>
+              <select
+                value={difficultyFilter}
+                onChange={(e) => setDifficultyFilter(e.target.value)}
+                className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base bg-white"
+              >
+                <option value="">כל הרמות</option>
+                <option value="קל">קל</option>
+                <option value="בינוני">בינוני</option>
+                <option value="קשה">קשה</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">תמונות</label>
+              <select
+                value={imageFilter}
+                onChange={(e) => setImageFilter(e.target.value)}
+                className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base bg-white"
+              >
+                <option value="">הכל</option>
+                <option value="with">עם תמונות</option>
+                <option value="without">ללא תמונות</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">קמח</label>
+              <select
+                value={flourFilter}
+                onChange={(e) => setFlourFilter(e.target.value)}
+                className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base bg-white"
+              >
+                <option value="">הכל</option>
+                <option value="with">עם קמח</option>
+                <option value="without">ללא קמח</option>
+              </select>
+            </div>
+            
+            {hasActiveFilters && (
+              <button
+                onClick={clearFilters}
+                className="w-full px-3 py-3 text-base text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+              >
+                נקה פילטרים
+              </button>
+            )}
+          </div>
+        </div>
       )}
     </>
   );

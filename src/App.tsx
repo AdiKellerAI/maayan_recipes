@@ -9,7 +9,7 @@ import AddRecipePage from './pages/AddRecipePage';
 import EditRecipePage from './pages/EditRecipePage';
 import SearchResultsPage from './pages/SearchResultsPage';
 import ErrorBoundary from './components/ErrorBoundary';
-import CookingTimer from './components/Timer/CookingTimer';
+import MultiTimer from './components/Timer/MultiTimer';
 import AuthModal from './components/AuthModal';
 
 function App() {
@@ -42,8 +42,8 @@ function App() {
                 </Routes>
               </main>
               
-              {/* Global Cooking Timer */}
-              <CookingTimer
+              {/* Global Multi Timer */}
+              <MultiTimer
                 isVisible={showTimer}
                 onClose={() => setShowTimer(false)}
               />
