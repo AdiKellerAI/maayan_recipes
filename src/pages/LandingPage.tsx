@@ -49,33 +49,33 @@ const LandingPage: React.FC = () => {
       {/* Background Decorative Circles - Redistributed */}
       <div className="absolute inset-0 pointer-events-none">
         {/* Top left area */}
-        <div className="absolute top-12 left-16 w-14 h-14 bg-orange-200 rounded-full opacity-40 animate-pulse"></div>
-        <div className="absolute top-24 left-8 w-8 h-8 bg-yellow-200 rounded-full opacity-35 animate-pulse delay-500"></div>
+        <div className="absolute top-12 left-16 w-14 h-14 bg-orange-200 rounded-full opacity-40 animate-pulse animate-float-slow"></div>
+        <div className="absolute top-24 left-8 w-8 h-8 bg-yellow-200 rounded-full opacity-35 animate-pulse delay-500 animate-float-slow-delayed"></div>
         
         {/* Top right area */}
-        <div className="absolute top-20 right-20 w-16 h-16 bg-red-200 rounded-full opacity-50 animate-pulse delay-700"></div>
-        <div className="absolute top-32 right-12 w-6 h-6 bg-pink-200 rounded-full opacity-45 animate-pulse delay-300"></div>
+        <div className="absolute top-20 right-20 w-16 h-16 bg-red-200 rounded-full opacity-50 animate-pulse delay-700 animate-float-medium"></div>
+        <div className="absolute top-32 right-12 w-6 h-6 bg-pink-200 rounded-full opacity-45 animate-pulse delay-300 animate-float-fast"></div>
         
         {/* Middle left area */}
-        <div className="absolute top-1/2 left-24 w-12 h-12 bg-blue-200 rounded-full opacity-60 animate-pulse delay-1000"></div>
-        <div className="absolute top-2/3 left-16 w-10 h-10 bg-indigo-200 rounded-full opacity-40 animate-pulse delay-400"></div>
+        <div className="absolute top-1/2 left-24 w-12 h-12 bg-blue-200 rounded-full opacity-60 animate-pulse delay-1000 animate-float-slow"></div>
+        <div className="absolute top-2/3 left-16 w-10 h-10 bg-indigo-200 rounded-full opacity-40 animate-pulse delay-400 animate-float-medium-delayed"></div>
         
         {/* Middle right area */}
-        <div className="absolute top-1/3 right-32 w-18 h-18 bg-green-200 rounded-full opacity-35 animate-pulse delay-800"></div>
-        <div className="absolute top-3/4 right-20 w-8 h-8 bg-teal-200 rounded-full opacity-50 animate-pulse delay-600"></div>
+        <div className="absolute top-1/3 right-32 w-18 h-18 bg-green-200 rounded-full opacity-35 animate-pulse delay-800 animate-float-slow-delayed"></div>
+        <div className="absolute top-3/4 right-20 w-8 h-8 bg-teal-200 rounded-full opacity-50 animate-pulse delay-600 animate-float-fast-delayed"></div>
         
         {/* Bottom left area */}
-        <div className="absolute bottom-28 left-20 w-16 h-16 bg-purple-200 rounded-full opacity-45 animate-pulse delay-900"></div>
-        <div className="absolute bottom-16 left-32 w-10 h-10 bg-amber-200 rounded-full opacity-30 animate-pulse delay-1200"></div>
+        <div className="absolute bottom-28 left-20 w-16 h-16 bg-purple-200 rounded-full opacity-45 animate-pulse delay-900 animate-float-medium"></div>
+        <div className="absolute bottom-16 left-32 w-10 h-10 bg-amber-200 rounded-full opacity-30 animate-pulse delay-1200 animate-float-slow"></div>
         
         {/* Bottom right area */}
-        <div className="absolute bottom-24 right-16 w-12 h-12 bg-cyan-200 rounded-full opacity-40 animate-pulse delay-1100"></div>
-        <div className="absolute bottom-36 right-28 w-14 h-14 bg-rose-200 rounded-full opacity-35 animate-pulse delay-700"></div>
+        <div className="absolute bottom-24 right-16 w-12 h-12 bg-cyan-200 rounded-full opacity-40 animate-pulse delay-1100 animate-float-fast"></div>
+        <div className="absolute bottom-36 right-28 w-14 h-14 bg-rose-200 rounded-full opacity-35 animate-pulse delay-700 animate-float-medium-delayed"></div>
         
         {/* Center floating circles */}
-        <div className="absolute top-40 left-1/3 w-6 h-6 bg-slate-200 rounded-full opacity-50 animate-pulse delay-400"></div>
-        <div className="absolute top-60 right-1/3 w-8 h-8 bg-emerald-200 rounded-full opacity-40 animate-pulse delay-800"></div>
-        <div className="absolute top-80 left-1/2 transform -translate-x-1/2 w-10 h-10 bg-violet-200 rounded-full opacity-45 animate-pulse delay-600"></div>
+        <div className="absolute top-40 left-1/3 w-6 h-6 bg-slate-200 rounded-full opacity-50 animate-pulse delay-400 animate-float-slow"></div>
+        <div className="absolute top-60 right-1/3 w-8 h-8 bg-emerald-200 rounded-full opacity-40 animate-pulse delay-800 animate-float-medium"></div>
+        <div className="absolute top-80 left-1/2 transform -translate-x-1/2 w-10 h-10 bg-violet-200 rounded-full opacity-45 animate-pulse delay-600 animate-float-fast"></div>
       </div>
 
       {/* Hero Section */}
@@ -120,8 +120,8 @@ const LandingPage: React.FC = () => {
                   <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-600/10 group-hover:from-blue-500/20 group-hover:to-purple-600/20 transition-all duration-300"></div>
                   <div className="relative z-10">
                     <div className="flex items-center space-x-3 md:space-x-4 rtl:space-x-reverse mb-2 md:mb-4">
-                      <div className="p-2 md:p-3 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-lg">
-                        <BookOpen className="h-4 w-4 md:h-6 md:w-6" />
+                      <div className="p-1.5 md:p-3 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-lg">
+                        <BookOpen className="h-3 w-3 md:h-6 md:w-6" />
                       </div>
                       <div>
                         <h3 className="text-base md:text-xl font-semibold text-gray-900 group-hover:text-gray-800 transition-colors">
@@ -147,8 +147,8 @@ const LandingPage: React.FC = () => {
                   <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-pink-600/10 group-hover:from-red-500/20 group-hover:to-pink-600/20 transition-all duration-300"></div>
                   <div className="relative z-10">
                     <div className="flex items-center space-x-3 md:space-x-4 rtl:space-x-reverse mb-2 md:mb-4">
-                      <div className="p-2 md:p-3 rounded-xl bg-gradient-to-br from-red-500 to-pink-600 text-white shadow-lg">
-                        <Heart className="h-4 w-4 md:h-6 md:w-6" />
+                      <div className="p-1.5 md:p-3 rounded-xl bg-gradient-to-br from-red-500 to-pink-600 text-white shadow-lg">
+                        <Heart className="h-3 w-3 md:h-6 md:w-6" />
                       </div>
                       <div>
                         <h3 className="text-base md:text-xl font-semibold text-gray-900 group-hover:text-gray-800 transition-colors">
@@ -174,8 +174,8 @@ const LandingPage: React.FC = () => {
                   <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-teal-600/10 group-hover:from-green-500/20 group-hover:to-teal-600/20 transition-all duration-300"></div>
                   <div className="relative z-10">
                     <div className="flex items-center space-x-3 md:space-x-4 rtl:space-x-reverse mb-2 md:mb-4">
-                      <div className="p-2 md:p-3 rounded-xl bg-gradient-to-br from-green-500 to-teal-600 text-white shadow-lg">
-                        <Layers className="h-4 w-4 md:h-6 md:w-6" />
+                      <div className="p-1.5 md:p-3 rounded-xl bg-gradient-to-br from-green-500 to-teal-600 text-white shadow-lg">
+                        <Layers className="h-3 w-3 md:h-6 md:w-6" />
                       </div>
                       <div>
                         <h3 className="text-base md:text-xl font-semibold text-gray-900 group-hover:text-gray-800 transition-colors">
@@ -201,8 +201,8 @@ const LandingPage: React.FC = () => {
                   <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-yellow-600/10 group-hover:from-orange-500/20 group-hover:to-yellow-600/20 transition-all duration-300"></div>
                   <div className="relative z-10">
                     <div className="flex items-center space-x-3 md:space-x-4 rtl:space-x-reverse mb-2 md:mb-4">
-                      <div className="p-2 md:p-3 rounded-xl bg-gradient-to-br from-orange-500 to-yellow-600 text-white shadow-lg">
-                        <Search className="h-4 w-4 md:h-6 md:w-6" />
+                      <div className="p-1.5 md:p-3 rounded-xl bg-gradient-to-br from-orange-500 to-yellow-600 text-white shadow-lg">
+                        <Search className="h-3 w-3 md:h-6 md:w-6" />
                       </div>
                       <div>
                         <h3 className="text-base md:text-xl font-semibold text-gray-900 group-hover:text-gray-800 transition-colors">
@@ -224,7 +224,7 @@ const LandingPage: React.FC = () => {
           {/* Welcome Message */}
           <div className="mt-12 text-center">
             <p className="text-gray-600 text-lg font-medium">
-              ברוכים הבאים למטבח הביתי שלכם
+              ברוכים הבאים למטבח הביתי שלי
             </p>
             <p className="text-gray-500 text-sm mt-2">
               בחרו באחת האפשרויות למעלה כדי להתחיל
@@ -301,7 +301,7 @@ const LandingPage: React.FC = () => {
                   <X className="h-6 w-6 text-gray-600" />
                 </button>
               </div>
-              <div className="relative">
+              <div className="mb-4">
                 <input
                   type="text"
                   value={searchQuery}
@@ -311,11 +311,13 @@ const LandingPage: React.FC = () => {
                   className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-lg"
                   autoFocus
                 />
+              </div>
+              <div className="text-center">
                 <button
                   onClick={() => handleSearch(searchQuery)}
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 p-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+                  className="bg-gradient-to-r from-orange-500 to-yellow-600 text-white px-8 py-3 rounded-xl hover:from-orange-600 hover:to-yellow-700 transition-all duration-300 font-medium text-lg shadow-lg"
                 >
-                  <Search className="h-5 w-5" />
+                  חפש מתכונים
                 </button>
               </div>
               <div className="mt-4 text-center">

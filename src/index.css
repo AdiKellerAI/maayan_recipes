@@ -65,6 +65,61 @@ body {
   }
 }
 
+/* Floating animations for background circles */
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes floatMedium {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
+}
+
+@keyframes floatFast {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes floatSlowDelayed {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-18px);
+  }
+}
+
+@keyframes floatMediumDelayed {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-12px);
+  }
+}
+
+@keyframes floatFastDelayed {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
 .fade-in {
   animation: fadeIn 0.3s ease-out;
 }
@@ -75,6 +130,31 @@ body {
 
 .animate-slideUp {
   animation: slideUp 0.4s ease-out both;
+}
+
+/* Floating animations */
+.animate-float-slow {
+  animation: floatSlow 6s ease-in-out infinite;
+}
+
+.animate-float-medium {
+  animation: floatMedium 5s ease-in-out infinite;
+}
+
+.animate-float-fast {
+  animation: floatFast 4s ease-in-out infinite;
+}
+
+.animate-float-slow-delayed {
+  animation: floatSlowDelayed 6s ease-in-out infinite 1s;
+}
+
+.animate-float-medium-delayed {
+  animation: floatMediumDelayed 5s ease-in-out infinite 0.5s;
+}
+
+.animate-float-fast-delayed {
+  animation: floatFastDelayed 4s ease-in-out infinite 0.8s;
 }
 
 /* Enhanced hover effects */

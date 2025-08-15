@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { Search, Heart, Plus, Menu, X, Clock, ChefHat, Filter, Database, ArrowUpDown, Timer } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Search, Heart, Plus, Filter, Menu, X, ChefHat } from 'lucide-react';
 import { useRecipes } from '../../contexts/RecipeContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { useProtectedAction } from '../../hooks/useProtectedAction';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 const Header: React.FC = () => {
   const { 
@@ -28,6 +29,14 @@ const Header: React.FC = () => {
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   const navigate = useNavigate();
   const { executeProtectedAction } = useProtectedAction();
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.pathname === '/landing') {
+      setSearchQuery('');
+      setLocalSearchQuery('');
+    }
+  }, [location.pathname, setSearchQuery]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,18 +125,20 @@ const Header: React.FC = () => {
           </Link>
 
           {/* Fixed Search Bar - Desktop */}
-          <div className="hidden md:flex flex-1 max-w-md mx-8">
-            <form onSubmit={handleSearch} className="relative w-full">
-              <input
-                type="text"
-                value={localSearchQuery}
-                onChange={handleSearchChange}
-                placeholder="חפש מתכונים..."
-                className="w-full pl-10 pr-4 rtl:pl-4 rtl:pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
-              />
-              <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-2.5 h-4 w-4 text-gray-400" />
-            </form>
-          </div>
+          {location.pathname !== '/landing' && (
+            <div className="hidden md:flex flex-1 max-w-md mx-8">
+              <form onSubmit={handleSearch} className="relative w-full">
+                <input
+                  type="text"
+                  value={localSearchQuery}
+                  onChange={handleSearchChange}
+                  placeholder="חפש מתכונים..."
+                  className="w-full pl-10 pr-4 rtl:pl-4 rtl:pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
+                />
+                <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-2.5 h-4 w-4 text-gray-400" />
+              </form>
+            </div>
+          )}
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-4 rtl:space-x-reverse">
@@ -291,18 +302,20 @@ const Header: React.FC = () => {
       </div>
 
       {/* Fixed Mobile Search Bar */}
-      <div className="md:hidden bg-white border-b border-gray-200 px-4 py-1.5">
-        <form onSubmit={handleSearch} className="relative">
-          <input
-            type="text"
-            value={localSearchQuery}
-            onChange={handleSearchChange}
-            placeholder="חפש מתכונים..."
-            className="w-full pl-10 pr-4 rtl:pl-4 rtl:pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
-          />
-          <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-2.5 h-4 w-4 text-gray-400" />
-        </form>
-      </div>
+      {location.pathname !== '/landing' && (
+        <div className="md:hidden bg-white border-b border-gray-200 px-4 py-1.5">
+          <form onSubmit={handleSearch} className="relative">
+            <input
+              type="text"
+              value={localSearchQuery}
+              onChange={handleSearchChange}
+              placeholder="חפש מתכונים..."
+              className="w-full pl-10 pr-4 rtl:pl-4 rtl:pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent bg-gray-50 focus:bg-white transition-colors"
+            />
+            <Search className="absolute left-3 rtl:left-auto rtl:right-3 top-2.5 h-4 w-4 text-gray-400" />
+          </form>
+        </div>
+      )}
       
       {/* Click outside to close filters */}
       {(isFilterOpen || isMenuOpen) && (
