@@ -65,113 +65,231 @@ body {
   }
 }
 
-/* Floating animations for background circles */
+/* Floating animations for background circles - Enhanced with larger movement range */
 @keyframes floatSlow {
   0%, 100% {
-    transform: translateY(0px);
+    transform: translateY(0px) translateX(0px);
+  }
+  25% {
+    transform: translateY(-25px) translateX(-5px);
   }
   50% {
-    transform: translateY(-20px);
+    transform: translateY(-35px) translateX(0px);
+  }
+  75% {
+    transform: translateY(-20px) translateX(5px);
   }
 }
 
 @keyframes floatMedium {
   0%, 100% {
-    transform: translateY(0px);
+    transform: translateY(0px) translateX(0px);
+  }
+  25% {
+    transform: translateY(-20px) translateX(-3px);
   }
   50% {
-    transform: translateY(-15px);
+    transform: translateY(-30px) translateX(0px);
+  }
+  75% {
+    transform: translateY(-15px) translateX(3px);
   }
 }
 
 @keyframes floatFast {
   0%, 100% {
-    transform: translateY(0px);
+    transform: translateY(0px) translateX(0px);
+  }
+  25% {
+    transform: translateY(-15px) translateX(-2px);
   }
   50% {
-    transform: translateY(-10px);
+    transform: translateY(-25px) translateX(0px);
+  }
+  75% {
+    transform: translateY(-10px) translateX(2px);
   }
 }
 
 @keyframes floatSlowDelayed {
   0%, 100% {
-    transform: translateY(0px);
+    transform: translateY(0px) translateX(0px);
+  }
+  25% {
+    transform: translateY(-22px) translateX(-4px);
   }
   50% {
-    transform: translateY(-18px);
+    transform: translateY(-32px) translateX(0px);
+  }
+  75% {
+    transform: translateY(-18px) translateX(4px);
   }
 }
 
 @keyframes floatMediumDelayed {
   0%, 100% {
-    transform: translateY(0px);
+    transform: translateY(0px) translateX(0px);
+  }
+  25% {
+    transform: translateY(-18px) translateX(-2px);
   }
   50% {
-    transform: translateY(-12px);
+    transform: translateY(-28px) translateX(0px);
+  }
+  75% {
+    transform: translateY(-12px) translateX(2px);
   }
 }
 
 @keyframes floatFastDelayed {
   0%, 100% {
-    transform: translateY(0px);
+    transform: translateY(0px) translateX(0px);
+  }
+  25% {
+    transform: translateY(-12px) translateX(-1px);
   }
   50% {
-    transform: translateY(-8px);
+    transform: translateY(-22px) translateX(0px);
+  }
+  75% {
+    transform: translateY(-8px) translateX(1px);
   }
 }
 
-/* Additional random speed animations */
+/* Additional random speed animations - Enhanced with larger movement range */
 @keyframes floatRandom1 {
   0%, 100% {
-    transform: translateY(0px);
+    transform: translateY(0px) translateX(0px);
+  }
+  25% {
+    transform: translateY(-18px) translateX(-3px);
   }
   50% {
-    transform: translateY(-13px);
+    transform: translateY(-28px) translateX(0px);
+  }
+  75% {
+    transform: translateY(-15px) translateX(3px);
   }
 }
 
 @keyframes floatRandom2 {
   0%, 100% {
-    transform: translateY(0px);
+    transform: translateY(0px) translateX(0px);
+  }
+  25% {
+    transform: translateY(-24px) translateX(-4px);
   }
   50% {
-    transform: translateY(-17px);
+    transform: translateY(-34px) translateX(0px);
+  }
+  75% {
+    transform: translateY(-20px) translateX(4px);
   }
 }
 
 @keyframes floatRandom3 {
   0%, 100% {
-    transform: translateY(0px);
+    transform: translateY(0px) translateX(0px);
+  }
+  25% {
+    transform: translateY(-16px) translateX(-2px);
   }
   50% {
-    transform: translateY(-11px);
+    transform: translateY(-26px) translateX(0px);
+  }
+  75% {
+    transform: translateY(-12px) translateX(2px);
   }
 }
 
 @keyframes floatRandom4 {
   0%, 100% {
-    transform: translateY(0px);
+    transform: translateY(0px) translateX(0px);
+  }
+  25% {
+    transform: translateY(-26px) translateX(-5px);
   }
   50% {
-    transform: translateY(-19px);
+    transform: translateY(-36px) translateX(0px);
+  }
+  75% {
+    transform: translateY(-22px) translateX(5px);
   }
 }
 
 @keyframes floatRandom5 {
   0%, 100% {
-    transform: translateY(0px);
+    transform: translateY(0px) translateX(0px);
+  }
+  25% {
+    transform: translateY(-19px) translateX(-3px);
   }
   50% {
-    transform: translateY(-14px);
+    transform: translateY(-29px) translateX(0px);
+  }
+  75% {
+    transform: translateY(-16px) translateX(3px);
   }
 }
 
 @keyframes floatRandom6 {
   0%, 100% {
-    transform: translateY(0px);
+    transform: translateY(0px) translateX(0px);
+  }
+  25% {
+    transform: translateY(-23px) translateX(-4px);
   }
   50% {
-    transform: translateY(-16px);
+    transform: translateY(-33px) translateX(0px);
+  }
+  75% {
+    transform: translateY(-19px) translateX(4px);
+  }
+}
+
+/* New ultra-fast animations for variety */
+@keyframes floatUltraFast1 {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px);
+  }
+  25% {
+    transform: translateY(-8px) translateX(-1px);
+  }
+  50% {
+    transform: translateY(-18px) translateX(0px);
+  }
+  75% {
+    transform: translateY(-5px) translateX(1px);
+  }
+}
+
+@keyframes floatUltraFast2 {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px);
+  }
+  25% {
+    transform: translateY(-6px) translateX(-1px);
+  }
+  50% {
+    transform: translateY(-16px) translateX(0px);
+  }
+  75% {
+    transform: translateY(-4px) translateX(1px);
+  }
+}
+
+@keyframes floatUltraFast3 {
+  0%, 100% {
+    transform: translateY(0px) translateX(0px);
+  }
+  25% {
+    transform: translateY(-10px) translateX(-2px);
+  }
+  50% {
+    transform: translateY(-20px) translateX(0px);
+  }
+  75% {
+    transform: translateY(-7px) translateX(2px);
   }
 }
 
@@ -235,6 +353,19 @@ body {
 
 .animate-float-random6 {
   animation: floatRandom6 5.8s ease-in-out infinite;
+}
+
+/* New ultra-fast animations for variety */
+.animate-float-ultra-fast1 {
+  animation: floatUltraFast1 2.5s ease-in-out infinite;
+}
+
+.animate-float-ultra-fast2 {
+  animation: floatUltraFast2 2.8s ease-in-out infinite;
+}
+
+.animate-float-ultra-fast3 {
+  animation: floatUltraFast3 2.2s ease-in-out infinite;
 }
 
 /* Enhanced hover effects */

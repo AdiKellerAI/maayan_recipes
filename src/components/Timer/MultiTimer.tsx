@@ -416,7 +416,7 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
           <div key={timer.id} className="flex-shrink-0">
             <div 
               className={`bg-gradient-to-br from-orange-500/60 to-red-500/60 rounded-full shadow-2xl border border-orange-300/50 backdrop-blur-md cursor-pointer hover:scale-105 transition-all duration-200 p-3 ${
-                timer.isRunning ? 'from-orange-500/40 to-red-500/40' : ''
+                timer.isRunning ? 'from-orange-500/90 to-orange-500/90' : ''
               }`}
               onClick={() => {
                 setHighlightedTimerId(timer.id);

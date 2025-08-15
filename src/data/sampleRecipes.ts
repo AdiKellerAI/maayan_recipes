@@ -358,7 +358,7 @@ export const sampleRecipes: RecipeInsert[] = [
   },
   {
     title: 'קארי ירקות צמחוני',
-    category: 'vegetarian',
+    category: 'healthy',
     ingredients: [
       '2 בטטות',
       '1 כרובית',
@@ -421,7 +421,7 @@ export const sampleRecipes: RecipeInsert[] = [
   },
   {
     title: 'חומוס ביתי עם טחינה',
-    category: 'sides',
+    category: 'sauces',
     ingredients: [
       '2 כוסות חומוס יבש',
       '1/2 כוס טחינה גולמית',

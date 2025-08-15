@@ -46,31 +46,31 @@ const LandingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
-      {/* Background Decorative Circles - Redistributed */}
+      {/* Background Decorative Circles - Enhanced with larger movement range and varied speeds */}
       <div className="absolute inset-0 pointer-events-none">
         {/* Top left area */}
         <div className="absolute top-12 left-16 w-14 h-14 bg-orange-200 rounded-full opacity-40 animate-pulse animate-float-slow shadow-lg"></div>
         <div className="absolute top-24 left-8 w-8 h-8 bg-yellow-200 rounded-full opacity-35 animate-pulse delay-500 animate-float-slow-delayed shadow-lg"></div>
         <div className="absolute top-8 left-32 w-12 h-12 bg-amber-200 rounded-full opacity-45 animate-pulse delay-300 animate-float-medium shadow-lg"></div>
-        <div className="absolute top-36 left-4 w-6 h-6 bg-orange-100 rounded-full opacity-50 animate-pulse delay-800 animate-float-fast shadow-lg"></div>
+        <div className="absolute top-36 left-4 w-6 h-6 bg-orange-100 rounded-full opacity-50 animate-pulse delay-800 animate-float-ultra-fast1 shadow-lg"></div>
         
         {/* Top right area */}
         <div className="absolute top-20 right-20 w-16 h-16 bg-red-200 rounded-full opacity-50 animate-pulse delay-700 animate-float-medium shadow-lg"></div>
-        <div className="absolute top-32 right-12 w-6 h-6 bg-pink-200 rounded-full opacity-45 animate-pulse delay-300 animate-float-fast shadow-lg"></div>
+        <div className="absolute top-32 right-12 w-6 h-6 bg-pink-200 rounded-full opacity-45 animate-pulse delay-300 animate-float-ultra-fast2 shadow-lg"></div>
         <div className="absolute top-16 right-36 w-10 h-10 bg-rose-200 rounded-full opacity-40 animate-pulse delay-600 animate-float-slow shadow-lg"></div>
         <div className="absolute top-44 right-8 w-8 h-8 bg-red-100 rounded-full opacity-55 animate-pulse delay-1000 animate-float-medium-delayed shadow-lg"></div>
         
         {/* Middle left area */}
         <div className="absolute top-1/2 left-24 w-12 h-12 bg-blue-200 rounded-full opacity-60 animate-pulse delay-1000 animate-float-slow shadow-lg"></div>
         <div className="absolute top-2/3 left-16 w-10 h-10 bg-indigo-200 rounded-full opacity-40 animate-pulse delay-400 animate-float-medium-delayed shadow-lg"></div>
-        <div className="absolute top-1/3 left-40 w-14 h-14 bg-sky-200 rounded-full opacity-35 animate-pulse delay-700 animate-float-fast shadow-lg"></div>
+        <div className="absolute top-1/3 left-40 w-14 h-14 bg-sky-200 rounded-full opacity-35 animate-pulse delay-700 animate-float-ultra-fast3 shadow-lg"></div>
         <div className="absolute top-3/4 left-8 w-7 h-7 bg-blue-100 rounded-full opacity-50 animate-pulse delay-1200 animate-float-slow-delayed shadow-lg"></div>
         
         {/* Middle right area */}
         <div className="absolute top-1/3 right-32 w-18 h-18 bg-green-200 rounded-full opacity-35 animate-pulse delay-800 animate-float-slow-delayed shadow-lg"></div>
         <div className="absolute top-3/4 right-20 w-8 h-8 bg-teal-200 rounded-full opacity-50 animate-pulse delay-600 animate-float-fast-delayed shadow-lg"></div>
         <div className="absolute top-1/2 right-48 w-11 h-11 bg-emerald-200 rounded-full opacity-45 animate-pulse delay-900 animate-float-medium shadow-lg"></div>
-        <div className="absolute top-2/3 right-12 w-9 h-9 bg-green-100 rounded-full opacity-40 animate-pulse delay-1100 animate-float-slow shadow-lg"></div>
+        <div className="absolute top-2/3 right-12 w-9 h-9 bg-green-100 rounded-full opacity-40 animate-pulse delay-1100 animate-float-ultra-fast1 shadow-lg"></div>
         
         {/* Bottom left area */}
         <div className="absolute bottom-28 left-20 w-16 h-16 bg-purple-200 rounded-full opacity-45 animate-pulse delay-900 animate-float-medium shadow-lg"></div>
@@ -82,7 +82,7 @@ const LandingPage: React.FC = () => {
         <div className="absolute bottom-24 right-16 w-12 h-12 bg-cyan-200 rounded-full opacity-40 animate-pulse delay-1100 animate-float-fast shadow-lg"></div>
         <div className="absolute bottom-36 right-28 w-14 h-14 bg-rose-200 rounded-full opacity-35 animate-pulse delay-700 animate-float-medium-delayed shadow-lg"></div>
         <div className="absolute bottom-12 right-40 w-9 h-9 bg-teal-100 rounded-full opacity-45 animate-pulse delay-1000 animate-float-slow shadow-lg"></div>
-        <div className="absolute bottom-48 right-8 w-6 h-6 bg-cyan-100 rounded-full opacity-55 animate-pulse delay-600 animate-float-fast-delayed shadow-lg"></div>
+        <div className="absolute bottom-48 right-8 w-6 h-6 bg-cyan-100 rounded-full opacity-55 animate-pulse delay-600 animate-float-ultra-fast2 shadow-lg"></div>
         
         {/* Center floating circles */}
         <div className="absolute top-40 left-1/3 w-6 h-6 bg-slate-200 rounded-full opacity-50 animate-pulse delay-400 animate-float-slow shadow-lg"></div>
