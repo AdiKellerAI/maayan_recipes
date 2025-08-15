@@ -120,6 +120,61 @@ body {
   }
 }
 
+/* Additional random speed animations */
+@keyframes floatRandom1 {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-13px);
+  }
+}
+
+@keyframes floatRandom2 {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-17px);
+  }
+}
+
+@keyframes floatRandom3 {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-11px);
+  }
+}
+
+@keyframes floatRandom4 {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-19px);
+  }
+}
+
+@keyframes floatRandom5 {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-14px);
+  }
+}
+
+@keyframes floatRandom6 {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-16px);
+  }
+}
+
 .fade-in {
   animation: fadeIn 0.3s ease-out;
 }
@@ -155,6 +210,31 @@ body {
 
 .animate-float-fast-delayed {
   animation: floatFastDelayed 4s ease-in-out infinite 0.8s;
+}
+
+/* Additional random speed animations */
+.animate-float-random1 {
+  animation: floatRandom1 4.5s ease-in-out infinite;
+}
+
+.animate-float-random2 {
+  animation: floatRandom2 5.5s ease-in-out infinite;
+}
+
+.animate-float-random3 {
+  animation: floatRandom3 3.8s ease-in-out infinite;
+}
+
+.animate-float-random4 {
+  animation: floatRandom4 6.2s ease-in-out infinite;
+}
+
+.animate-float-random5 {
+  animation: floatRandom5 4.8s ease-in-out infinite;
+}
+
+.animate-float-random6 {
+  animation: floatRandom6 5.8s ease-in-out infinite;
 }
 
 /* Enhanced hover effects */

@@ -49,33 +49,57 @@ const LandingPage: React.FC = () => {
       {/* Background Decorative Circles - Redistributed */}
       <div className="absolute inset-0 pointer-events-none">
         {/* Top left area */}
-        <div className="absolute top-12 left-16 w-14 h-14 bg-orange-200 rounded-full opacity-40 animate-pulse animate-float-slow"></div>
-        <div className="absolute top-24 left-8 w-8 h-8 bg-yellow-200 rounded-full opacity-35 animate-pulse delay-500 animate-float-slow-delayed"></div>
+        <div className="absolute top-12 left-16 w-14 h-14 bg-orange-200 rounded-full opacity-40 animate-pulse animate-float-slow shadow-lg"></div>
+        <div className="absolute top-24 left-8 w-8 h-8 bg-yellow-200 rounded-full opacity-35 animate-pulse delay-500 animate-float-slow-delayed shadow-lg"></div>
+        <div className="absolute top-8 left-32 w-12 h-12 bg-amber-200 rounded-full opacity-45 animate-pulse delay-300 animate-float-medium shadow-lg"></div>
+        <div className="absolute top-36 left-4 w-6 h-6 bg-orange-100 rounded-full opacity-50 animate-pulse delay-800 animate-float-fast shadow-lg"></div>
         
         {/* Top right area */}
-        <div className="absolute top-20 right-20 w-16 h-16 bg-red-200 rounded-full opacity-50 animate-pulse delay-700 animate-float-medium"></div>
-        <div className="absolute top-32 right-12 w-6 h-6 bg-pink-200 rounded-full opacity-45 animate-pulse delay-300 animate-float-fast"></div>
+        <div className="absolute top-20 right-20 w-16 h-16 bg-red-200 rounded-full opacity-50 animate-pulse delay-700 animate-float-medium shadow-lg"></div>
+        <div className="absolute top-32 right-12 w-6 h-6 bg-pink-200 rounded-full opacity-45 animate-pulse delay-300 animate-float-fast shadow-lg"></div>
+        <div className="absolute top-16 right-36 w-10 h-10 bg-rose-200 rounded-full opacity-40 animate-pulse delay-600 animate-float-slow shadow-lg"></div>
+        <div className="absolute top-44 right-8 w-8 h-8 bg-red-100 rounded-full opacity-55 animate-pulse delay-1000 animate-float-medium-delayed shadow-lg"></div>
         
         {/* Middle left area */}
-        <div className="absolute top-1/2 left-24 w-12 h-12 bg-blue-200 rounded-full opacity-60 animate-pulse delay-1000 animate-float-slow"></div>
-        <div className="absolute top-2/3 left-16 w-10 h-10 bg-indigo-200 rounded-full opacity-40 animate-pulse delay-400 animate-float-medium-delayed"></div>
+        <div className="absolute top-1/2 left-24 w-12 h-12 bg-blue-200 rounded-full opacity-60 animate-pulse delay-1000 animate-float-slow shadow-lg"></div>
+        <div className="absolute top-2/3 left-16 w-10 h-10 bg-indigo-200 rounded-full opacity-40 animate-pulse delay-400 animate-float-medium-delayed shadow-lg"></div>
+        <div className="absolute top-1/3 left-40 w-14 h-14 bg-sky-200 rounded-full opacity-35 animate-pulse delay-700 animate-float-fast shadow-lg"></div>
+        <div className="absolute top-3/4 left-8 w-7 h-7 bg-blue-100 rounded-full opacity-50 animate-pulse delay-1200 animate-float-slow-delayed shadow-lg"></div>
         
         {/* Middle right area */}
-        <div className="absolute top-1/3 right-32 w-18 h-18 bg-green-200 rounded-full opacity-35 animate-pulse delay-800 animate-float-slow-delayed"></div>
-        <div className="absolute top-3/4 right-20 w-8 h-8 bg-teal-200 rounded-full opacity-50 animate-pulse delay-600 animate-float-fast-delayed"></div>
+        <div className="absolute top-1/3 right-32 w-18 h-18 bg-green-200 rounded-full opacity-35 animate-pulse delay-800 animate-float-slow-delayed shadow-lg"></div>
+        <div className="absolute top-3/4 right-20 w-8 h-8 bg-teal-200 rounded-full opacity-50 animate-pulse delay-600 animate-float-fast-delayed shadow-lg"></div>
+        <div className="absolute top-1/2 right-48 w-11 h-11 bg-emerald-200 rounded-full opacity-45 animate-pulse delay-900 animate-float-medium shadow-lg"></div>
+        <div className="absolute top-2/3 right-12 w-9 h-9 bg-green-100 rounded-full opacity-40 animate-pulse delay-1100 animate-float-slow shadow-lg"></div>
         
         {/* Bottom left area */}
-        <div className="absolute bottom-28 left-20 w-16 h-16 bg-purple-200 rounded-full opacity-45 animate-pulse delay-900 animate-float-medium"></div>
-        <div className="absolute bottom-16 left-32 w-10 h-10 bg-amber-200 rounded-full opacity-30 animate-pulse delay-1200 animate-float-slow"></div>
+        <div className="absolute bottom-28 left-20 w-16 h-16 bg-purple-200 rounded-full opacity-45 animate-pulse delay-900 animate-float-medium shadow-lg"></div>
+        <div className="absolute bottom-16 left-32 w-10 h-10 bg-amber-200 rounded-full opacity-30 animate-pulse delay-1200 animate-float-slow shadow-lg"></div>
+        <div className="absolute bottom-40 left-8 w-13 h-13 bg-violet-200 rounded-full opacity-50 animate-pulse delay-500 animate-float-fast shadow-lg"></div>
+        <div className="absolute bottom-8 left-24 w-5 h-5 bg-purple-100 rounded-full opacity-60 animate-pulse delay-800 animate-float-medium-delayed shadow-lg"></div>
         
         {/* Bottom right area */}
-        <div className="absolute bottom-24 right-16 w-12 h-12 bg-cyan-200 rounded-full opacity-40 animate-pulse delay-1100 animate-float-fast"></div>
-        <div className="absolute bottom-36 right-28 w-14 h-14 bg-rose-200 rounded-full opacity-35 animate-pulse delay-700 animate-float-medium-delayed"></div>
+        <div className="absolute bottom-24 right-16 w-12 h-12 bg-cyan-200 rounded-full opacity-40 animate-pulse delay-1100 animate-float-fast shadow-lg"></div>
+        <div className="absolute bottom-36 right-28 w-14 h-14 bg-rose-200 rounded-full opacity-35 animate-pulse delay-700 animate-float-medium-delayed shadow-lg"></div>
+        <div className="absolute bottom-12 right-40 w-9 h-9 bg-teal-100 rounded-full opacity-45 animate-pulse delay-1000 animate-float-slow shadow-lg"></div>
+        <div className="absolute bottom-48 right-8 w-6 h-6 bg-cyan-100 rounded-full opacity-55 animate-pulse delay-600 animate-float-fast-delayed shadow-lg"></div>
         
         {/* Center floating circles */}
-        <div className="absolute top-40 left-1/3 w-6 h-6 bg-slate-200 rounded-full opacity-50 animate-pulse delay-400 animate-float-slow"></div>
-        <div className="absolute top-60 right-1/3 w-8 h-8 bg-emerald-200 rounded-full opacity-40 animate-pulse delay-800 animate-float-medium"></div>
-        <div className="absolute top-80 left-1/2 transform -translate-x-1/2 w-10 h-10 bg-violet-200 rounded-full opacity-45 animate-pulse delay-600 animate-float-fast"></div>
+        <div className="absolute top-40 left-1/3 w-6 h-6 bg-slate-200 rounded-full opacity-50 animate-pulse delay-400 animate-float-slow shadow-lg"></div>
+        <div className="absolute top-60 right-1/3 w-8 h-8 bg-emerald-200 rounded-full opacity-40 animate-pulse delay-800 animate-float-medium shadow-lg"></div>
+        <div className="absolute top-80 left-1/2 transform -translate-x-1/2 w-10 h-10 bg-violet-200 rounded-full opacity-45 animate-pulse delay-600 animate-float-fast shadow-lg"></div>
+        
+        {/* Additional floating circles */}
+        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 w-7 h-7 bg-pink-100 rounded-full opacity-40 animate-pulse delay-200 animate-float-random1 shadow-lg"></div>
+        <div className="absolute top-70 right-1/4 w-9 h-9 bg-blue-100 rounded-full opacity-45 animate-pulse delay-900 animate-float-random2 shadow-lg"></div>
+        <div className="absolute top-90 left-1/4 w-5 h-5 bg-yellow-100 rounded-full opacity-50 animate-pulse delay-700 animate-float-random3 shadow-lg"></div>
+        <div className="absolute top-50 right-1/2 transform translate-x-1/2 w-11 h-11 bg-green-100 rounded-full opacity-35 animate-pulse delay-1100 animate-float-random4 shadow-lg"></div>
+        
+        {/* Corner accent circles */}
+        <div className="absolute top-4 left-4 w-4 h-4 bg-orange-100 rounded-full opacity-60 animate-pulse delay-400 animate-float-random5 shadow-lg"></div>
+        <div className="absolute top-4 right-4 w-4 h-4 bg-red-100 rounded-full opacity-60 animate-pulse delay-600 animate-float-random6 shadow-lg"></div>
+        <div className="absolute bottom-4 left-4 w-4 h-4 bg-purple-100 rounded-full opacity-60 animate-pulse delay-800 animate-float-random1 shadow-lg"></div>
+        <div className="absolute bottom-4 right-4 w-4 h-4 bg-cyan-100 rounded-full opacity-60 animate-pulse delay-1000 animate-float-random2 shadow-lg"></div>
       </div>
 
       {/* Hero Section */}
@@ -84,26 +108,17 @@ const LandingPage: React.FC = () => {
         <div className="absolute inset-0 bg-gradient-to-br from-orange-50/30 via-transparent to-red-50/30"></div>
         
         {/* Logo Section */}
-        <div className="relative z-10 flex flex-col items-center justify-center min-h-[60vh] px-4 pt-8">
+        <div className="relative z-10 flex flex-col items-center justify-center min-h-[20vh] px-4 pt-1">
           {/* Elegant Logo - without container */}
-          <div className="mb-6 md:mb-8">
+          <div className="mb-1">
             <div className="relative">
-              {/* MK Logo */}
-              <div className="text-6xl md:text-8xl font-serif font-bold text-gray-900 tracking-tight">
-                <span className="relative">
-                  M
-                  <div className="absolute -bottom-1 md:-bottom-2 left-0 right-0 h-0.5 md:h-1 bg-gradient-to-r from-orange-400 to-red-500 rounded-full opacity-60"></div>
-                </span>
-                <span className="relative ml-1 md:ml-2">
-                  K
-                  <div className="absolute -bottom-1 md:-bottom-2 left-0 right-0 h-0.5 md:h-1 bg-gradient-to-r from-red-500 to-orange-400 rounded-full opacity-60"></div>
-                </span>
-              </div>
-              
-              {/* Subtitle */}
-              <div className="text-center mt-3 md:mt-4">
-                <h1 className="text-xl md:text-2xl font-light text-gray-700 mb-1 md:mb-2">המטבח של מעיין</h1>
-                <p className="text-sm md:text-base text-gray-500 font-medium">בישול ביתי, פשוט וטעים</p>
+              {/* Logo Image */}
+              <div className="flex justify-center">
+                <img 
+                  src="/logo_new.svg" 
+                  alt="Maayan Kitchen Logo" 
+                  className="h-64 md:h-80 w-auto object-contain"
+                />
               </div>
             </div>
           </div>
