@@ -17,6 +17,7 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
   const [isMinimized, setIsMinimized] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+  const targetFinishTimeRef = useRef<number | null>(null);
 
   // Initialize audio context on user interaction (required for mobile)
   useEffect(() => {
@@ -97,7 +98,7 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
       // Method 2: HTML Audio Element as fallback
       try {
         // Create a data URL for a beep sound
-        const beepDataUrl = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAg==';
+        const beepDataUrl = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAg==';
         const audio = new Audio(beepDataUrl);
         audio.volume = 1.0; // Maximum volume
         audio.play().catch(e => console.warn('HTML Audio fallback failed:', e));
@@ -116,20 +117,24 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
     }
   };
 
+  // System clock-based timer logic
   useEffect(() => {
-    if (isRunning && timeLeft > 0) {
+    if (isRunning && targetFinishTimeRef.current) {
+      // Update timer every 100ms for smooth UI updates
       intervalRef.current = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            setIsRunning(false);
-            setShowFloatingTimer(false);
-            setShowAlert(true);
-            playBeepSound();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+        const now = Date.now();
+        const remaining = Math.max(0, Math.ceil((targetFinishTimeRef.current! - now) / 1000));
+        
+        setTimeLeft(remaining);
+        
+        if (remaining <= 0) {
+          setIsRunning(false);
+          setShowFloatingTimer(false);
+          setShowAlert(true);
+          playBeepSound();
+          targetFinishTimeRef.current = null;
+        }
+      }, 100);
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -142,7 +147,7 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
         clearInterval(intervalRef.current);
       }
     };
-  }, [isRunning, timeLeft]);
+  }, [isRunning]);
 
   const startTimer = () => {
     if (timeLeft === 0) {
@@ -150,6 +155,11 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
       if (totalSeconds === 0) return;
       setTimeLeft(totalSeconds);
     }
+    
+    // Calculate target finish time based on current system time
+    const now = Date.now();
+    targetFinishTimeRef.current = now + (timeLeft * 1000);
+    
     setIsRunning(true);
     setShowAlert(false);
     setShowFloatingTimer(true);
@@ -158,6 +168,12 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
 
   const pauseTimer = () => {
     setIsRunning(false);
+    // Store remaining time when pausing
+    if (targetFinishTimeRef.current) {
+      const now = Date.now();
+      const remaining = Math.max(0, Math.ceil((targetFinishTimeRef.current - now) / 1000));
+      setTimeLeft(remaining);
+    }
   };
 
   const stopTimer = () => {
@@ -166,6 +182,7 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
     setShowAlert(false);
     setShowFloatingTimer(false);
     setIsMinimized(false);
+    targetFinishTimeRef.current = null;
   };
 
   const resetTimer = () => {
@@ -173,6 +190,7 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
     const totalSeconds = hours * 3600 + minutes * 60 + seconds;
     setTimeLeft(totalSeconds);
     setShowAlert(false);
+    targetFinishTimeRef.current = null;
   };
 
   const formatTime = (totalSeconds: number) => {
@@ -239,11 +257,17 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
     setTimeLeft(0);
     setShowFloatingTimer(false);
     setIsMinimized(false);
+    targetFinishTimeRef.current = null;
   };
 
   const restartTimer = () => {
     const totalSeconds = hours * 3600 + minutes * 60 + seconds;
     setTimeLeft(totalSeconds);
+    
+    // Calculate new target finish time
+    const now = Date.now();
+    targetFinishTimeRef.current = now + (totalSeconds * 1000);
+    
     setIsRunning(true);
     setShowAlert(false);
     setShowFloatingTimer(true);

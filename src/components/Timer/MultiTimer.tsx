@@ -43,31 +43,18 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
       }
     };
 
-    // Create alarm audio element
+    // Create alarm audio element with the new sound file
     if (!alarmAudioRef.current) {
-      alarmAudioRef.current = new Audio();
-      // Create a simple alarm sound using Web Audio API
+      alarmAudioRef.current = new Audio('/bedside-clock-alarm.mp3');
+      alarmAudioRef.current.preload = 'auto';
+      alarmAudioRef.current.volume = 1.0;
+      
+      // Initialize Web Audio API as fallback
       try {
         const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        
-        oscillator.frequency.value = 800;
-        oscillator.type = 'sine';
-        
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-        
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.5);
-        
-        // Store the audio context for later use
         audioContextRef.current = audioContext;
       } catch (e) {
-        console.warn('Could not create alarm sound:', e);
+        console.warn('Could not create audio context:', e);
       }
     }
 
@@ -90,7 +77,59 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
   // Enhanced alarm sound that works even in silent mode
   const playAlarmSound = () => {
     try {
-      // Method 1: Web Audio API (works even on silent mode)
+      // Method 1: Play the new alarm sound file (primary method)
+      if (alarmAudioRef.current) {
+        // Reset audio to beginning and play
+        alarmAudioRef.current.currentTime = 0;
+        alarmAudioRef.current.volume = 1.0;
+        
+        // Play the alarm sound
+        alarmAudioRef.current.play().catch((error) => {
+          console.log('HTML5 Audio failed, trying Web Audio API...', error);
+          // Fallback to Web Audio API if HTML5 fails
+          playWebAudioAlarm();
+        });
+      }
+      
+      // Method 2: Vibration as additional alert
+      if ('vibrate' in navigator) {
+        // Long vibration pattern to ensure it's felt
+        navigator.vibrate([500, 200, 500, 200, 500, 500, 500, 200, 500, 200, 500, 500, 500, 200, 500, 200, 500]);
+      }
+      
+    } catch (error) {
+      console.warn('Could not play alarm sound:', error);
+      // Fallback to Web Audio API
+      playWebAudioAlarm();
+    }
+  };
+
+  // Stop the alarm sound
+  const stopAlarmSound = () => {
+    try {
+      // Stop HTML5 audio
+      if (alarmAudioRef.current) {
+        alarmAudioRef.current.pause();
+        alarmAudioRef.current.currentTime = 0;
+      }
+      
+      // Stop Web Audio API if it's playing
+      if (audioContextRef.current && audioContextRef.current.state === 'running') {
+        audioContextRef.current.suspend();
+      }
+      
+      // Stop vibration
+      if ('vibrate' in navigator) {
+        navigator.vibrate(0);
+      }
+    } catch (error) {
+      console.warn('Could not stop alarm sound:', error);
+    }
+  };
+
+  // Fallback Web Audio API method for silent mode
+  const playWebAudioAlarm = () => {
+    try {
       let audioContext = audioContextRef.current;
       
       if (!audioContext) {
@@ -142,26 +181,8 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
         }
       }, 6000);
       
-      // Method 2: Vibration as additional alert (more aggressive pattern)
-      if ('vibrate' in navigator) {
-        // Long vibration pattern to ensure it's felt
-        navigator.vibrate([500, 200, 500, 200, 500, 500, 500, 200, 500, 200, 500, 500, 500, 200, 500, 200, 500]);
-      }
-      
-      // Method 3: Try to play HTML5 audio as fallback
-      try {
-        if (alarmAudioRef.current) {
-          alarmAudioRef.current.volume = 1.0;
-          alarmAudioRef.current.play().catch(() => {
-            // Ignore errors, Web Audio API is the primary method
-          });
-        }
-      } catch (e) {
-        // Ignore HTML5 audio errors
-      }
-      
     } catch (error) {
-      console.warn('Could not play alarm sound:', error);
+      console.warn('Web Audio API also failed:', error);
     }
   };
 
@@ -177,7 +198,7 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
       minutes: globalMinutes,
       seconds: globalSeconds,
       timeLeft: globalHours * 3600 + globalMinutes * 60 + globalSeconds,
-      isRunning: false,
+      isRunning: true, // Start running automatically
       isMinimized: true, // Start minimized by default
       label: finalTimerName
     };
@@ -232,7 +253,7 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
       timer.id === id ? { 
         ...timer, 
         isRunning: false, 
-        timeLeft: timer.hours * 3600 + timer.minutes * 60 + timer.seconds,
+        timeLeft: 0, // Set time to 0 so it won't show in floating timers
         isMinimized: false // Remove from bottom when stopped
       } : timer
     ));
@@ -364,15 +385,21 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
       setTimers(prev => prev.map(timer => 
         timer.id === alertTimerId ? { 
           ...timer, 
-          timeLeft: timer.hours * 3600 + timer.minutes * 60 + timer.seconds,
+          timeLeft: 0, // Set time to 0 so it won't show in floating timers
+          isRunning: false,
           isMinimized: false // Remove from bottom when dismissed
         } : timer
       ));
     }
     setAlertTimerId(null);
+    // Stop the alarm sound
+    stopAlarmSound();
   };
 
   const restartTimer = (id: string) => {
+    // Stop the alarm sound first
+    stopAlarmSound();
+    
     setTimers(prev => prev.map(timer => {
       if (timer.id === id) {
         const totalSeconds = timer.hours * 3600 + timer.minutes * 60 + timer.seconds;
@@ -380,7 +407,26 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
           ...timer, 
           timeLeft: totalSeconds, 
           isRunning: true,
-          isMinimized: true // Restart minimized
+          isMinimized: true // Keep visible at bottom with new time
+        };
+      }
+      return timer;
+    }));
+  };
+
+  const snoozeTimer = (id: string) => {
+    // Stop the alarm sound first
+    stopAlarmSound();
+    
+    setTimers(prev => prev.map(timer => {
+      if (timer.id === id) {
+        // Add 1 minute (60 seconds) to the timer
+        const snoozeTime = 60;
+        return { 
+          ...timer, 
+          timeLeft: snoozeTime, 
+          isRunning: true,
+          isMinimized: true // Keep visible at bottom
         };
       }
       return timer;
@@ -400,9 +446,9 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
   ];
 
   const handleClose = () => {
-    // When closing, minimize all running timers so they stay visible at bottom
+    // When closing, minimize only running timers or timers with time left
     setTimers(prev => prev.map(timer => 
-      timer.isRunning || timer.timeLeft > 0 ? { ...timer, isMinimized: true } : timer
+      timer.isRunning || timer.timeLeft > 0 ? { ...timer, isMinimized: true } : { ...timer, isMinimized: false }
     ));
     setHighlightedTimerId(null);
     onClose();
@@ -412,7 +458,7 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
     <>
       {/* Floating Timers Row - Always Visible - Left Side */}
       <div className="fixed bottom-4 left-4 z-40 flex items-center space-x-2 rtl:space-x-reverse">
-        {timers.filter(t => t.isRunning || t.timeLeft > 0 || t.isMinimized).map((timer) => (
+        {timers.filter(t => t.isRunning || t.timeLeft > 0).map((timer) => (
           <div key={timer.id} className="flex-shrink-0">
             <div 
               className={`bg-gradient-to-br from-orange-500/60 to-red-500/60 rounded-full shadow-2xl border border-orange-300/50 backdrop-blur-md cursor-pointer hover:scale-105 transition-all duration-200 p-3 ${
@@ -447,10 +493,11 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
       {/* Alert Modal */}
       {showAlert && alertTimerId && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
-          <div className="bg-white rounded-lg p-6 max-w-sm w-full text-center animate-pulse">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full text-center animate-pulse">
             <div className="text-6xl mb-4">⏰</div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">הטיימר הסתיים!</h2>
             <p className="text-gray-600 mb-6">הזמן שהגדרת הסתיים</p>
+            <p className="text-sm text-gray-500 mb-4">בחר מה לעשות עם הטיימר</p>
             <div className="flex items-center justify-center space-x-2 rtl:space-x-reverse mb-6">
               <Volume2 className="h-5 w-5 text-orange-500" />
               <span className="text-sm text-gray-500">מושמע צליל התראה</span>
@@ -461,6 +508,17 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
                 className="flex-1 bg-gray-500 text-white py-3 px-4 rounded-lg hover:bg-gray-600 transition-colors font-medium"
               >
                 סגור
+              </button>
+              <button
+                onClick={() => {
+                  snoozeTimer(alertTimerId);
+                  setShowAlert(false);
+                  setAlertTimerId(null);
+                }}
+                className="flex-1 bg-blue-500 text-white py-3 px-4 rounded-lg hover:bg-blue-600 transition-colors font-medium flex items-center justify-center space-x-2 rtl:space-x-reverse"
+              >
+                <span>⏰</span>
+                <span>נודניק</span>
               </button>
               <button
                 onClick={() => {
