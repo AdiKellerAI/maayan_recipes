@@ -1,20 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Heart, BookOpen, Layers, X } from 'lucide-react';
 import { categories } from '../data/categories';
+import { useRecipes } from '../contexts/RecipeContext';
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
+  const { refreshRecipes } = useRecipes();
   const [showCategories, setShowCategories] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [hasPreloaded, setHasPreloaded] = useState(false);
 
   const handleNavigation = (type: string) => {
     switch (type) {
       case 'recipes':
+        // Preload all recipes before navigation
+        const preloadAllRecipes = async () => {
+          try {
+            await refreshRecipes();
+          } catch (error) {
+            console.log('Preloading all recipes...');
+          }
+        };
+        preloadAllRecipes();
         navigate('/?recipes=true');
         break;
       case 'favorites':
+        // Preload favorite recipes before navigation
+        const preloadFavorites = async () => {
+          try {
+            await refreshRecipes();
+          } catch (error) {
+            console.log('Preloading favorites...');
+          }
+        };
+        preloadFavorites();
         navigate('/?favorites=true');
         break;
       case 'categories':
@@ -28,6 +49,15 @@ const LandingPage: React.FC = () => {
 
   const handleCategorySelect = (categoryId: string) => {
     setShowCategories(false);
+    // Preload recipes for the selected category before navigation
+    const preloadCategoryRecipes = async () => {
+      try {
+        await refreshRecipes();
+      } catch (error) {
+        console.log('Preloading category recipes...');
+      }
+    };
+    preloadCategoryRecipes();
     navigate(`/?category=${categoryId}`);
   };
 
@@ -44,8 +74,29 @@ const LandingPage: React.FC = () => {
     }
   };
 
+  // Preload recipes from all categories for faster navigation
+  useEffect(() => {
+    if (!hasPreloaded) {
+      // Start preloading recipes in the background
+      const preloadRecipes = async () => {
+        try {
+          // This will trigger the loading of recipes from all categories
+          await refreshRecipes();
+          setHasPreloaded(true);
+        } catch (error) {
+          console.log('Preloading recipes...');
+        }
+      };
+      
+      // Start preloading after a short delay to not block the UI
+      const timer = setTimeout(preloadRecipes, 1000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [hasPreloaded, refreshRecipes]);
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
+    <div className="h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
       {/* Background Decorative Circles - Enhanced with larger movement range and varied speeds */}
       <div className="absolute inset-0 pointer-events-none">
         {/* Top left area */}
@@ -274,6 +325,15 @@ const LandingPage: React.FC = () => {
                 <button
                   onClick={() => {
                     setShowCategories(false);
+                    // Preload all recipes before navigation
+                    const preloadAllRecipes = async () => {
+                      try {
+                        await refreshRecipes();
+                      } catch (error) {
+                        console.log('Preloading all recipes...');
+                      }
+                    };
+                    preloadAllRecipes();
                     navigate('/?recipes=true');
                   }}
                   className="px-6 py-3 rounded-full text-sm font-medium transition-colors bg-primary-500 text-white hover:bg-primary-600"

@@ -85,14 +85,15 @@ const Header: React.FC = () => {
         <div className="flex items-center justify-between h-16">
           {/* Menu Button - Left side for both mobile and desktop */}
           <div className="flex items-center space-x-2 rtl:space-x-reverse">
+            {/* Show menu button only on small screens */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 rounded-lg transition-colors text-gray-600 hover:bg-gray-100"
+              className="sm:hidden p-2 rounded-lg transition-colors text-gray-600 hover:bg-gray-100"
             >
               <Menu className="h-6 w-6" />
             </button>
             
-            {/* Timer Button - Right to menu button */}
+            {/* Timer Button - Always visible */}
             <button
               onClick={() => {
                 // Open timer
@@ -126,7 +127,7 @@ const Header: React.FC = () => {
 
           {/* Fixed Search Bar - Desktop */}
           {location.pathname !== '/landing' && (
-            <div className="hidden md:flex flex-1 max-w-md mx-8">
+            <div className="hidden sm:flex flex-1 max-w-md mx-8">
               <form onSubmit={handleSearch} className="relative w-full">
                 <input
                   type="text"
@@ -140,8 +141,8 @@ const Header: React.FC = () => {
             </div>
           )}
 
-          {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-4 rtl:space-x-reverse">
+          {/* Desktop Navigation - Show on medium screens and up */}
+          <div className="hidden sm:flex items-center space-x-4 rtl:space-x-reverse">
 
             <button
               onClick={toggleFavorites}
@@ -241,7 +242,7 @@ const Header: React.FC = () => {
 
         {/* Mobile Menu Overlay */}
         {isMenuOpen && (
-          <div className="md:hidden absolute top-full left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
+          <div className="sm:hidden absolute top-full left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
             <div className="p-4 space-y-4">
               <div className="flex items-center justify-between mb-4">
                 <h4 className="text-lg font-semibold text-gray-800">תפריט</h4>

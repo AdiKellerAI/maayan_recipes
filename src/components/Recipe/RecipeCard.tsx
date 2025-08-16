@@ -356,7 +356,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
   if (viewMode === 'large') {
     return (
       <div 
-        className="block h-full"
+        className="block h-full select-none touch-manipulation"
         onClick={handleCardClick}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
@@ -614,7 +614,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
   // Medium view
   return (
     <div 
-      className="block h-full"
+      className="block h-full select-none touch-manipulation"
       onClick={handleCardClick}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}

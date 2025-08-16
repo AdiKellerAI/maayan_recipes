@@ -406,6 +406,19 @@ body {
   -webkit-touch-callout: none !important;
 }
 
+/* Prevent text and image selection on recipe cards */
+.select-none {
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+
+.touch-manipulation {
+  touch-action: manipulation !important;
+}
+
 /* Processing state for heart button */
 .heart-button[data-processing="true"] {
   opacity: 0.7 !important;
