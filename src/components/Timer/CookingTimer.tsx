@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Timer, Play, Pause, Square, Plus, Minus, X, Volume2, RotateCcw, Minimize2, Maximize2 } from 'lucide-react';
 
 interface CookingTimerProps {
@@ -15,17 +15,14 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
   const [showAlert, setShowAlert] = useState(false);
   const [showFloatingTimer, setShowFloatingTimer] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  
+  // Absolute timestamp-based timing refs
+  const startTimeRef = useRef<number | null>(null);
+  const endTimeRef = useRef<number | null>(null);
+  const pausedAtRef = useRef<number | null>(null);
+  const remainingAtPauseRef = useRef<number | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  
-  // New refs for accurate timing
-  const startTimeRef = useRef<number | null>(null);
-  const targetEndTimeRef = useRef<number | null>(null);
-  
-  // Helper function to get high-precision timestamp
-  const getHighPrecisionTime = () => {
-    return typeof performance !== 'undefined' ? performance.now() : Date.now();
-  };
 
   // Initialize audio context on user interaction (required for mobile)
   useEffect(() => {
@@ -65,6 +62,19 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
     window.addEventListener('showTimer', handleShowTimer);
     return () => window.removeEventListener('showTimer', handleShowTimer);
   }, []);
+
+  // Browser tab visibility change handler for accurate timing
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && isRunning && endTimeRef.current) {
+        // Tab became visible - immediately recalculate from system time
+        updateTimerDisplay();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isRunning]);
 
   // Enhanced audio system for mobile and silent mode
   const playBeepSound = () => {
@@ -106,7 +116,7 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
       // Method 2: HTML Audio Element as fallback
       try {
         // Create a data URL for a beep sound
-        const beepDataUrl = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAg==';
+        const beepDataUrl = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAg==';
         const audio = new Audio(beepDataUrl);
         audio.volume = 1.0; // Maximum volume
         audio.play().catch(e => console.warn('HTML Audio fallback failed:', e));
@@ -125,36 +135,49 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
     }
   };
 
-  // Accurate timer implementation using system clock
+  // Core timer update function using absolute timestamps
+  const updateTimerDisplay = useCallback(() => {
+    if (!endTimeRef.current) return;
+
+    const now = Date.now();
+    const remainingMs = Math.max(0, endTimeRef.current - now);
+    const remainingSeconds = Math.floor(remainingMs / 1000);
+
+    if (remainingMs <= 0) {
+      // Timer completed - handle immediately
+      handleTimerCompletion();
+    } else {
+      // Update display with calculated time
+      setTimeLeft(remainingSeconds);
+    }
+  }, []);
+
+  // Handle timer completion
+  const handleTimerCompletion = useCallback(() => {
+    setIsRunning(false);
+    setShowFloatingTimer(false);
+    setShowAlert(true);
+    setTimeLeft(0);
+    playBeepSound();
+    
+    // Clear all timing refs
+    startTimeRef.current = null;
+    endTimeRef.current = null;
+    pausedAtRef.current = null;
+    remainingAtPauseRef.current = null;
+    
+    // Clear interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+  }, []);
+
+  // High-frequency timer updates (100ms) for smooth countdown
   useEffect(() => {
-    if (isRunning && targetEndTimeRef.current) {
-      // Update timer every 100ms for smooth UI
-      intervalRef.current = setInterval(() => {
-        const now = getHighPrecisionTime();
-        const remaining = Math.max(0, Math.ceil((targetEndTimeRef.current! - now) / 1000));
-        
-        if (remaining <= 0) {
-          // Timer finished
-          const actualEndTime = getHighPrecisionTime();
-          const expectedEndTime = targetEndTimeRef.current!;
-          const accuracy = Math.abs(actualEndTime - expectedEndTime);
-          
-          console.log(`Timer finished! Accuracy: ${accuracy.toFixed(2)}ms`);
-          
-          setIsRunning(false);
-          setShowFloatingTimer(false);
-          setShowAlert(true);
-          setTimeLeft(0);
-          playBeepSound();
-          
-          // Clear the target end time
-          targetEndTimeRef.current = null;
-          startTimeRef.current = null;
-        } else {
-          // Only update if the time has actually changed to prevent unnecessary re-renders
-          setTimeLeft(prev => prev !== remaining ? remaining : prev);
-        }
-      }, 100); // Update every 100ms for smooth countdown
+    if (isRunning && endTimeRef.current) {
+      // Update timer every 100ms for smooth UI and accurate completion detection
+      intervalRef.current = setInterval(updateTimerDisplay, 100);
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -165,9 +188,10 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
     return () => {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
+        intervalRef.current = null;
       }
     };
-  }, [isRunning]);
+  }, [isRunning, updateTimerDisplay]);
 
   const startTimer = () => {
     if (timeLeft === 0) {
@@ -176,14 +200,17 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
       setTimeLeft(totalSeconds);
     }
     
-    // Set the target end time based on current time + remaining time
-    const now = getHighPrecisionTime();
+    // Set absolute timestamps for accurate timing
+    const now = Date.now();
     const remainingMs = timeLeft * 1000;
-    targetEndTimeRef.current = now + remainingMs;
+    
     startTimeRef.current = now;
+    endTimeRef.current = now + remainingMs;
+    pausedAtRef.current = null;
+    remainingAtPauseRef.current = null;
     
     // Debug logging for timing accuracy
-    console.log(`Timer started: ${timeLeft}s, Target end: ${new Date(targetEndTimeRef.current).toISOString()}`);
+    console.log(`Timer started: ${timeLeft}s, Target end: ${new Date(endTimeRef.current).toISOString()}`);
     
     setIsRunning(true);
     setShowAlert(false);
@@ -192,19 +219,29 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
   };
 
   const pauseTimer = () => {
+    if (!isRunning || !endTimeRef.current) return;
+    
+    // Store pause information for accurate resume
+    const now = Date.now();
+    pausedAtRef.current = now;
+    remainingAtPauseRef.current = endTimeRef.current - now;
+    
     setIsRunning(false);
-    // Don't clear targetEndTimeRef - we'll use it when resuming
   };
 
   const resumeTimer = () => {
-    if (timeLeft > 0) {
-      // When resuming, recalculate the target end time based on remaining time
-      const now = getHighPrecisionTime();
-      const remainingMs = timeLeft * 1000;
-      targetEndTimeRef.current = now + remainingMs;
-      startTimeRef.current = now;
-      setIsRunning(true);
-    }
+    if (!pausedAtRef.current || !remainingAtPauseRef.current) return;
+    
+    // Recalculate end time based on remaining time at pause
+    const now = Date.now();
+    endTimeRef.current = now + remainingAtPauseRef.current;
+    startTimeRef.current = now;
+    
+    // Clear pause refs
+    pausedAtRef.current = null;
+    remainingAtPauseRef.current = null;
+    
+    setIsRunning(true);
   };
 
   const stopTimer = () => {
@@ -214,9 +251,11 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
     setShowFloatingTimer(false);
     setIsMinimized(false);
     
-    // Clear timing refs
-    targetEndTimeRef.current = null;
+    // Clear all timing refs
     startTimeRef.current = null;
+    endTimeRef.current = null;
+    pausedAtRef.current = null;
+    remainingAtPauseRef.current = null;
   };
 
   const resetTimer = () => {
@@ -225,9 +264,11 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
     setTimeLeft(totalSeconds);
     setShowAlert(false);
     
-    // Clear timing refs
-    targetEndTimeRef.current = null;
+    // Clear all timing refs
     startTimeRef.current = null;
+    endTimeRef.current = null;
+    pausedAtRef.current = null;
+    remainingAtPauseRef.current = null;
   };
 
   const formatTime = (totalSeconds: number) => {
@@ -301,10 +342,12 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
     setTimeLeft(totalSeconds);
     
     // Set the target end time based on current time + total time
-    const now = getHighPrecisionTime();
+    const now = Date.now();
     const totalMs = totalSeconds * 1000;
-    targetEndTimeRef.current = now + totalMs;
+    endTimeRef.current = now + totalMs;
     startTimeRef.current = now;
+    pausedAtRef.current = null;
+    remainingAtPauseRef.current = null;
     
     setIsRunning(true);
     setShowAlert(false);
