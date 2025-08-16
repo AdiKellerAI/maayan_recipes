@@ -1,10 +1,22 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { categories } from '../../data/categories';
 import { useRecipes } from '../../contexts/RecipeContext';
 import { getCategoryColor } from '../../data/categories';
+import { useLocation } from 'react-router-dom';
 
 const CategoryNav: React.FC = () => {
   const { selectedCategory, setSelectedCategory } = useRecipes();
+  const location = useLocation();
+
+  // Ensure category selection is synchronized with URL parameters
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const categoryParam = urlParams.get('category');
+    
+    if (categoryParam && categoryParam !== selectedCategory) {
+      setSelectedCategory(categoryParam);
+    }
+  }, [location.search, selectedCategory, setSelectedCategory]);
 
   return (
     <div className="bg-white border-b border-gray-200 py-3">

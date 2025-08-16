@@ -23,7 +23,7 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
   const [alertTimerId, setAlertTimerId] = useState<string | null>(null);
   const [nextTimerId, setNextTimerId] = useState(1);
   const [globalHours, setGlobalHours] = useState(0);
-  const [globalMinutes, setGlobalMinutes] = useState(5);
+  const [globalMinutes, setGlobalMinutes] = useState(10);
   const [globalSeconds, setGlobalSeconds] = useState(0);
   const [highlightedTimerId, setHighlightedTimerId] = useState<string | null>(null);
   const [timerName, setTimerName] = useState('');
@@ -327,6 +327,15 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
       }
     }
   };
+
+  // Reset global time to default values when timer is opened
+  useEffect(() => {
+    if (isVisible) {
+      setGlobalHours(0);
+      setGlobalMinutes(10);
+      setGlobalSeconds(0);
+    }
+  }, [isVisible]);
 
   // Timer intervals management
   useEffect(() => {

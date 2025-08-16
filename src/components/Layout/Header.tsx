@@ -85,10 +85,10 @@ const Header: React.FC = () => {
         <div className="flex items-center justify-between h-16">
           {/* Menu Button - Left side for both mobile and desktop */}
           <div className="flex items-center space-x-2 rtl:space-x-reverse">
-            {/* Show menu button only on small screens */}
+            {/* Show menu button on all screens */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="sm:hidden p-2 rounded-lg transition-colors text-gray-600 hover:bg-gray-100"
+              className="p-2 rounded-lg transition-colors text-gray-600 hover:bg-gray-100"
             >
               <Menu className="h-6 w-6" />
             </button>
@@ -240,65 +240,123 @@ const Header: React.FC = () => {
           </div>
         </div>
 
-        {/* Mobile Menu Overlay */}
+        {/* Sidebar Menu - Visible on all screens */}
         {isMenuOpen && (
-          <div className="sm:hidden absolute top-full left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
-            <div className="p-4 space-y-4">
-              <div className="flex items-center justify-between mb-4">
-                <h4 className="text-lg font-semibold text-gray-800">תפריט</h4>
+          <>
+            {/* Backdrop */}
+            <div 
+              className="fixed inset-0 bg-black bg-opacity-50 z-40"
+              onClick={() => setIsMenuOpen(false)}
+            />
+            
+            {/* Sidebar */}
+            <div className="fixed top-0 right-0 w-56 bg-gradient-to-b from-white via-gray-50 to-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out rounded-l-2xl border-l border-gray-200">
+              {/* Header */}
+              <div className="flex items-center justify-end p-2 border-b border-gray-200">
                 <button
                   onClick={() => setIsMenuOpen(false)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                  className="p-1 hover:bg-gray-100 rounded-full transition-all duration-300 hover:scale-110"
                 >
-                  <X className="h-5 w-5 text-gray-500" />
+                  <X className="h-4 w-4 text-gray-600" />
                 </button>
               </div>
               
-              {/* Add Recipe Button */}
-              <button
-                onClick={() => {
-                  executeProtectedAction(() => navigate('/add'));
-                  setIsMenuOpen(false);
-                }}
-                className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse bg-primary-500 text-white py-3 px-4 rounded-lg hover:bg-primary-600 transition-colors"
-              >
-                <Plus className="h-5 w-5" />
-                <span>הוספת מתכון</span>
-              </button>
-              
-              {/* Favorites Button */}
-              <button
-                onClick={toggleFavorites}
-                className={`w-full flex items-center justify-center space-x-2 rtl:space-x-reverse py-3 px-4 rounded-lg transition-colors ${
-                  showFavoritesOnly 
-                    ? 'bg-red-100 text-red-600' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                <Heart className={`h-5 w-5 ${showFavoritesOnly ? 'fill-current' : ''}`} />
-                <span>מועדפים</span>
-              </button>
-              
-              {/* Filter Button */}
-              <button
-                onClick={() => {
-                  setIsFilterOpen(!isFilterOpen);
-                  setIsMenuOpen(false);
-                }}
-                className={`w-full flex items-center justify-center space-x-2 rtl:space-x-reverse py-3 px-4 rounded-lg transition-colors ${
-                  hasActiveFilters
-                    ? 'bg-primary-100 text-primary-600' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                <Filter className="h-5 w-5" />
-                <span>סינון מתכונים</span>
-                {hasActiveFilters && (
-                  <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                )}
-              </button>
+              {/* Menu Items */}
+              <div className="p-3 space-y-2">
+                {/* Add Recipe Button */}
+                <button
+                  onClick={() => {
+                    executeProtectedAction(() => navigate('/add'));
+                    setIsMenuOpen(false);
+                  }}
+                  className="w-full flex items-center space-x-2 rtl:space-x-reverse bg-gradient-to-r from-green-500 to-green-600 text-white py-2.5 px-3 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg"
+                >
+                  <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center">
+                    <Plus className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-sm font-semibold">הוספת מתכון</span>
+                </button>
+                
+                {/* Favorites Button */}
+                <button
+                  onClick={toggleFavorites}
+                  className={`w-full flex items-center space-x-2 rtl:space-x-reverse py-2.5 px-3 rounded-lg transition-all duration-300 transform hover:scale-105 ${
+                    showFavoritesOnly 
+                      ? 'bg-gradient-to-r from-red-100 to-red-200 text-red-700 border border-red-300 shadow-md' 
+                      : 'bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 hover:from-gray-100 hover:to-gray-200 border border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                    showFavoritesOnly ? 'bg-red-200' : 'bg-gray-200'
+                  }`}>
+                    <Heart className={`h-3.5 w-3.5 ${showFavoritesOnly ? 'text-red-600 fill-current' : 'text-gray-600'}`} />
+                  </div>
+                  <span className="text-sm font-semibold">מועדפים</span>
+                </button>
+                
+                {/* Filter Button */}
+                <button
+                  onClick={() => {
+                    setIsFilterOpen(!isFilterOpen);
+                    setIsMenuOpen(false);
+                  }}
+                  className={`w-full flex items-center space-x-2 rtl:space-x-reverse py-2.5 px-3 rounded-lg transition-all duration-300 transform hover:scale-105 ${
+                    hasActiveFilters
+                      ? 'bg-gradient-to-r from-primary-100 to-primary-200 text-primary-700 border border-primary-300 shadow-md' 
+                      : 'bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 hover:from-gray-100 hover:to-gray-200 border border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center ${
+                    hasActiveFilters ? 'bg-primary-200' : 'bg-gray-200'
+                  }`}>
+                    <Filter className="h-3.5 w-3.5" />
+                  </div>
+                  <span className="text-sm font-semibold">סינון מתכונים</span>
+                  {hasActiveFilters && (
+                    <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse ml-auto rtl:mr-auto rtl:ml-0"></div>
+                  )}
+                </button>
+                
+                {/* Divider */}
+                <div className="border-t border-gray-200 my-3"></div>
+                
+                {/* Quick Actions */}
+                <div className="space-y-1.5">
+                  <h5 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">פעולות מהירות</h5>
+                  
+                  {/* Timer Button */}
+                  <button
+                    onClick={() => {
+                      const timerEvent = new CustomEvent('showTimer');
+                      window.dispatchEvent(timerEvent);
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full flex items-center space-x-2 rtl:space-x-reverse py-1.5 px-2.5 rounded-md bg-gradient-to-r from-orange-100 to-orange-200 text-orange-700 hover:from-orange-200 hover:to-orange-300 transition-all duration-300 transform hover:scale-105"
+                  >
+                    <div className="w-5 h-5 bg-orange-200 rounded-full flex items-center justify-center">
+                      <span className="text-xs">⏰</span>
+                    </div>
+                    <span className="text-xs font-medium">טיימר בישול</span>
+                  </button>
+                  
+                  {/* Landing Page Button */}
+                  <button
+                    onClick={() => {
+                      resetFilters();
+                      navigate('/landing');
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full flex items-center space-x-2 rtl:space-x-reverse py-1.5 px-2.5 rounded-md bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 hover:from-blue-200 hover:to-blue-300 transition-all duration-300 transform hover:scale-105"
+                  >
+                    <div className="w-5 h-5 bg-blue-200 rounded-full flex items-center justify-center">
+                      <ChefHat className="h-2.5 w-2.5" />
+                    </div>
+                    <span className="text-xs font-medium">דף הבית</span>
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
+          </>
         )}
       </div>
 

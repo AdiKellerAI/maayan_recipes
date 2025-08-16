@@ -8,7 +8,7 @@ interface CookingTimerProps {
 
 const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
   const [hours, setHours] = useState(0);
-  const [minutes, setMinutes] = useState(5);
+  const [minutes, setMinutes] = useState(10);
   const [seconds, setSeconds] = useState(0);
   const [isRunning, setIsRunning] = useState(false);
   const [timeLeft, setTimeLeft] = useState(0);
@@ -17,7 +17,15 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
   const [isMinimized, setIsMinimized] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const targetFinishTimeRef = useRef<number | null>(null);
+  
+  // New refs for accurate timing
+  const startTimeRef = useRef<number | null>(null);
+  const targetEndTimeRef = useRef<number | null>(null);
+  
+  // Helper function to get high-precision timestamp
+  const getHighPrecisionTime = () => {
+    return typeof performance !== 'undefined' ? performance.now() : Date.now();
+  };
 
   // Initialize audio context on user interaction (required for mobile)
   useEffect(() => {
@@ -98,7 +106,7 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
       // Method 2: HTML Audio Element as fallback
       try {
         // Create a data URL for a beep sound
-        const beepDataUrl = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAg==';
+        const beepDataUrl = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAg==';
         const audio = new Audio(beepDataUrl);
         audio.volume = 1.0; // Maximum volume
         audio.play().catch(e => console.warn('HTML Audio fallback failed:', e));
@@ -117,24 +125,36 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
     }
   };
 
-  // System clock-based timer logic
+  // Accurate timer implementation using system clock
   useEffect(() => {
-    if (isRunning && targetFinishTimeRef.current) {
-      // Update timer every 100ms for smooth UI updates
+    if (isRunning && targetEndTimeRef.current) {
+      // Update timer every 100ms for smooth UI
       intervalRef.current = setInterval(() => {
-        const now = Date.now();
-        const remaining = Math.max(0, Math.ceil((targetFinishTimeRef.current! - now) / 1000));
-        
-        setTimeLeft(remaining);
+        const now = getHighPrecisionTime();
+        const remaining = Math.max(0, Math.ceil((targetEndTimeRef.current! - now) / 1000));
         
         if (remaining <= 0) {
+          // Timer finished
+          const actualEndTime = getHighPrecisionTime();
+          const expectedEndTime = targetEndTimeRef.current!;
+          const accuracy = Math.abs(actualEndTime - expectedEndTime);
+          
+          console.log(`Timer finished! Accuracy: ${accuracy.toFixed(2)}ms`);
+          
           setIsRunning(false);
           setShowFloatingTimer(false);
           setShowAlert(true);
+          setTimeLeft(0);
           playBeepSound();
-          targetFinishTimeRef.current = null;
+          
+          // Clear the target end time
+          targetEndTimeRef.current = null;
+          startTimeRef.current = null;
+        } else {
+          // Only update if the time has actually changed to prevent unnecessary re-renders
+          setTimeLeft(prev => prev !== remaining ? remaining : prev);
         }
-      }, 100);
+      }, 100); // Update every 100ms for smooth countdown
     } else {
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -156,9 +176,14 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
       setTimeLeft(totalSeconds);
     }
     
-    // Calculate target finish time based on current system time
-    const now = Date.now();
-    targetFinishTimeRef.current = now + (timeLeft * 1000);
+    // Set the target end time based on current time + remaining time
+    const now = getHighPrecisionTime();
+    const remainingMs = timeLeft * 1000;
+    targetEndTimeRef.current = now + remainingMs;
+    startTimeRef.current = now;
+    
+    // Debug logging for timing accuracy
+    console.log(`Timer started: ${timeLeft}s, Target end: ${new Date(targetEndTimeRef.current).toISOString()}`);
     
     setIsRunning(true);
     setShowAlert(false);
@@ -168,11 +193,17 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
 
   const pauseTimer = () => {
     setIsRunning(false);
-    // Store remaining time when pausing
-    if (targetFinishTimeRef.current) {
-      const now = Date.now();
-      const remaining = Math.max(0, Math.ceil((targetFinishTimeRef.current - now) / 1000));
-      setTimeLeft(remaining);
+    // Don't clear targetEndTimeRef - we'll use it when resuming
+  };
+
+  const resumeTimer = () => {
+    if (timeLeft > 0) {
+      // When resuming, recalculate the target end time based on remaining time
+      const now = getHighPrecisionTime();
+      const remainingMs = timeLeft * 1000;
+      targetEndTimeRef.current = now + remainingMs;
+      startTimeRef.current = now;
+      setIsRunning(true);
     }
   };
 
@@ -182,7 +213,10 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
     setShowAlert(false);
     setShowFloatingTimer(false);
     setIsMinimized(false);
-    targetFinishTimeRef.current = null;
+    
+    // Clear timing refs
+    targetEndTimeRef.current = null;
+    startTimeRef.current = null;
   };
 
   const resetTimer = () => {
@@ -190,7 +224,10 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
     const totalSeconds = hours * 3600 + minutes * 60 + seconds;
     setTimeLeft(totalSeconds);
     setShowAlert(false);
-    targetFinishTimeRef.current = null;
+    
+    // Clear timing refs
+    targetEndTimeRef.current = null;
+    startTimeRef.current = null;
   };
 
   const formatTime = (totalSeconds: number) => {
@@ -257,16 +294,17 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
     setTimeLeft(0);
     setShowFloatingTimer(false);
     setIsMinimized(false);
-    targetFinishTimeRef.current = null;
   };
 
   const restartTimer = () => {
     const totalSeconds = hours * 3600 + minutes * 60 + seconds;
     setTimeLeft(totalSeconds);
     
-    // Calculate new target finish time
-    const now = Date.now();
-    targetFinishTimeRef.current = now + (totalSeconds * 1000);
+    // Set the target end time based on current time + total time
+    const now = getHighPrecisionTime();
+    const totalMs = totalSeconds * 1000;
+    targetEndTimeRef.current = now + totalMs;
+    startTimeRef.current = now;
     
     setIsRunning(true);
     setShowAlert(false);
@@ -339,7 +377,7 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
           <div className="flex items-center justify-center space-x-2 rtl:space-x-reverse">
             {!isRunning ? (
               <button
-                onClick={() => setIsRunning(true)}
+                onClick={resumeTimer}
                 className="p-3 bg-green-500/90 text-white rounded-full hover:bg-green-600 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
               >
                 <Play className="h-5 w-5" />
