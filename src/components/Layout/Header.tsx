@@ -252,7 +252,8 @@ const Header: React.FC = () => {
             {/* Sidebar */}
             <div className="fixed top-0 right-0 w-56 bg-gradient-to-b from-white via-gray-50 to-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out rounded-l-2xl border-l border-gray-200">
               {/* Header */}
-              <div className="flex items-center justify-end p-2 border-b border-gray-200">
+              <div className="flex items-center justify-between p-3 border-b border-gray-200">
+                <h2 className="text-lg font-bold text-gray-800">תפריט</h2>
                 <button
                   onClick={() => setIsMenuOpen(false)}
                   className="p-1 hover:bg-gray-100 rounded-full transition-all duration-300 hover:scale-110"
@@ -269,10 +270,10 @@ const Header: React.FC = () => {
                     executeProtectedAction(() => navigate('/add'));
                     setIsMenuOpen(false);
                   }}
-                  className="w-full flex items-center space-x-2 rtl:space-x-reverse bg-gradient-to-r from-green-500 to-green-600 text-white py-2.5 px-3 rounded-lg hover:from-green-600 hover:to-green-700 transition-all duration-300 transform hover:scale-105 shadow-md hover:shadow-lg"
+                  className="w-full flex items-center space-x-2 rtl:space-x-reverse py-2.5 px-3 rounded-lg transition-all duration-300 transform hover:scale-105 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 hover:from-gray-200 hover:to-gray-300 border border-gray-300 hover:border-gray-400"
                 >
-                  <div className="w-7 h-7 bg-white/20 rounded-full flex items-center justify-center">
-                    <Plus className="h-3.5 w-3.5" />
+                  <div className="w-7 h-7 bg-gray-300 rounded-full flex items-center justify-center">
+                    <Plus className="h-3.5 w-3.5 text-gray-600" />
                   </div>
                   <span className="text-sm font-semibold">הוספת מתכון</span>
                 </button>
@@ -283,11 +284,11 @@ const Header: React.FC = () => {
                   className={`w-full flex items-center space-x-2 rtl:space-x-reverse py-2.5 px-3 rounded-lg transition-all duration-300 transform hover:scale-105 ${
                     showFavoritesOnly 
                       ? 'bg-gradient-to-r from-red-100 to-red-200 text-red-700 border border-red-300 shadow-md' 
-                      : 'bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 hover:from-gray-100 hover:to-gray-200 border border-gray-200 hover:border-gray-300'
+                      : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 hover:from-gray-200 hover:to-gray-300 border border-gray-300 hover:border-gray-400'
                   }`}
                 >
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center ${
-                    showFavoritesOnly ? 'bg-red-200' : 'bg-gray-200'
+                    showFavoritesOnly ? 'bg-red-200' : 'bg-gray-300'
                   }`}>
                     <Heart className={`h-3.5 w-3.5 ${showFavoritesOnly ? 'text-red-600 fill-current' : 'text-gray-600'}`} />
                   </div>
@@ -303,11 +304,11 @@ const Header: React.FC = () => {
                   className={`w-full flex items-center space-x-2 rtl:space-x-reverse py-2.5 px-3 rounded-lg transition-all duration-300 transform hover:scale-105 ${
                     hasActiveFilters
                       ? 'bg-gradient-to-r from-primary-100 to-primary-200 text-primary-700 border border-primary-300 shadow-md' 
-                      : 'bg-gradient-to-r from-gray-50 to-gray-100 text-gray-700 hover:from-gray-100 hover:to-gray-200 border border-gray-200 hover:border-gray-300'
+                      : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 hover:from-gray-200 hover:to-gray-300 border border-gray-300 hover:border-gray-400'
                   }`}
                 >
                   <div className={`w-7 h-7 rounded-full flex items-center justify-center ${
-                    hasActiveFilters ? 'bg-primary-200' : 'bg-gray-200'
+                    hasActiveFilters ? 'bg-primary-200' : 'bg-gray-300'
                   }`}>
                     <Filter className="h-3.5 w-3.5" />
                   </div>

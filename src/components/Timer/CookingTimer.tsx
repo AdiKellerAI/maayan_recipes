@@ -2,27 +2,38 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Timer, Play, Pause, Square, Plus, Minus, X, Volume2, RotateCcw, Minimize2, Maximize2 } from 'lucide-react';
 
 interface CookingTimerProps {
-  isVisible: boolean;
-  onClose: () => void;
+  duration: number; // Duration in minutes
+  onComplete: () => void;
+  timerName?: string;
 }
 
-const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
-  const [hours, setHours] = useState(0);
-  const [minutes, setMinutes] = useState(10);
-  const [seconds, setSeconds] = useState(0);
+const CookingTimer: React.FC<CookingTimerProps> = ({ 
+  duration, 
+  onComplete, 
+  timerName = "טיימר בישול" 
+}) => {
+  // Validate duration prop
+  if (typeof duration !== 'number' || duration <= 0) {
+    throw new Error('Duration must be a positive number');
+  }
+
+  const [timeLeft, setTimeLeft] = useState(duration * 60);
   const [isRunning, setIsRunning] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
   const [showAlert, setShowAlert] = useState(false);
   const [showFloatingTimer, setShowFloatingTimer] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   
-  // Absolute timestamp-based timing refs
+  // Performance API-based timing refs
   const startTimeRef = useRef<number | null>(null);
-  const endTimeRef = useRef<number | null>(null);
+  const durationRef = useRef(duration * 60 * 1000); // Duration in milliseconds
+  const animationIdRef = useRef<number | null>(null);
   const pausedAtRef = useRef<number | null>(null);
   const remainingAtPauseRef = useRef<number | null>(null);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+
+  // Local storage key
+  const STORAGE_KEY = `cooking_timer_${timerName}`;
 
   // Initialize audio context on user interaction (required for mobile)
   useEffect(() => {
@@ -36,7 +47,6 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
       }
     };
 
-    // Initialize on any user interaction
     const handleUserInteraction = () => {
       initAudioContext();
       if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
@@ -53,28 +63,96 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
     };
   }, []);
 
-  // Listen for global timer open events
-  useEffect(() => {
-    const handleShowTimer = () => {
-      // This will be handled by the parent component
-    };
+  // Core timer update function using performance.now() and requestAnimationFrame
+  const updateTimer = useCallback(() => {
+    if (!startTimeRef.current || !isRunning) return;
 
-    window.addEventListener('showTimer', handleShowTimer);
-    return () => window.removeEventListener('showTimer', handleShowTimer);
-  }, []);
-
-  // Browser tab visibility change handler for accurate timing
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (!document.hidden && isRunning && endTimeRef.current) {
-        // Tab became visible - immediately recalculate from system time
-        updateTimerDisplay();
+    const elapsed = performance.now() - startTimeRef.current;
+    const remaining = Math.max(0, durationRef.current - elapsed);
+    
+    if (remaining > 0) {
+      setTimeLeft(Math.ceil(remaining / 1000));
+      animationIdRef.current = requestAnimationFrame(updateTimer);
+    } else {
+      // Timer completed
+      setTimeLeft(0);
+      setIsRunning(false);
+      setIsPaused(false);
+      setShowAlert(true);
+      setShowFloatingTimer(false);
+      
+      // Clear animation frame
+      if (animationIdRef.current) {
+        cancelAnimationFrame(animationIdRef.current);
+        animationIdRef.current = null;
       }
-    };
+      
+      // Clear localStorage
+      localStorage.removeItem(STORAGE_KEY);
+      
+      // Play completion sound
+      playBeepSound();
+      
+      // Call completion callback
+      onComplete();
+    }
+  }, [isRunning, onComplete, STORAGE_KEY]);
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [isRunning]);
+  // Load timer state from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedState = localStorage.getItem(STORAGE_KEY);
+      if (savedState) {
+        const parsed = JSON.parse(savedState);
+        
+        if (parsed.isRunning && parsed.startTime && parsed.duration) {
+          // Check if timer should have completed while page was closed
+          const elapsed = performance.now() - parsed.startTime;
+          const remainingMs = Math.max(0, parsed.duration - elapsed);
+          const remainingSeconds = Math.floor(remainingMs / 1000);
+          
+          if (remainingSeconds > 0) {
+            // Timer was running, restore state
+            setTimeLeft(remainingSeconds);
+            setIsRunning(true);
+            setShowFloatingTimer(true);
+            startTimeRef.current = parsed.startTime;
+            durationRef.current = parsed.duration;
+            
+            // Start the timer animation frame immediately
+            animationIdRef.current = requestAnimationFrame(updateTimer);
+          } else {
+            // Timer completed while page was closed
+            localStorage.removeItem(STORAGE_KEY);
+            onComplete();
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to restore timer state from localStorage:', error);
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, [STORAGE_KEY, onComplete, updateTimer]);
+
+  // Save timer state to localStorage
+  const saveTimerState = useCallback(() => {
+    try {
+      if (isRunning && startTimeRef.current) {
+        const state = {
+          isRunning: true,
+          startTime: startTimeRef.current,
+          duration: durationRef.current,
+          timerName: timerName,
+          timestamp: performance.now()
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    } catch (error) {
+      console.warn('Failed to save timer state to localStorage:', error);
+    }
+  }, [isRunning, timerName, STORAGE_KEY]);
 
   // Enhanced audio system for mobile and silent mode
   const playBeepSound = () => {
@@ -82,13 +160,11 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
       // Method 1: Web Audio API (works even on silent mode on many devices)
       let audioContext = audioContextRef.current;
       
-      // Create audio context if not exists
       if (!audioContext) {
         audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
         audioContextRef.current = audioContext;
       }
       
-      // Ensure audio context is running (required for mobile)
       if (audioContext.state === 'suspended') {
         audioContext.resume();
       }
@@ -105,7 +181,7 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
           oscillator.frequency.value = 800; // 800Hz beep
           oscillator.type = 'sine';
           
-          gainNode.gain.setValueAtTime(0.5, audioContext.currentTime); // Increased volume
+          gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
           gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.8);
           
           oscillator.start(audioContext.currentTime);
@@ -115,10 +191,9 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
       
       // Method 2: HTML Audio Element as fallback
       try {
-        // Create a data URL for a beep sound
-        const beepDataUrl = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAg==';
+        const beepDataUrl = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAg==';
         const audio = new Audio(beepDataUrl);
-        audio.volume = 1.0; // Maximum volume
+        audio.volume = 1.0;
         audio.play().catch(e => console.warn('HTML Audio fallback failed:', e));
       } catch (audioError) {
         console.warn('HTML Audio fallback failed:', audioError);
@@ -129,207 +204,186 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
       
       // Method 3: Vibration as final fallback (mobile only)
       if ('vibrate' in navigator) {
-        // Vibrate pattern: vibrate for 200ms, pause 100ms, repeat 3 times
         navigator.vibrate([200, 100, 200, 100, 200]);
       }
     }
   };
 
-  // Core timer update function using absolute timestamps
-  const updateTimerDisplay = useCallback(() => {
-    if (!endTimeRef.current) return;
-
-    const now = Date.now();
-    const remainingMs = Math.max(0, endTimeRef.current - now);
-    const remainingSeconds = Math.floor(remainingMs / 1000);
-
-    if (remainingMs <= 0) {
-      // Timer completed - handle immediately
-      handleTimerCompletion();
-    } else {
-      // Update display with calculated time
-      setTimeLeft(remainingSeconds);
-    }
-  }, []);
-
-  // Handle timer completion
-  const handleTimerCompletion = useCallback(() => {
-    setIsRunning(false);
-    setShowFloatingTimer(false);
-    setShowAlert(true);
-    setTimeLeft(0);
-    playBeepSound();
+  // Start timer with performance.now()
+  const startTimer = useCallback(() => {
+    if (isRunning) return;
     
-    // Clear all timing refs
-    startTimeRef.current = null;
-    endTimeRef.current = null;
-    pausedAtRef.current = null;
-    remainingAtPauseRef.current = null;
-    
-    // Clear interval
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-  }, []);
-
-  // High-frequency timer updates (100ms) for smooth countdown
-  useEffect(() => {
-    if (isRunning && endTimeRef.current) {
-      // Update timer every 100ms for smooth UI and accurate completion detection
-      intervalRef.current = setInterval(updateTimerDisplay, 100);
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    };
-  }, [isRunning, updateTimerDisplay]);
-
-  const startTimer = () => {
-    if (timeLeft === 0) {
-      const totalSeconds = hours * 3600 + minutes * 60 + seconds;
-      if (totalSeconds === 0) return;
-      setTimeLeft(totalSeconds);
-    }
-    
-    // Set absolute timestamps for accurate timing
-    const now = Date.now();
-    const remainingMs = timeLeft * 1000;
+    const now = performance.now();
+    const durationMs = duration * 60 * 1000;
     
     startTimeRef.current = now;
-    endTimeRef.current = now + remainingMs;
+    durationRef.current = durationMs;
     pausedAtRef.current = null;
     remainingAtPauseRef.current = null;
-    
-    // Debug logging for timing accuracy
-    console.log(`Timer started: ${timeLeft}s, Target end: ${new Date(endTimeRef.current).toISOString()}`);
     
     setIsRunning(true);
+    setIsPaused(false);
     setShowAlert(false);
     setShowFloatingTimer(true);
-    onClose(); // Close the main timer window
-  };
-
-  const pauseTimer = () => {
-    if (!isRunning || !endTimeRef.current) return;
     
-    // Store pause information for accurate resume
-    const now = Date.now();
+    // Save state to localStorage
+    saveTimerState();
+    
+    // Start timer animation frame
+    animationIdRef.current = requestAnimationFrame(updateTimer);
+  }, [isRunning, duration, saveTimerState, updateTimer]);
+
+  // Pause timer
+  const pauseTimer = useCallback(() => {
+    if (!isRunning || !startTimeRef.current) return;
+    
+    // Cancel animation frame
+    if (animationIdRef.current) {
+      cancelAnimationFrame(animationIdRef.current);
+      animationIdRef.current = null;
+    }
+    
+    // Store pause information
+    const now = performance.now();
     pausedAtRef.current = now;
-    remainingAtPauseRef.current = endTimeRef.current - now;
+    const elapsed = now - startTimeRef.current;
+    remainingAtPauseRef.current = Math.max(0, durationRef.current - elapsed);
     
     setIsRunning(false);
-  };
-
-  const resumeTimer = () => {
-    if (!pausedAtRef.current || !remainingAtPauseRef.current) return;
+    setIsPaused(true);
     
-    // Recalculate end time based on remaining time at pause
-    const now = Date.now();
-    endTimeRef.current = now + remainingAtPauseRef.current;
+    // Update localStorage
+    saveTimerState();
+  }, [isRunning, saveTimerState]);
+
+  // Resume timer
+  const resumeTimer = useCallback(() => {
+    if (!isPaused || !pausedAtRef.current || !remainingAtPauseRef.current) return;
+    
+    // Recalculate start time based on remaining time at pause
+    const now = performance.now();
     startTimeRef.current = now;
+    durationRef.current = remainingAtPauseRef.current;
     
     // Clear pause refs
     pausedAtRef.current = null;
     remainingAtPauseRef.current = null;
     
     setIsRunning(true);
-  };
+    setIsPaused(false);
+    
+    // Save state to localStorage
+    saveTimerState();
+    
+    // Resume timer animation frame
+    animationIdRef.current = requestAnimationFrame(updateTimer);
+  }, [isPaused, saveTimerState, updateTimer]);
 
-  const stopTimer = () => {
+  // Stop timer completely
+  const stopTimer = useCallback(() => {
+    // Cancel animation frame
+    if (animationIdRef.current) {
+      cancelAnimationFrame(animationIdRef.current);
+      animationIdRef.current = null;
+    }
+    
     setIsRunning(false);
-    setTimeLeft(0);
+    setIsPaused(false);
+    setTimeLeft(duration * 60);
     setShowAlert(false);
     setShowFloatingTimer(false);
     setIsMinimized(false);
     
-    // Clear all timing refs
+    // Clear refs
     startTimeRef.current = null;
-    endTimeRef.current = null;
+    durationRef.current = duration * 60 * 1000;
     pausedAtRef.current = null;
     remainingAtPauseRef.current = null;
-  };
-
-  const resetTimer = () => {
-    setIsRunning(false);
-    const totalSeconds = hours * 3600 + minutes * 60 + seconds;
-    setTimeLeft(totalSeconds);
-    setShowAlert(false);
     
-    // Clear all timing refs
-    startTimeRef.current = null;
-    endTimeRef.current = null;
-    pausedAtRef.current = null;
-    remainingAtPauseRef.current = null;
-  };
+    // Clear localStorage
+    localStorage.removeItem(STORAGE_KEY);
+  }, [duration, STORAGE_KEY]);
 
+  // Reset timer
+  const resetTimer = useCallback(() => {
+    stopTimer();
+    setTimeLeft(duration * 60);
+  }, [stopTimer, duration]);
+
+  // Restart timer
+  const restartTimer = useCallback(() => {
+    stopTimer();
+    startTimer();
+  }, [stopTimer, startTimer]);
+
+  // Page Visibility API handler for tab switching
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden && isRunning && startTimeRef.current) {
+        // Tab became visible - immediately recalculate from performance.now()
+        const now = performance.now();
+        const elapsed = now - startTimeRef.current;
+        const remainingMs = Math.max(0, durationRef.current - elapsed);
+        const remainingSeconds = Math.floor(remainingMs / 1000);
+        
+        if (remainingSeconds <= 0) {
+          // Timer should have completed while in background
+          setTimeLeft(0);
+          setIsRunning(false);
+          setIsPaused(false);
+          setShowAlert(true);
+          setShowFloatingTimer(false);
+          
+          // Cancel animation frame
+          if (animationIdRef.current) {
+            cancelAnimationFrame(animationIdRef.current);
+            animationIdRef.current = null;
+          }
+          
+          // Clear localStorage
+          localStorage.removeItem(STORAGE_KEY);
+          
+          // Play completion sound
+          playBeepSound();
+          
+          // Call completion callback
+          onComplete();
+        } else {
+          // Update display and continue
+          setTimeLeft(remainingSeconds);
+          
+          // Restart animation frame if it was cancelled
+          if (!animationIdRef.current) {
+            animationIdRef.current = requestAnimationFrame(updateTimer);
+          }
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isRunning, onComplete, STORAGE_KEY, updateTimer]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (animationIdRef.current) {
+        cancelAnimationFrame(animationIdRef.current);
+      }
+    };
+  }, []);
+
+  // Format time display
   const formatTime = (totalSeconds: number) => {
-    const hrs = Math.floor(totalSeconds / 3600);
-    const mins = Math.floor((totalSeconds % 3600) / 60);
+    const mins = Math.floor(totalSeconds / 60);
     const secs = totalSeconds % 60;
-    
-    if (hrs > 0) {
-      return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    }
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const adjustHours = (delta: number) => {
-    setHours(prev => Math.max(0, Math.min(24, prev + delta)));
-  };
+  // Calculate progress percentage
+  const progressPercentage = ((duration * 60 - timeLeft) / (duration * 60)) * 100;
 
-  const adjustMinutes = (delta: number) => {
-    setMinutes(prev => {
-      const newMinutes = prev + delta;
-      if (newMinutes >= 60) {
-        setHours(h => Math.min(24, h + 1));
-        return 0;
-      } else if (newMinutes < 0) {
-        if (hours > 0) {
-          setHours(h => Math.max(0, h - 1));
-          return 59;
-        }
-        return 0;
-      }
-      return newMinutes;
-    });
-  };
-
-  const adjustSeconds = (delta: number) => {
-    setSeconds(prev => {
-      const newSeconds = prev + delta;
-      if (newSeconds >= 60) {
-        setMinutes(m => {
-          if (m >= 59) {
-            setHours(h => Math.min(24, h + 1));
-            return 0;
-          }
-          return m + 1;
-        });
-        return 0;
-      } else if (newSeconds < 0) {
-        if (minutes > 0) {
-          setMinutes(m => m - 1);
-          return 59;
-        } else if (hours > 0) {
-          setHours(h => h - 1);
-          setMinutes(59);
-          return 59;
-        }
-        return 0;
-      }
-      return newSeconds;
-    });
-  };
-
+  // Dismiss alert
   const dismissAlert = () => {
     setShowAlert(false);
     setTimeLeft(0);
@@ -337,24 +391,7 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
     setIsMinimized(false);
   };
 
-  const restartTimer = () => {
-    const totalSeconds = hours * 3600 + minutes * 60 + seconds;
-    setTimeLeft(totalSeconds);
-    
-    // Set the target end time based on current time + total time
-    const now = Date.now();
-    const totalMs = totalSeconds * 1000;
-    endTimeRef.current = now + totalMs;
-    startTimeRef.current = now;
-    pausedAtRef.current = null;
-    remainingAtPauseRef.current = null;
-    
-    setIsRunning(true);
-    setShowAlert(false);
-    setShowFloatingTimer(true);
-    setIsMinimized(false);
-  };
-
+  // Toggle minimize
   const toggleMinimize = () => {
     setIsMinimized(!isMinimized);
   };
@@ -374,7 +411,6 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
               <div className="text-xs font-mono font-bold text-white tracking-tight leading-none">
                 {formatTime(timeLeft)}
               </div>
-              {/* Pulsing indicator when running */}
               {isRunning && (
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
               )}
@@ -392,7 +428,7 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
             <div className="w-8 h-8 bg-orange-100/80 rounded-full flex items-center justify-center">
               <span className="text-lg">⏰</span>
             </div>
-            <span className="text-sm font-semibold text-gray-900">טיימר בישול</span>
+            <span className="text-sm font-semibold text-gray-900">{timerName}</span>
           </div>
           <div className="flex items-center space-x-1 rtl:space-x-reverse">
             <button
@@ -413,8 +449,38 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
         </div>
         
         <div className="text-center">
-          <div className="text-3xl font-mono font-bold text-gray-900 mb-4 tracking-wider">
-            {formatTime(timeLeft)}
+          {/* Progress Circle */}
+          <div className="relative w-24 h-24 mx-auto mb-4">
+            <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
+              {/* Background circle */}
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                fill="none"
+                stroke="#e5e7eb"
+                strokeWidth="8"
+              />
+              {/* Progress circle */}
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                fill="none"
+                stroke="#f97316"
+                strokeWidth="8"
+                strokeDasharray={`${2 * Math.PI * 45}`}
+                strokeDashoffset={`${2 * Math.PI * 45 * (1 - progressPercentage / 100)}`}
+                strokeLinecap="round"
+                className="transition-all duration-100 ease-out"
+              />
+            </svg>
+            {/* Time display in center */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-lg font-mono font-bold text-gray-900">
+                {formatTime(timeLeft)}
+              </div>
+            </div>
           </div>
           
           <div className="flex items-center justify-center space-x-2 rtl:space-x-reverse">
@@ -428,7 +494,7 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
             ) : (
               <button
                 onClick={pauseTimer}
-                className="p-3 bg-yellow-500/90 text-white rounded-full hover:bg-yellow-600 transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
+                className="p-3 bg-yellow-500/90 text-white rounded-full hover:bg-yellow-600 transition-colors"
               >
                 <Pause className="h-5 w-5" />
               </button>
@@ -446,137 +512,112 @@ const CookingTimer: React.FC<CookingTimerProps> = ({ isVisible, onClose }) => {
     );
   };
 
-  if (!isVisible && !showFloatingTimer && !showAlert) return null;
-
   return (
     <>
       {/* Main Timer Setup Window */}
-      {isVisible && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                <span className="text-2xl">⏰</span>
-                <h3 className="text-xl font-semibold text-gray-900">הגדרת טיימר</h3>
-              </div>
-              <button
-                onClick={onClose}
-                className="p-1 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="h-5 w-5 text-gray-500" />
-              </button>
-            </div>
+      <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-2 rtl:space-x-reverse">
+            <span className="text-2xl">⏰</span>
+            <h3 className="text-xl font-semibold text-gray-900">{timerName}</h3>
+          </div>
+        </div>
 
-            {/* Time Display */}
-            <div className="text-center mb-6">
-              <div className="text-4xl font-mono font-bold text-gray-900 mb-4">
-                {hours > 0 ? `${hours.toString().padStart(2, '0')}:` : ''}
-                {minutes.toString().padStart(2, '0')}:
-                {seconds.toString().padStart(2, '0')}
+        {/* Time Display */}
+        <div className="text-center mb-6">
+          <div className="text-4xl font-mono font-bold text-gray-900 mb-4">
+            {formatTime(timeLeft)}
+          </div>
+          
+          {/* Progress Circle */}
+          <div className="relative w-32 h-32 mx-auto mb-6">
+            <svg className="w-32 h-32 transform -rotate-90" viewBox="0 0 100 100">
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                fill="none"
+                stroke="#e5e7eb"
+                strokeWidth="8"
+              />
+              <circle
+                cx="50"
+                cy="50"
+                r="45"
+                fill="none"
+                stroke="#f97316"
+                strokeWidth="8"
+                strokeDasharray={`${2 * Math.PI * 45}`}
+                strokeDashoffset={`${2 * Math.PI * 45 * (1 - progressPercentage / 100)}`}
+                strokeLinecap="round"
+                className="transition-all duration-100 ease-out"
+              />
+            </svg>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="text-2xl font-mono font-bold text-gray-900">
+                {Math.round(progressPercentage)}%
               </div>
-              
-              {/* Time Setters */}
-              <div className="flex items-center justify-center space-x-8 rtl:space-x-reverse mb-6">
-                {/* Seconds */}
-                <div className="flex flex-col items-center">
-                  <button
-                    onClick={() => adjustSeconds(15)}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                  <span className="text-sm text-gray-600 mx-2 py-2">שניות</span>
-                  <button
-                    onClick={() => adjustSeconds(-15)}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                  >
-                    <Minus className="h-4 w-4" />
-                  </button>
-                </div>
-                
-                {/* Minutes */}
-                <div className="flex flex-col items-center">
-                  <button
-                    onClick={() => adjustMinutes(1)}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                  <span className="text-sm text-gray-600 mx-2 py-2">דקות</span>
-                  <button
-                    onClick={() => adjustMinutes(-1)}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                  >
-                    <Minus className="h-4 w-4" />
-                  </button>
-                </div>
-                
-                {/* Hours */}
-                <div className="flex flex-col items-center">
-                  <button
-                    onClick={() => adjustHours(1)}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                  >
-                    <Plus className="h-4 w-4" />
-                  </button>
-                  <span className="text-sm text-gray-600 mx-2 py-2">שעות</span>
-                  <button
-                    onClick={() => adjustHours(-1)}
-                    className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-                  >
-                    <Minus className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
-
-              {/* Quick Time Buttons */}
-              <div className="grid grid-cols-4 gap-2 mb-6">
-                {[
-                  { label: '1 דק', h: 0, m: 1, s: 0 },
-                  { label: '5 דק', h: 0, m: 5, s: 0 },
-                  { label: '10 דק', h: 0, m: 10, s: 0 },
-                  { label: '15 דק', h: 0, m: 15, s: 0 },
-                  { label: '30 דק', h: 0, m: 30, s: 0 },
-                  { label: '45 דק', h: 0, m: 45, s: 0 },
-                  { label: '1 שעה', h: 1, m: 0, s: 0 },
-                  { label: '2 שעות', h: 2, m: 0, s: 0 }
-                ].map((preset) => (
-                  <button
-                    key={preset.label}
-                    onClick={() => {
-                      setHours(preset.h);
-                      setMinutes(preset.m);
-                      setSeconds(preset.s);
-                    }}
-                    className="px-3 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-                  >
-                    {preset.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Controls */}
-            <div className="flex items-center justify-center space-x-3 rtl:space-x-reverse">
-              <button
-                onClick={startTimer}
-                disabled={hours === 0 && minutes === 0 && seconds === 0}
-                className="flex items-center space-x-2 rtl:space-x-reverse bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
-              >
-                <Play className="h-4 w-4" />
-                <span>התחל</span>
-              </button>
-              
-              <button
-                onClick={onClose}
-                className="flex items-center space-x-2 rtl:space-x-reverse bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 transition-colors"
-              >
-                <span>ביטול</span>
-              </button>
             </div>
           </div>
         </div>
-      )}
+
+        {/* Controls */}
+        <div className="flex items-center justify-center space-x-3 rtl:space-x-reverse mb-4">
+          {!isRunning ? (
+            <button
+              onClick={startTimer}
+              disabled={timeLeft === 0}
+              className="flex items-center space-x-2 rtl:space-x-reverse bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            >
+              <Play className="h-4 w-4" />
+              <span>התחל</span>
+            </button>
+          ) : (
+            <button
+              onClick={pauseTimer}
+              className="flex items-center space-x-2 rtl:space-x-reverse bg-yellow-500 text-white px-6 py-3 rounded-lg hover:bg-yellow-600 transition-colors"
+            >
+              <Pause className="h-4 w-4" />
+              <span>השהה</span>
+            </button>
+          )}
+          
+          {isPaused && (
+            <button
+              onClick={resumeTimer}
+              className="flex items-center space-x-2 rtl:space-x-reverse bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              <Play className="h-4 w-4" />
+              <span>המשך</span>
+            </button>
+          )}
+          
+          <button
+            onClick={stopTimer}
+            className="flex items-center space-x-2 rtl:space-x-reverse bg-red-500 text-white px-6 py-3 rounded-lg hover:bg-red-600 transition-colors"
+          >
+            <Square className="h-4 w-4" />
+            <span>עצור</span>
+          </button>
+          
+          <button
+            onClick={resetTimer}
+            className="flex items-center space-x-2 rtl:space-x-reverse bg-gray-500 text-white px-6 py-3 rounded-lg hover:bg-gray-600 transition-colors"
+          >
+            <RotateCcw className="h-4 w-4" />
+            <span>אפס</span>
+          </button>
+        </div>
+
+        {/* Timer Info */}
+        <div className="text-center text-sm text-gray-600">
+          <p>משך: {duration} דקות</p>
+          <p>סטטוס: {isRunning ? 'רץ' : isPaused ? 'מושהה' : 'עצור'}</p>
+          {startTimeRef.current && (
+            <p>התחיל: {new Date(startTimeRef.current).toLocaleTimeString()}</p>
+          )}
+        </div>
+      </div>
 
       {/* Floating Timer */}
       <FloatingTimer />
