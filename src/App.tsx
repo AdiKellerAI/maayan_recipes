@@ -9,6 +9,7 @@ import RecipeDetailPage from './pages/RecipeDetailPage';
 import AddRecipePage from './pages/AddRecipePage';
 import EditRecipePage from './pages/EditRecipePage';
 import SearchResultsPage from './pages/SearchResultsPage';
+import TimerTestPage from './pages/TimerTestPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import MultiTimer from './components/Timer/MultiTimer';
 import AuthModal from './components/AuthModal';
@@ -41,6 +42,7 @@ function App() {
                   <Route path="/add" element={<AddRecipePage />} />
                   <Route path="/edit/:id" element={<EditRecipePage />} />
                   <Route path="/search" element={<SearchResultsPage />} />
+                  <Route path="/timer-test" element={<TimerTestPage />} />
                 </Routes>
               </main>
               

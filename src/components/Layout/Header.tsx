@@ -354,6 +354,20 @@ const Header: React.FC = () => {
                     </div>
                     <span className="text-xs font-medium">דף הבית</span>
                   </button>
+                  
+                  {/* Timer Test Button */}
+                  <button
+                    onClick={() => {
+                      navigate('/timer-test');
+                      setIsMenuOpen(false);
+                    }}
+                    className="w-full flex items-center space-x-2 rtl:space-x-reverse py-1.5 px-2.5 rounded-md bg-gradient-to-r from-green-100 to-green-200 text-green-700 hover:from-green-200 hover:to-green-300 transition-all duration-300 transform hover:scale-105"
+                  >
+                    <div className="w-5 h-5 bg-green-200 rounded-full flex items-center justify-center">
+                      <span className="text-xs">🧪</span>
+                    </div>
+                    <span className="text-xs font-medium">בדיקת טיימר</span>
+                  </button>
                 </div>
               </div>
             </div>

@@ -1,5 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause, Square, Plus, Minus, X, Volume2, RotateCcw, Minimize2, Clock } from 'lucide-react';
+import {
+  getServerTime,
+  calculateTimeOffset,
+  getCurrentTime,
+  saveTimerState,
+  loadTimerState,
+  clearTimerState,
+  shouldTimerBeRunning,
+  calculateRemainingTime,
+  createTimerWorker
+} from '../../utils/timeSync';
 
 interface TimerData {
   id: string;
@@ -10,6 +21,8 @@ interface TimerData {
   isRunning: boolean;
   isMinimized: boolean;
   label?: string;
+  endTime?: number;
+  serverOffset?: number;
 }
 
 interface MultiTimerProps {
@@ -27,7 +40,11 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
   const [globalSeconds, setGlobalSeconds] = useState(0);
   const [highlightedTimerId, setHighlightedTimerId] = useState<string | null>(null);
   const [timerName, setTimerName] = useState('');
+  const [serverOffset, setServerOffset] = useState(0);
+  
   const intervalRefs = useRef<{ [key: string]: NodeJS.Timeout }>({});
+  const syncIntervalRefs = useRef<{ [key: string]: NodeJS.Timeout }>({});
+  const workerRefs = useRef<{ [key: string]: Worker }>({});
   const audioContextRef = useRef<AudioContext | null>(null);
   const alarmAudioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -72,6 +89,18 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
       document.removeEventListener('touchstart', handleUserInteraction);
       document.removeEventListener('click', handleUserInteraction);
     };
+  }, []);
+
+  // Sync with server time
+  const syncServerTime = useCallback(async () => {
+    try {
+      const offset = await calculateTimeOffset();
+      setServerOffset(offset);
+      return offset;
+    } catch (e) {
+      console.warn('Time sync failed, using local time');
+      return 0;
+    }
   }, []);
 
   // Enhanced alarm sound that works even in silent mode
@@ -187,57 +216,303 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
   };
 
   // Timer management functions
-  const addTimer = () => {
+  const addTimer = useCallback(async () => {
     if (timers.length >= 5) return;
     
     const finalTimerName = timerName.trim() || `טיימר ${nextTimerId}`;
+    const totalSeconds = globalHours * 3600 + globalMinutes * 60 + globalSeconds;
+    
+    if (totalSeconds === 0) return;
+    
+    // Sync with server time
+    const offset = await syncServerTime();
+    
+    const currentTime = getCurrentTime(offset);
+    const endTime = currentTime + (totalSeconds * 1000);
+    
+    const timerId = `timer-${nextTimerId}`;
     
     const newTimer: TimerData = {
-      id: `timer-${nextTimerId}`,
+      id: timerId,
       hours: globalHours,
       minutes: globalMinutes,
       seconds: globalSeconds,
-      timeLeft: globalHours * 3600 + globalMinutes * 60 + globalSeconds,
+      timeLeft: totalSeconds,
       isRunning: true, // Start running automatically
       isMinimized: true, // Start minimized by default
-      label: finalTimerName
+      label: finalTimerName,
+      endTime: endTime,
+      serverOffset: offset
     };
     
     setTimers(prev => [...prev, newTimer]);
     setNextTimerId(prev => prev + 1);
     setTimerName(''); // Reset timer name input
-  };
+    
+    // Start timer immediately by setting up intervals and worker
+    setTimeout(() => {
+      // Start update loop - update every second for smooth counting
+      intervalRefs.current[timerId] = setInterval(() => {
+        setTimers(prev => prev.map(t => {
+          if (t.id === timerId && t.endTime && t.serverOffset !== undefined) {
+            const remainingMs = calculateRemainingTime(t.endTime, t.serverOffset);
+            const remainingSeconds = Math.floor(remainingMs / 1000);
+            
+            if (remainingMs <= 0) {
+              // Only finish timer if we're in the foreground
+              if (!document.hidden) {
+                // Timer finished
+                clearInterval(intervalRefs.current[timerId]);
+                delete intervalRefs.current[timerId];
+                setShowAlert(true);
+                setAlertTimerId(timerId);
+                playAlarmSound();
+                return { ...t, timeLeft: 0, isRunning: false };
+              }
+            }
+            return { ...t, timeLeft: remainingSeconds };
+          }
+          return t;
+        }));
+      }, 1000);
+      
+      // Start server sync loop (every 5 seconds for better accuracy)
+      syncIntervalRefs.current[timerId] = setInterval(async () => {
+        const newOffset = await syncServerTime();
+        setTimers(prev => prev.map(t => {
+          if (t.id === timerId) {
+            return { ...t, serverOffset: newOffset };
+          }
+          return t;
+        }));
+        
+        // Update worker with new offset immediately
+        if (workerRefs.current[timerId]) {
+          workerRefs.current[timerId].postMessage({ 
+            type: 'sync', 
+            syncOffset: newOffset 
+          });
+        }
+      }, 5000);
+      
+      // Start Web Worker for background accuracy
+      workerRefs.current[timerId] = createTimerWorker();
+      
+      workerRefs.current[timerId].onmessage = (e) => {
+        if (e.data.type === 'update') {
+          setTimers(prev => prev.map(t => {
+            if (t.id === timerId) {
+              return { ...t, timeLeft: e.data.remaining };
+            }
+            return t;
+          }));
+        } else if (e.data.type === 'complete') {
+          // Only complete timer if we're in the foreground and time is really up
+          if (!document.hidden) {
+            const timer = timers.find(t => t.id === timerId);
+            if (timer && timer.isRunning && timer.endTime && timer.serverOffset !== undefined) {
+              const currentTime = getCurrentTime(timer.serverOffset);
+              if (currentTime >= timer.endTime) {
+                // Timer completed in worker
+                clearInterval(intervalRefs.current[timerId]);
+                delete intervalRefs.current[timerId];
+                
+                if (syncIntervalRefs.current[timerId]) {
+                  clearInterval(syncIntervalRefs.current[timerId]);
+                  delete syncIntervalRefs.current[timerId];
+                }
+                
+                if (workerRefs.current[timerId]) {
+                  workerRefs.current[timerId].postMessage({ type: 'stop' });
+                }
+                
+                setShowAlert(true);
+                setAlertTimerId(timerId);
+                playAlarmSound();
+                setTimers(prev => prev.map(t => 
+                  t.id === timerId ? { ...t, timeLeft: 0, isRunning: false } : t
+                ));
+              }
+            }
+          }
+        }
+      };
+      
+      // Start worker
+      workerRefs.current[timerId].postMessage({ 
+        type: 'start', 
+        endTime: endTime, 
+        syncOffset: offset 
+      });
+    }, 0);
+  }, [timers.length, timerName, nextTimerId, globalHours, globalMinutes, globalSeconds, syncServerTime]);
 
   const removeTimer = (id: string) => {
-    // Stop and clear interval
+    // Stop and clear intervals
     if (intervalRefs.current[id]) {
       clearInterval(intervalRefs.current[id]);
       delete intervalRefs.current[id];
     }
     
+    if (syncIntervalRefs.current[id]) {
+      clearInterval(syncIntervalRefs.current[id]);
+      delete syncIntervalRefs.current[id];
+    }
+    
+    // Stop and terminate worker
+    if (workerRefs.current[id]) {
+      workerRefs.current[id].postMessage({ type: 'stop' });
+      workerRefs.current[id].terminate();
+      delete workerRefs.current[id];
+    }
+    
     setTimers(prev => prev.filter(timer => timer.id !== id));
   };
 
-  const startTimer = (id: string) => {
-    setTimers(prev => prev.map(timer => {
-      if (timer.id === id) {
-        if (timer.timeLeft === 0) {
-          const totalSeconds = globalHours * 3600 + globalMinutes * 60 + globalSeconds;
-          if (totalSeconds === 0) return timer;
-          return { 
-            ...timer, 
-            timeLeft: totalSeconds, 
-            isRunning: true,
-            isMinimized: true // Start minimized by default
-          };
-        }
-        return { ...timer, isRunning: true, isMinimized: true };
+  const startTimer = useCallback(async (id: string) => {
+    const timer = timers.find(t => t.id === id);
+    if (!timer) return;
+    
+    // Re-sync with server
+    const offset = await syncServerTime();
+    
+    const currentTime = getCurrentTime(offset);
+    const totalSeconds = timer.hours * 3600 + timer.minutes * 60 + timer.seconds;
+    const endTime = currentTime + (totalSeconds * 1000);
+    
+    setTimers(prev => prev.map(t => {
+      if (t.id === id) {
+        return { 
+          ...t, 
+          timeLeft: totalSeconds, 
+          isRunning: true,
+          isMinimized: true,
+          endTime: endTime,
+          serverOffset: offset
+        };
       }
-      return timer;
+      return t;
     }));
-  };
+    
+    // Start update loop
+    if (intervalRefs.current[id]) {
+      clearInterval(intervalRefs.current[id]);
+    }
+    
+    intervalRefs.current[id] = setInterval(() => {
+      setTimers(prev => prev.map(t => {
+        if (t.id === id && t.endTime && t.serverOffset !== undefined) {
+          const remaining = calculateRemainingTime(t.endTime, t.serverOffset);
+          if (remaining <= 0) {
+            // Only finish timer if we're in the foreground
+            if (!document.hidden) {
+              // Timer finished
+              clearInterval(intervalRefs.current[id]);
+              delete intervalRefs.current[id];
+              setShowAlert(true);
+              setAlertTimerId(id);
+              playAlarmSound();
+              return { ...t, timeLeft: 0, isRunning: false };
+            }
+          }
+          return { ...t, timeLeft: Math.floor(remaining / 1000) };
+        }
+        return t;
+      }));
+    }, 1000);
+    
+    // Start server sync loop
+    if (syncIntervalRefs.current[id]) {
+      clearInterval(syncIntervalRefs.current[id]);
+    }
+    
+    syncIntervalRefs.current[id] = setInterval(async () => {
+      const newOffset = await syncServerTime();
+      setTimers(prev => prev.map(t => {
+        if (t.id === id) {
+          return { ...t, serverOffset: newOffset };
+        }
+        return t;
+      }));
+      
+      // Update worker with new offset immediately
+      if (workerRefs.current[id]) {
+        workerRefs.current[id].postMessage({ 
+          type: 'sync', 
+          syncOffset: newOffset 
+        });
+      }
+    }, 5000);
+    
+    // Start Web Worker for background accuracy
+    if (!workerRefs.current[id]) {
+      workerRefs.current[id] = createTimerWorker();
+      
+      workerRefs.current[id].onmessage = (e) => {
+        if (e.data.type === 'update') {
+          setTimers(prev => prev.map(t => {
+            if (t.id === id) {
+              return { ...t, timeLeft: e.data.remaining };
+            }
+            return t;
+          }));
+        } else if (e.data.type === 'complete') {
+          // Only complete timer if we're in the foreground and time is really up
+          if (!document.hidden) {
+            const timer = timers.find(t => t.id === id);
+            if (timer && timer.isRunning && timer.endTime && timer.serverOffset !== undefined) {
+              const currentTime = getCurrentTime(timer.serverOffset);
+              if (currentTime >= timer.endTime) {
+                // Timer completed in worker
+                clearInterval(intervalRefs.current[id]);
+                delete intervalRefs.current[id];
+                
+                if (syncIntervalRefs.current[id]) {
+                  clearInterval(syncIntervalRefs.current[id]);
+                  delete syncIntervalRefs.current[id];
+                }
+                
+                if (workerRefs.current[id]) {
+                  workerRefs.current[id].postMessage({ type: 'stop' });
+                }
+                
+                setShowAlert(true);
+                setAlertTimerId(id);
+                playAlarmSound();
+                setTimers(prev => prev.map(t => 
+                  t.id === id ? { ...t, timeLeft: 0, isRunning: false } : t
+                ));
+              }
+            }
+          }
+        }
+      };
+    }
+    
+    // Start worker
+    workerRefs.current[id].postMessage({ 
+      type: 'start', 
+      endTime: endTime, 
+      syncOffset: offset 
+    });
+  }, [timers, syncServerTime]);
 
   const pauseTimer = (id: string) => {
+    // Clear intervals
+    if (intervalRefs.current[id]) {
+      clearInterval(intervalRefs.current[id]);
+      delete intervalRefs.current[id];
+    }
+    
+    if (syncIntervalRefs.current[id]) {
+      clearInterval(syncIntervalRefs.current[id]);
+      delete syncIntervalRefs.current[id];
+    }
+    
+    if (workerRefs.current[id]) {
+      workerRefs.current[id].postMessage({ type: 'stop' });
+    }
+    
     setTimers(prev => prev.map(timer => 
       timer.id === id ? { ...timer, isRunning: false, isMinimized: true } : timer
     ));
@@ -249,12 +524,23 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
       delete intervalRefs.current[id];
     }
     
+    if (syncIntervalRefs.current[id]) {
+      clearInterval(syncIntervalRefs.current[id]);
+      delete syncIntervalRefs.current[id];
+    }
+    
+    if (workerRefs.current[id]) {
+      workerRefs.current[id].postMessage({ type: 'stop' });
+    }
+    
     setTimers(prev => prev.map(timer => 
       timer.id === id ? { 
         ...timer, 
         isRunning: false, 
         timeLeft: 0, // Set time to 0 so it won't show in floating timers
-        isMinimized: false // Remove from bottom when stopped
+        isMinimized: false, // Remove from bottom when stopped
+        endTime: undefined,
+        serverOffset: undefined
       } : timer
     ));
   };
@@ -337,45 +623,146 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
     }
   }, [isVisible]);
 
-  // Timer intervals management
+  // Check for existing timers on mount
   useEffect(() => {
-    timers.forEach(timer => {
-      if (timer.isRunning && timer.timeLeft > 0) {
-        if (intervalRefs.current[timer.id]) {
-          clearInterval(intervalRefs.current[timer.id]);
-        }
-        
-        intervalRefs.current[timer.id] = setInterval(() => {
-          setTimers(prev => prev.map(t => {
-            if (t.id === timer.id) {
-              if (t.timeLeft <= 1) {
-                // Timer finished
-                clearInterval(intervalRefs.current[t.id]);
-                delete intervalRefs.current[t.id];
-                setShowAlert(true);
-                setAlertTimerId(t.id);
-                playAlarmSound();
-                return { ...t, timeLeft: 0, isRunning: false };
-              }
-              return { ...t, timeLeft: t.timeLeft - 1 };
-            }
-            return t;
-          }));
-        }, 1000);
-      } else {
-        if (intervalRefs.current[timer.id]) {
-          clearInterval(intervalRefs.current[timer.id]);
-          delete intervalRefs.current[timer.id];
-        }
-      }
-    });
+    const checkExistingTimers = async () => {
+      // For now, we'll just sync server time
+      // In a real implementation, you might want to store multiple timer states
+      await syncServerTime();
+    };
+    
+    checkExistingTimers();
+  }, [syncServerTime]);
 
+  // Page Visibility API handler with immediate sync
+  useEffect(() => {
+    const handleVisibilityChange = async () => {
+              if (document.hidden) {
+          console.log('MultiTimer: Going to background - STOPPING all workers completely');
+          // Going to background - COMPLETELY STOP all workers and save current state
+          Object.keys(workerRefs.current).forEach(timerId => {
+            if (workerRefs.current[timerId]) {
+              workerRefs.current[timerId].postMessage({ type: 'stop' });
+            }
+          });
+          
+          // Save the exact time when going to background for all running timers
+          const backgroundTime = Date.now();
+          localStorage.setItem('multitimer_background_time', backgroundTime.toString());
+          
+          timers.forEach(timer => {
+            if (timer.isRunning && timer.endTime) {
+              localStorage.setItem(`multitimer_end_time_${timer.id}`, timer.endTime.toString());
+            }
+          });
+          console.log('MultiTimer: Saved background time for', timers.filter(t => t.isRunning).length, 'timers');
+                } else {
+          console.log('MultiTimer: Coming back to foreground - checking background time');
+          // Coming back to foreground - sync and restart workers
+          await syncServerTime();
+          
+          // Check all running timers if they should have completed while in background
+          const backgroundTime = localStorage.getItem('multitimer_background_time');
+              
+              setTimers(prev => prev.map(timer => {
+                if (timer.isRunning && timer.endTime && timer.serverOffset !== undefined) {
+                  const currentTime = getCurrentTime(timer.serverOffset);
+                  const remaining = Math.max(0, timer.endTime - currentTime);
+                  
+                  // Also check localStorage for more accurate background time tracking
+                  let accurateRemaining = remaining;
+                  if (backgroundTime) {
+                    const backgroundTimestamp = parseInt(backgroundTime);
+                    const storedEndTime = localStorage.getItem(`multitimer_end_time_${timer.id}`);
+                    
+                    if (storedEndTime) {
+                      const endTimestamp = parseInt(storedEndTime);
+                      const timeInBackground = Date.now() - backgroundTimestamp;
+                      const expectedRemaining = Math.max(0, endTimestamp - (backgroundTimestamp + timeInBackground));
+                      
+                      console.log(`Timer ${timer.id} background calculation:`, {
+                        backgroundTime: new Date(backgroundTimestamp).toLocaleTimeString(),
+                        endTime: new Date(endTimestamp).toLocaleTimeString(),
+                        timeInBackground: Math.floor(timeInBackground / 1000) + 's',
+                        expectedRemaining: Math.floor(expectedRemaining / 1000) + 's',
+                        serverRemaining: Math.floor(remaining / 1000) + 's'
+                      });
+                      
+                      // Use the more accurate calculation
+                      accurateRemaining = Math.min(remaining, expectedRemaining);
+                    }
+                  }
+                  
+                  if (accurateRemaining <= 0) {
+                    // Timer completed while in background
+                    clearInterval(intervalRefs.current[timer.id]);
+                    delete intervalRefs.current[timer.id];
+                    
+                    if (syncIntervalRefs.current[timer.id]) {
+                      clearInterval(syncIntervalRefs.current[timer.id]);
+                      delete syncIntervalRefs.current[timer.id];
+                    }
+                    
+                    if (workerRefs.current[timer.id]) {
+                      workerRefs.current[timer.id].postMessage({ type: 'stop' });
+                    }
+                    
+                    setShowAlert(true);
+                    setAlertTimerId(timer.id);
+                    playAlarmSound();
+                    
+                    return { ...timer, timeLeft: 0, isRunning: false };
+                  }
+                  
+                  console.log(`Timer ${timer.id}: RESTARTING worker completely`);
+                  // RESTART worker completely with current time
+                  if (workerRefs.current[timer.id]) {
+                    workerRefs.current[timer.id].postMessage({ 
+                      type: 'start', 
+                      endTime: timer.endTime, 
+                      syncOffset: timer.serverOffset 
+                    });
+                  }
+                  
+                  // Force immediate timer update for accuracy
+                  const remainingSeconds = Math.floor(accurateRemaining / 1000);
+                  return { ...timer, timeLeft: remainingSeconds };
+                }
+                return timer;
+              }));
+              
+              // Clear background tracking
+              localStorage.removeItem('multitimer_background_time');
+              timers.forEach(timer => {
+                if (timer.isRunning) {
+                  localStorage.removeItem(`multitimer_end_time_${timer.id}`);
+                }
+              });
+      }
+    };
+    
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [syncServerTime]);
+
+  // Cleanup on unmount
+  useEffect(() => {
     return () => {
+      // Clear all intervals
       Object.values(intervalRefs.current).forEach(interval => {
         if (interval) clearInterval(interval);
       });
+      
+      Object.values(syncIntervalRefs.current).forEach(interval => {
+        if (interval) clearInterval(interval);
+      });
+      
+      // Terminate all workers
+      Object.values(workerRefs.current).forEach(worker => {
+        if (worker) worker.terminate();
+      });
     };
-  }, [timers]);
+  }, []);
 
   const formatTime = (totalSeconds: number) => {
     const hrs = Math.floor(totalSeconds / 3600);
@@ -421,6 +808,9 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
       }
       return timer;
     }));
+    
+    // Start the timer
+    startTimer(id);
   };
 
   const snoozeTimer = (id: string) => {
@@ -440,6 +830,9 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
       }
       return timer;
     }));
+    
+    // Start the snooze timer
+    startTimer(id);
   };
 
   // Quick time presets
@@ -649,12 +1042,19 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
                 <div className="text-center">
                   <button
                     onClick={addTimer}
-                    disabled={timers.length >= 5}
+                    disabled={timers.length >= 5 || (globalHours === 0 && globalMinutes === 0 && globalSeconds === 0)}
                     className="flex items-center space-x-2 rtl:space-x-reverse bg-green-500 text-white px-6 py-2 rounded-lg hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors mx-auto"
                   >
                     <Plus className="h-5 w-5" />
                     <span>הוסף טיימר</span>
                   </button>
+                </div>
+                
+                {/* Sync Status */}
+                <div className="text-center mt-2">
+                  <p className="text-xs text-gray-500">
+                    סנכרון: {serverOffset !== 0 ? 'פעיל' : 'מקומי'}
+                  </p>
                 </div>
               </div>
 
@@ -694,7 +1094,7 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
                           {!timer.isRunning ? (
                             <button
                               onClick={() => startTimer(timer.id)}
-                              disabled={globalHours === 0 && globalMinutes === 0 && globalSeconds === 0}
+                              disabled={timer.hours === 0 && timer.minutes === 0 && timer.seconds === 0}
                               className="p-1.5 bg-green-500 text-white rounded-full hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-200"
                               title="הפעל טיימר"
                             >
@@ -723,7 +1123,7 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
                             className="p-1.5 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-all duration-200"
                             title="אפס טיימר"
                           >
-                            <RotateCcw className="h-3 w-3" />
+                            <RotateCcw className="h-4 w-4" />
                           </button>
                           
                           <button
@@ -744,7 +1144,7 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
                               className="bg-orange-500 h-1.5 rounded-full transition-all duration-1000"
                               style={{ 
                                 width: `${(() => {
-                                  const totalTime = globalHours * 3600 + globalMinutes * 60 + globalSeconds;
+                                  const totalTime = timer.hours * 3600 + timer.minutes * 60 + timer.seconds;
                                   if (totalTime === 0) return 0;
                                   const elapsed = totalTime - timer.timeLeft;
                                   return Math.min(100, Math.max(0, (elapsed / totalTime) * 100));
