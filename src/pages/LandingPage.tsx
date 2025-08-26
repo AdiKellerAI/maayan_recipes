@@ -59,7 +59,14 @@ const LandingPage: React.FC = () => {
   // Generate uniformly distributed circles using useMemo to prevent regeneration on re-renders
   const backgroundCircles = useMemo(() => {
     const circles: CircleConfig[] = [];
-    const totalCircles = 85; // Approximate count from original implementation
+    
+    // Default viewport dimensions for SSR compatibility
+    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
+    const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 1080;
+    
+    // Responsive circle count - fewer circles on mobile, more spread out
+    const isMobile = viewportWidth < 768;
+    const totalCircles = isMobile ? 45 : 85; // Reduced from 85 to 45 on mobile
     
     // Use a seeded random approach for consistent results
     const seededRandom = (seed: number) => {
@@ -67,12 +74,8 @@ const LandingPage: React.FC = () => {
       return x - Math.floor(x);
     };
 
-    // Default viewport dimensions for SSR compatibility
-    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
-    const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 1080;
-
     // Generate circles with improved uniform distribution using grid-based approach with jitter
-    const margin = 50; // 50px margin from edges
+    const margin = isMobile ? 30 : 50; // Smaller margin on mobile for more spread
     const availableWidth = viewportWidth - 2 * margin;
     const availableHeight = viewportHeight - 2 * margin;
     
@@ -94,8 +97,10 @@ const LandingPage: React.FC = () => {
       // Add jitter within cell for natural randomness (using seeded random)
       const jitterSeedX = i * 7 + 1;
       const jitterSeedY = i * 11 + 3;
-      const jitterAmountX = cellWidth * 0.8; // 80% of cell width for jitter
-      const jitterAmountY = cellHeight * 0.8; // 80% of cell height for jitter
+      // Increase jitter on mobile to spread circles more
+      const jitterMultiplier = isMobile ? 0.9 : 0.8; 
+      const jitterAmountX = cellWidth * jitterMultiplier;
+      const jitterAmountY = cellHeight * jitterMultiplier;
       
       const jitterX = (seededRandom(jitterSeedX) - 0.5) * jitterAmountX;
       const jitterY = (seededRandom(jitterSeedY) - 0.5) * jitterAmountY;

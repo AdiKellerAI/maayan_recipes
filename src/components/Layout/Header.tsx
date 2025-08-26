@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Heart, Plus, Filter, Menu, X, ChefHat } from 'lucide-react';
+import { Search, Heart, Plus, Filter, Menu, X, ChefHat, Database } from 'lucide-react';
 import { useRecipes } from '../../contexts/RecipeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useProtectedAction } from '../../hooks/useProtectedAction';
@@ -76,7 +76,7 @@ const Header: React.FC = () => {
     setShowRecentOnly(false);
   };
 
-  const hasActiveFilters = difficultyFilter || imageFilter || showFavoritesOnly || showRecentOnly;
+  const hasActiveFilters = difficultyFilter || imageFilter || flourFilter;
 
   return (
     <>
@@ -117,7 +117,14 @@ const Header: React.FC = () => {
               navigate('/landing');
             }}
           >
-            <div className="bg-primary-500 px-4 py-2 rounded-lg shadow-md border border-primary-600 h-10 flex items-center justify-center">
+            <div 
+              className={`px-4 py-2 rounded-lg shadow-md border h-10 flex items-center justify-center transition-all duration-500 ease-in-out ${
+                location.pathname === '/landing' 
+                  ? 'md:px-16' // 4x wider on desktop landing page
+                  : 'px-4'     // normal width on other pages
+              }`}
+              style={{backgroundColor: '#593622', borderColor: '#5c3b28'}}
+            >
               <ChefHat className="h-5 w-5 text-white mr-3 rtl:ml-3 rtl:mr-0" />
               <div className="text-base font-bold text-white tracking-wide">
                 המטבח של מעיין
@@ -299,7 +306,8 @@ const Header: React.FC = () => {
                 <button
                   onClick={() => {
                     setIsFilterOpen(!isFilterOpen);
-                    setIsMenuOpen(false);
+                    // Don't close menu immediately on mobile to allow filter overlay to show
+                    setTimeout(() => setIsMenuOpen(false), 100);
                   }}
                   className={`w-full flex items-center space-x-2 rtl:space-x-reverse py-2 px-2.5 rounded-lg transition-all duration-300 transform hover:scale-105 ${
                     hasActiveFilters
@@ -354,6 +362,37 @@ const Header: React.FC = () => {
                     </div>
                     <span className="text-xs font-medium">דף הבית</span>
                   </button>
+                  
+                  {/* Divider */}
+                  <div className="border-t border-gray-200 my-3"></div>
+                  
+                  {/* Database Section */}
+                  <div className="space-y-1.5">
+                    <h5 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">מאגר מידע</h5>
+                    
+                    {/* Database Connection Status */}
+                    <div className="w-full flex items-center space-x-2 rtl:space-x-reverse py-1.5 px-2.5">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                        postgresqlStatus === 'connected' 
+                          ? 'bg-gradient-to-br from-green-500 to-emerald-600' 
+                          : postgresqlStatus === 'disconnected'
+                          ? 'bg-gradient-to-br from-red-500 to-red-600'
+                          : 'bg-gradient-to-br from-yellow-500 to-orange-600'
+                      }`}>
+                        <Database className="h-2.5 w-2.5 text-white" />
+                      </div>
+                      <span className={`text-xs font-medium ${
+                        postgresqlStatus === 'connected' 
+                          ? 'text-green-700' 
+                          : postgresqlStatus === 'disconnected'
+                          ? 'text-red-700'
+                          : 'text-yellow-700'
+                      }`}>
+                        {postgresqlStatus === 'connected' ? 'מחובר' : 
+                         postgresqlStatus === 'disconnected' ? 'מנותק' : 'בודק...'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
