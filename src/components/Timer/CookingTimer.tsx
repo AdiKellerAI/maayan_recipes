@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Timer, Play, Pause, Square, Plus, Minus, X, Volume2, RotateCcw, Minimize2, Maximize2 } from 'lucide-react';
-import EnhancedTimer, { TimerStatus } from '../../utils/enhancedTimer';
 
 interface CookingTimerProps {
   duration: number; // Duration in minutes
@@ -25,10 +24,16 @@ const CookingTimer: React.FC<CookingTimerProps> = ({
   const [showFloatingTimer, setShowFloatingTimer] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   
-  // Enhanced timer system
-  const enhancedTimerRef = useRef<EnhancedTimer | null>(null);
-  const [currentTimerId, setCurrentTimerId] = useState<string | null>(null);
+  // Performance API-based timing refs
+  const startTimeRef = useRef<number | null>(null);
+  const durationRef = useRef(duration * 60 * 1000); // Duration in milliseconds
+  const animationIdRef = useRef<number | null>(null);
+  const pausedAtRef = useRef<number | null>(null);
+  const remainingAtPauseRef = useRef<number | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
+
+  // Local storage key
+  const STORAGE_KEY = `cooking_timer_${timerName}`;
 
   // Initialize audio context on user interaction (required for mobile)
   useEffect(() => {
@@ -58,31 +63,96 @@ const CookingTimer: React.FC<CookingTimerProps> = ({
     };
   }, []);
 
-  // Initialize enhanced timer system
-  const initializeEnhancedTimer = useCallback(async () => {
-    if (!enhancedTimerRef.current) {
-      enhancedTimerRef.current = new EnhancedTimer({
-        onUpdate: (remaining: number) => {
-          setTimeLeft(remaining);
-        },
-        onComplete: (timerId: string, timerName: string) => {
-          setIsRunning(false);
-          setIsPaused(false);
-          setShowAlert(true);
-          setShowFloatingTimer(false);
-          setTimeLeft(0);
-          setCurrentTimerId(null);
-          playBeepSound();
-          onComplete();
-        },
-        onError: (error: string) => {
-          console.error('Enhanced timer error:', error);
-        }
-      });
+  // Core timer update function using performance.now() and requestAnimationFrame
+  const updateTimer = useCallback(() => {
+    if (!startTimeRef.current || !isRunning) return;
+
+    const elapsed = performance.now() - startTimeRef.current;
+    const remaining = Math.max(0, durationRef.current - elapsed);
+    
+    if (remaining > 0) {
+      setTimeLeft(Math.ceil(remaining / 1000));
+      animationIdRef.current = requestAnimationFrame(updateTimer);
+    } else {
+      // Timer completed
+      setTimeLeft(0);
+      setIsRunning(false);
+      setIsPaused(false);
+      setShowAlert(true);
+      setShowFloatingTimer(false);
       
-      await enhancedTimerRef.current.initialize();
+      // Clear animation frame
+      if (animationIdRef.current) {
+        cancelAnimationFrame(animationIdRef.current);
+        animationIdRef.current = null;
+      }
+      
+      // Clear localStorage
+      localStorage.removeItem(STORAGE_KEY);
+      
+      // Play completion sound
+      playBeepSound();
+      
+      // Call completion callback
+      onComplete();
     }
-  }, [onComplete]);
+  }, [isRunning, onComplete, STORAGE_KEY]);
+
+  // Load timer state from localStorage on mount
+  useEffect(() => {
+    try {
+      const savedState = localStorage.getItem(STORAGE_KEY);
+      if (savedState) {
+        const parsed = JSON.parse(savedState);
+        
+        if (parsed.isRunning && parsed.startTime && parsed.duration) {
+          // Check if timer should have completed while page was closed
+          const elapsed = performance.now() - parsed.startTime;
+          const remainingMs = Math.max(0, parsed.duration - elapsed);
+          const remainingSeconds = Math.floor(remainingMs / 1000);
+          
+          if (remainingSeconds > 0) {
+            // Timer was running, restore state
+            setTimeLeft(remainingSeconds);
+            setIsRunning(true);
+            setShowFloatingTimer(true);
+            startTimeRef.current = parsed.startTime;
+            durationRef.current = parsed.duration;
+            
+            // Start the timer animation frame immediately
+            animationIdRef.current = requestAnimationFrame(updateTimer);
+          } else {
+            // Timer completed while page was closed
+            localStorage.removeItem(STORAGE_KEY);
+            onComplete();
+          }
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to restore timer state from localStorage:', error);
+      localStorage.removeItem(STORAGE_KEY);
+    }
+  }, [STORAGE_KEY, onComplete, updateTimer]);
+
+  // Save timer state to localStorage
+  const saveTimerState = useCallback(() => {
+    try {
+      if (isRunning && startTimeRef.current) {
+        const state = {
+          isRunning: true,
+          startTime: startTimeRef.current,
+          duration: durationRef.current,
+          timerName: timerName,
+          timestamp: performance.now()
+        };
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } else {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    } catch (error) {
+      console.warn('Failed to save timer state to localStorage:', error);
+    }
+  }, [isRunning, timerName, STORAGE_KEY]);
 
   // Enhanced audio system for mobile and silent mode
   const playBeepSound = () => {
@@ -121,7 +191,7 @@ const CookingTimer: React.FC<CookingTimerProps> = ({
       
       // Method 2: HTML Audio Element as fallback
       try {
-        const beepDataUrl = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAg==';
+        const beepDataUrl = 'data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFbF1fdJivrJBhNjVgodDbq2EcBj+a2/LDciUFLIHO8tiJNwgZaLvt559NEAxQp+PwtmMcBjiR1/LMeSwFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAjiS2e7MeSsFJHfH8N2QQAoUXrTp66hVFApGn+DyvmEaAg==';
         const audio = new Audio(beepDataUrl);
         audio.volume = 1.0;
         audio.play().catch(e => console.warn('HTML Audio fallback failed:', e));
@@ -139,81 +209,82 @@ const CookingTimer: React.FC<CookingTimerProps> = ({
     }
   };
 
-  // Start timer with enhanced system
-  const startTimer = useCallback(async () => {
+  // Start timer with performance.now()
+  const startTimer = useCallback(() => {
     if (isRunning) return;
     
-    try {
-      // Initialize enhanced timer if needed
-      await initializeEnhancedTimer();
-      
-      // Start timer using enhanced system
-      const timerId = await enhancedTimerRef.current!.startTimer(timerName, duration);
-      setCurrentTimerId(timerId);
-      
-      setIsRunning(true);
-      setIsPaused(false);
-      setShowAlert(false);
-      setShowFloatingTimer(true);
-      
-      console.log(`Enhanced timer started: ${timerName} for ${duration} minutes`);
-    } catch (error) {
-      console.error('Failed to start enhanced timer:', error);
-      // Fallback to basic timer
-      setIsRunning(true);
-      setIsPaused(false);
-      setShowAlert(false);
-      setShowFloatingTimer(true);
-      
-      // Simple countdown as fallback
-      const endTime = Date.now() + (duration * 60 * 1000);
-      const interval = setInterval(() => {
-        const remaining = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
-        setTimeLeft(remaining);
-        
-        if (remaining <= 0) {
-          clearInterval(interval);
-          setIsRunning(false);
-          setShowAlert(true);
-          setShowFloatingTimer(false);
-          playBeepSound();
-          onComplete();
-        }
-      }, 1000);
-    }
-  }, [isRunning, duration, timerName, initializeEnhancedTimer, onComplete]);
+    const now = performance.now();
+    const durationMs = duration * 60 * 1000;
+    
+    startTimeRef.current = now;
+    durationRef.current = durationMs;
+    pausedAtRef.current = null;
+    remainingAtPauseRef.current = null;
+    
+    setIsRunning(true);
+    setIsPaused(false);
+    setShowAlert(false);
+    setShowFloatingTimer(true);
+    
+    // Save state to localStorage
+    saveTimerState();
+    
+    // Start timer animation frame
+    animationIdRef.current = requestAnimationFrame(updateTimer);
+  }, [isRunning, duration, saveTimerState, updateTimer]);
 
   // Pause timer
   const pauseTimer = useCallback(() => {
-    if (!isRunning) return;
+    if (!isRunning || !startTimeRef.current) return;
+    
+    // Cancel animation frame
+    if (animationIdRef.current) {
+      cancelAnimationFrame(animationIdRef.current);
+      animationIdRef.current = null;
+    }
+    
+    // Store pause information
+    const now = performance.now();
+    pausedAtRef.current = now;
+    const elapsed = now - startTimeRef.current;
+    remainingAtPauseRef.current = Math.max(0, durationRef.current - elapsed);
     
     setIsRunning(false);
     setIsPaused(true);
     
-    // Note: Enhanced timer continues running in background for accuracy
-    // Pause is just for UI state
-  }, [isRunning]);
+    // Update localStorage
+    saveTimerState();
+  }, [isRunning, saveTimerState]);
 
   // Resume timer
-  const resumeTimer = useCallback(async () => {
-    if (!isPaused) return;
+  const resumeTimer = useCallback(() => {
+    if (!isPaused || !pausedAtRef.current || !remainingAtPauseRef.current) return;
+    
+    // Recalculate start time based on remaining time at pause
+    const now = performance.now();
+    startTimeRef.current = now;
+    durationRef.current = remainingAtPauseRef.current;
+    
+    // Clear pause refs
+    pausedAtRef.current = null;
+    remainingAtPauseRef.current = null;
     
     setIsRunning(true);
     setIsPaused(false);
     
-    // Enhanced timer continues running in background, just resume UI state
-    console.log('Timer resumed');
-  }, [isPaused]);
+    // Save state to localStorage
+    saveTimerState();
+    
+    // Resume timer animation frame
+    animationIdRef.current = requestAnimationFrame(updateTimer);
+  }, [isPaused, saveTimerState, updateTimer]);
 
   // Stop timer completely
-  const stopTimer = useCallback(async () => {
-    try {
-      // Stop enhanced timer if running
-      if (currentTimerId && enhancedTimerRef.current) {
-        await enhancedTimerRef.current.stopTimer(currentTimerId);
-      }
-    } catch (error) {
-      console.error('Failed to stop enhanced timer:', error);
+  const stopTimer = useCallback(() => {
+    // Cancel animation frame
+    if (animationIdRef.current) {
+      cancelAnimationFrame(animationIdRef.current);
+      animationIdRef.current = null;
     }
     
     setIsRunning(false);
@@ -222,10 +293,16 @@ const CookingTimer: React.FC<CookingTimerProps> = ({
     setShowAlert(false);
     setShowFloatingTimer(false);
     setIsMinimized(false);
-    setCurrentTimerId(null);
     
-    console.log('Timer stopped');
-  }, [duration, currentTimerId]);
+    // Clear refs
+    startTimeRef.current = null;
+    durationRef.current = duration * 60 * 1000;
+    pausedAtRef.current = null;
+    remainingAtPauseRef.current = null;
+    
+    // Clear localStorage
+    localStorage.removeItem(STORAGE_KEY);
+  }, [duration, STORAGE_KEY]);
 
   // Reset timer
   const resetTimer = useCallback(() => {
@@ -239,58 +316,59 @@ const CookingTimer: React.FC<CookingTimerProps> = ({
     startTimer();
   }, [stopTimer, startTimer]);
 
-  // Check for existing timer on mount
-  useEffect(() => {
-    const checkExistingTimer = async () => {
-      try {
-        // Initialize enhanced timer system
-        await initializeEnhancedTimer();
-        
-        // Check for existing timers
-        if (enhancedTimerRef.current) {
-          const allTimers = await enhancedTimerRef.current.getAllTimers();
-          if (allTimers.length > 0) {
-            // Resume the first active timer
-            const activeTimer = allTimers.find(timer => timer.isRunning);
-            if (activeTimer) {
-              setCurrentTimerId(activeTimer.id);
-              setTimeLeft(activeTimer.remaining);
-              setIsRunning(true);
-              setShowFloatingTimer(true);
-              console.log(`Resumed existing timer: ${activeTimer.name}`);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Failed to check existing timers:', error);
-      }
-    };
-    
-    checkExistingTimer();
-  }, [initializeEnhancedTimer]);
-
-  // Page Visibility API handler - Enhanced timer handles background automatically
+  // Page Visibility API handler for tab switching
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.hidden && isRunning) {
-        console.log('Going to background - Enhanced timer continues running');
-        // Enhanced timer continues running in background for accuracy
-      } else if (!document.hidden && isRunning) {
-        console.log('Coming back to foreground - Enhanced timer syncs automatically');
-        // Enhanced timer automatically syncs when returning to foreground
-        // No manual intervention needed
+      if (!document.hidden && isRunning && startTimeRef.current) {
+        // Tab became visible - immediately recalculate from performance.now()
+        const now = performance.now();
+        const elapsed = now - startTimeRef.current;
+        const remainingMs = Math.max(0, durationRef.current - elapsed);
+        const remainingSeconds = Math.floor(remainingMs / 1000);
+        
+        if (remainingSeconds <= 0) {
+          // Timer should have completed while in background
+          setTimeLeft(0);
+          setIsRunning(false);
+          setIsPaused(false);
+          setShowAlert(true);
+          setShowFloatingTimer(false);
+          
+          // Cancel animation frame
+          if (animationIdRef.current) {
+            cancelAnimationFrame(animationIdRef.current);
+            animationIdRef.current = null;
+          }
+          
+          // Clear localStorage
+          localStorage.removeItem(STORAGE_KEY);
+          
+          // Play completion sound
+          playBeepSound();
+          
+          // Call completion callback
+          onComplete();
+        } else {
+          // Update display and continue
+          setTimeLeft(remainingSeconds);
+          
+          // Restart animation frame if it was cancelled
+          if (!animationIdRef.current) {
+            animationIdRef.current = requestAnimationFrame(updateTimer);
+          }
+        }
       }
     };
-    
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, [isRunning]);
+  }, [isRunning, onComplete, STORAGE_KEY, updateTimer]);
 
   // Cleanup on unmount
   useEffect(() => {
     return () => {
-      if (enhancedTimerRef.current) {
-        enhancedTimerRef.current.destroy();
+      if (animationIdRef.current) {
+        cancelAnimationFrame(animationIdRef.current);
       }
     };
   }, []);
@@ -535,10 +613,9 @@ const CookingTimer: React.FC<CookingTimerProps> = ({
         <div className="text-center text-sm text-gray-600">
           <p>משך: {duration} דקות</p>
           <p>סטטוס: {isRunning ? 'רץ' : isPaused ? 'מושהה' : 'עצור'}</p>
-          {currentTimerId && (
-            <p>מזהה: {currentTimerId.slice(-8)}</p>
+          {startTimeRef.current && (
+            <p>התחיל: {new Date(startTimeRef.current).toLocaleTimeString()}</p>
           )}
-          <p>מערכת: משופרת</p>
         </div>
       </div>
 
