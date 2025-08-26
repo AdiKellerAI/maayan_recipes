@@ -1,8 +1,20 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Heart, BookOpen, Layers, X } from 'lucide-react';
 import { categories } from '../data/categories';
 import { useRecipes } from '../contexts/RecipeContext';
+
+// Circle configuration for uniform random distribution
+interface CircleConfig {
+  id: string;
+  x: number;
+  y: number;
+  size: string;
+  color: string;
+  opacity: number;
+  animation: string;
+  delay: string;
+}
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
@@ -11,6 +23,134 @@ const LandingPage: React.FC = () => {
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [hasPreloaded, setHasPreloaded] = useState(false);
+
+  // Circle properties arrays to maintain existing visual variety
+  const circleColors = [
+    'bg-orange-200', 'bg-yellow-200', 'bg-amber-200', 'bg-orange-100', 'bg-red-200', 
+    'bg-pink-200', 'bg-rose-200', 'bg-red-100', 'bg-blue-200', 'bg-indigo-200', 
+    'bg-sky-200', 'bg-blue-100', 'bg-green-200', 'bg-teal-200', 'bg-emerald-200', 
+    'bg-green-100', 'bg-purple-200', 'bg-violet-200', 'bg-purple-100', 'bg-cyan-200', 
+    'bg-teal-100', 'bg-cyan-100', 'bg-slate-200', 'bg-pink-100', 'bg-yellow-100', 
+    'bg-lime-200', 'bg-emerald-100', 'bg-sky-100', 'bg-indigo-100', 'bg-violet-100', 
+    'bg-fuchsia-200', 'bg-lime-100', 'bg-amber-100'
+  ];
+
+  const circleSizes = [
+    'w-4 h-4', 'w-5 h-5', 'w-6 h-6', 'w-7 h-7', 'w-8 h-8', 'w-9 h-9', 
+    'w-10 h-10', 'w-11 h-11', 'w-12 h-12', 'w-13 h-13', 'w-14 h-14', 
+    'w-15 h-15', 'w-16 h-16', 'w-18 h-18'
+  ];
+
+  const circleAnimations = [
+    'animate-float-slow', 'animate-float-medium', 'animate-float-fast',
+    'animate-float-slow-delayed', 'animate-float-medium-delayed', 'animate-float-fast-delayed',
+    'animate-float-random1', 'animate-float-random2', 'animate-float-random3',
+    'animate-float-random4', 'animate-float-random5', 'animate-float-random6',
+    'animate-float-ultra-fast1', 'animate-float-ultra-fast2', 'animate-float-ultra-fast3'
+  ];
+
+  const circleOpacities = [0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60];
+
+  const circleDelays = [
+    'delay-200', 'delay-300', 'delay-400', 'delay-500', 'delay-600', 'delay-700',
+    'delay-800', 'delay-900', 'delay-1000', 'delay-1100', 'delay-1200', 'delay-1350', 'delay-1450'
+  ];
+
+  // Generate uniformly distributed circles using useMemo to prevent regeneration on re-renders
+  const backgroundCircles = useMemo(() => {
+    const circles: CircleConfig[] = [];
+    const totalCircles = 85; // Approximate count from original implementation
+    
+    // Use a seeded random approach for consistent results
+    const seededRandom = (seed: number) => {
+      const x = Math.sin(seed) * 10000;
+      return x - Math.floor(x);
+    };
+
+    // Default viewport dimensions for SSR compatibility
+    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1920;
+    const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 1080;
+
+    // Generate circles with improved uniform distribution using grid-based approach with jitter
+    const margin = 50; // 50px margin from edges
+    const availableWidth = viewportWidth - 2 * margin;
+    const availableHeight = viewportHeight - 2 * margin;
+    
+    // Calculate grid dimensions for better distribution
+    const gridCols = Math.ceil(Math.sqrt(totalCircles * (availableWidth / availableHeight)));
+    const gridRows = Math.ceil(totalCircles / gridCols);
+    const cellWidth = availableWidth / gridCols;
+    const cellHeight = availableHeight / gridRows;
+    
+    for (let i = 0; i < totalCircles; i++) {
+      // Calculate grid position
+      const gridCol = i % gridCols;
+      const gridRow = Math.floor(i / gridCols);
+      
+      // Calculate base position in grid cell
+      const baseCellX = gridCol * cellWidth;
+      const baseCellY = gridRow * cellHeight;
+      
+      // Add jitter within cell for natural randomness (using seeded random)
+      const jitterSeedX = i * 7 + 1;
+      const jitterSeedY = i * 11 + 3;
+      const jitterAmountX = cellWidth * 0.8; // 80% of cell width for jitter
+      const jitterAmountY = cellHeight * 0.8; // 80% of cell height for jitter
+      
+      const jitterX = (seededRandom(jitterSeedX) - 0.5) * jitterAmountX;
+      const jitterY = (seededRandom(jitterSeedY) - 0.5) * jitterAmountY;
+      
+      // Final position with margin and jitter
+      const x = margin + baseCellX + cellWidth/2 + jitterX;
+      const y = margin + baseCellY + cellHeight/2 + jitterY;
+      
+      // Ensure circles stay within bounds
+      const clampedX = Math.max(margin, Math.min(viewportWidth - margin, x));
+      const clampedY = Math.max(margin, Math.min(viewportHeight - margin, y));
+      
+      // Randomly select properties using the seeded approach
+      const colorSeed = i * 13 + 5;
+      const sizeSeed = i * 17 + 7;
+      const animationSeed = i * 19 + 9;
+      const opacitySeed = i * 23 + 11;
+      const delaySeed = i * 29 + 13;
+      
+      circles.push({
+        id: `circle-${i}`,
+        x: clampedX,
+        y: clampedY,
+        size: circleSizes[Math.floor(seededRandom(sizeSeed) * circleSizes.length)],
+        color: circleColors[Math.floor(seededRandom(colorSeed) * circleColors.length)],
+        opacity: circleOpacities[Math.floor(seededRandom(opacitySeed) * circleOpacities.length)],
+        animation: circleAnimations[Math.floor(seededRandom(animationSeed) * circleAnimations.length)],
+        delay: circleDelays[Math.floor(seededRandom(delaySeed) * circleDelays.length)]
+      });
+    }
+    
+    // Log distribution statistics for verification (development only)
+    if (process.env.NODE_ENV === 'development') {
+      const xValues = circles.map(c => c.x);
+      const yValues = circles.map(c => c.y);
+      const xMin = Math.min(...xValues);
+      const xMax = Math.max(...xValues);
+      const yMin = Math.min(...yValues);
+      const yMax = Math.max(...yValues);
+      
+      console.log('Uniform Circle Distribution Stats:', {
+        totalCircles: circles.length,
+        grid: { cols: gridCols, rows: gridRows, cellSize: `${cellWidth.toFixed(1)}x${cellHeight.toFixed(1)}` },
+        xRange: { min: Math.round(xMin), max: Math.round(xMax), span: Math.round(xMax - xMin) },
+        yRange: { min: Math.round(yMin), max: Math.round(yMax), span: Math.round(yMax - yMin) },
+        viewport: { width: viewportWidth, height: viewportHeight },
+        coverage: { 
+          xCoverage: Math.round((xMax - xMin) / viewportWidth * 100) + '%',
+          yCoverage: Math.round((yMax - yMin) / viewportHeight * 100) + '%'
+        }
+      });
+    }
+    
+    return circles;
+  }, []); // Empty dependency array ensures circles are generated only once
 
   const handleNavigation = (type: string) => {
     switch (type) {
@@ -74,9 +214,28 @@ const LandingPage: React.FC = () => {
     }
   };
 
-  // Scroll to top whenever LandingPage is shown
+  // Scroll to top whenever LandingPage is shown - only once on mount
   useEffect(() => {
-    window.scrollTo(0, 0);
+    // Force scroll to top immediately and prevent any scroll restoration
+    const scrollToTop = () => {
+      window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+    
+    scrollToTop();
+    
+    // Also prevent browser scroll restoration
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+    
+    // Cleanup function to restore scroll behavior when leaving
+    return () => {
+      if ('scrollRestoration' in history) {
+        history.scrollRestoration = 'auto';
+      }
+    };
   }, []);
 
   // Preload recipes from all categories for faster navigation
@@ -102,60 +261,19 @@ const LandingPage: React.FC = () => {
 
   return (
     <div className="h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
-      {/* Background Decorative Circles - Enhanced with larger movement range and varied speeds */}
+      {/* Background Decorative Circles - Uniformly Distributed */}
       <div className="absolute inset-0 pointer-events-none">
-        {/* Top left area */}
-        <div className="absolute top-12 left-16 w-14 h-14 bg-orange-200 rounded-full opacity-40 animate-pulse animate-float-slow shadow-lg"></div>
-        <div className="absolute top-24 left-8 w-8 h-8 bg-yellow-200 rounded-full opacity-35 animate-pulse delay-500 animate-float-slow-delayed shadow-lg"></div>
-        <div className="absolute top-8 left-32 w-12 h-12 bg-amber-200 rounded-full opacity-45 animate-pulse delay-300 animate-float-medium shadow-lg"></div>
-        <div className="absolute top-36 left-4 w-6 h-6 bg-orange-100 rounded-full opacity-50 animate-pulse delay-800 animate-float-ultra-fast1 shadow-lg"></div>
-        
-        {/* Top right area */}
-        <div className="absolute top-20 right-20 w-16 h-16 bg-red-200 rounded-full opacity-50 animate-pulse delay-700 animate-float-medium shadow-lg"></div>
-        <div className="absolute top-32 right-12 w-6 h-6 bg-pink-200 rounded-full opacity-45 animate-pulse delay-300 animate-float-ultra-fast2 shadow-lg"></div>
-        <div className="absolute top-16 right-36 w-10 h-10 bg-rose-200 rounded-full opacity-40 animate-pulse delay-600 animate-float-slow shadow-lg"></div>
-        <div className="absolute top-44 right-8 w-8 h-8 bg-red-100 rounded-full opacity-55 animate-pulse delay-1000 animate-float-medium-delayed shadow-lg"></div>
-        
-        {/* Middle left area */}
-        <div className="absolute top-1/2 left-24 w-12 h-12 bg-blue-200 rounded-full opacity-60 animate-pulse delay-1000 animate-float-slow shadow-lg"></div>
-        <div className="absolute top-2/3 left-16 w-10 h-10 bg-indigo-200 rounded-full opacity-40 animate-pulse delay-400 animate-float-medium-delayed shadow-lg"></div>
-        <div className="absolute top-1/3 left-40 w-14 h-14 bg-sky-200 rounded-full opacity-35 animate-pulse delay-700 animate-float-ultra-fast3 shadow-lg"></div>
-        <div className="absolute top-3/4 left-8 w-7 h-7 bg-blue-100 rounded-full opacity-50 animate-pulse delay-1200 animate-float-slow-delayed shadow-lg"></div>
-        
-        {/* Middle right area */}
-        <div className="absolute top-1/3 right-32 w-18 h-18 bg-green-200 rounded-full opacity-35 animate-pulse delay-800 animate-float-slow-delayed shadow-lg"></div>
-        <div className="absolute top-3/4 right-20 w-8 h-8 bg-teal-200 rounded-full opacity-50 animate-pulse delay-600 animate-float-fast-delayed shadow-lg"></div>
-        <div className="absolute top-1/2 right-48 w-11 h-11 bg-emerald-200 rounded-full opacity-45 animate-pulse delay-900 animate-float-medium shadow-lg"></div>
-        <div className="absolute top-2/3 right-12 w-9 h-9 bg-green-100 rounded-full opacity-40 animate-pulse delay-1100 animate-float-ultra-fast1 shadow-lg"></div>
-        
-        {/* Bottom left area */}
-        <div className="absolute bottom-28 left-20 w-16 h-16 bg-purple-200 rounded-full opacity-45 animate-pulse delay-900 animate-float-medium shadow-lg"></div>
-        <div className="absolute bottom-16 left-32 w-10 h-10 bg-amber-200 rounded-full opacity-30 animate-pulse delay-1200 animate-float-slow shadow-lg"></div>
-        <div className="absolute bottom-40 left-8 w-13 h-13 bg-violet-200 rounded-full opacity-50 animate-pulse delay-500 animate-float-fast shadow-lg"></div>
-        <div className="absolute bottom-8 left-24 w-5 h-5 bg-purple-100 rounded-full opacity-60 animate-pulse delay-800 animate-float-medium-delayed shadow-lg"></div>
-        
-        {/* Bottom right area */}
-        <div className="absolute bottom-24 right-16 w-12 h-12 bg-cyan-200 rounded-full opacity-40 animate-pulse delay-1100 animate-float-fast shadow-lg"></div>
-        <div className="absolute bottom-36 right-28 w-14 h-14 bg-rose-200 rounded-full opacity-35 animate-pulse delay-700 animate-float-medium-delayed shadow-lg"></div>
-        <div className="absolute bottom-12 right-40 w-9 h-9 bg-teal-100 rounded-full opacity-45 animate-pulse delay-1000 animate-float-slow shadow-lg"></div>
-        <div className="absolute bottom-48 right-8 w-6 h-6 bg-cyan-100 rounded-full opacity-55 animate-pulse delay-600 animate-float-ultra-fast2 shadow-lg"></div>
-        
-        {/* Center floating circles */}
-        <div className="absolute top-40 left-1/3 w-6 h-6 bg-slate-200 rounded-full opacity-50 animate-pulse delay-400 animate-float-slow shadow-lg"></div>
-        <div className="absolute top-60 right-1/3 w-8 h-8 bg-emerald-200 rounded-full opacity-40 animate-pulse delay-800 animate-float-medium shadow-lg"></div>
-        <div className="absolute top-80 left-1/2 transform -translate-x-1/2 w-10 h-10 bg-violet-200 rounded-full opacity-45 animate-pulse delay-600 animate-float-fast shadow-lg"></div>
-        
-        {/* Additional floating circles */}
-        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 w-7 h-7 bg-pink-100 rounded-full opacity-40 animate-pulse delay-200 animate-float-random1 shadow-lg"></div>
-        <div className="absolute top-70 right-1/4 w-9 h-9 bg-blue-100 rounded-full opacity-45 animate-pulse delay-900 animate-float-random2 shadow-lg"></div>
-        <div className="absolute top-90 left-1/4 w-5 h-5 bg-yellow-100 rounded-full opacity-50 animate-pulse delay-700 animate-float-random3 shadow-lg"></div>
-        <div className="absolute top-50 right-1/2 transform translate-x-1/2 w-11 h-11 bg-green-100 rounded-full opacity-35 animate-pulse delay-1100 animate-float-random4 shadow-lg"></div>
-        
-        {/* Corner accent circles */}
-        <div className="absolute top-4 left-4 w-4 h-4 bg-orange-100 rounded-full opacity-60 animate-pulse delay-400 animate-float-random5 shadow-lg"></div>
-        <div className="absolute top-4 right-4 w-4 h-4 bg-red-100 rounded-full opacity-60 animate-pulse delay-600 animate-float-random6 shadow-lg"></div>
-        <div className="absolute bottom-4 left-4 w-4 h-4 bg-purple-100 rounded-full opacity-60 animate-pulse delay-800 animate-float-random1 shadow-lg"></div>
-        <div className="absolute bottom-4 right-4 w-4 h-4 bg-cyan-100 rounded-full opacity-60 animate-pulse delay-1000 animate-float-random2 shadow-lg"></div>
+        {backgroundCircles.map((circle) => (
+          <div
+            key={circle.id}
+            className={`absolute rounded-full shadow-lg animate-pulse ${circle.size} ${circle.color} ${circle.animation} ${circle.delay}`}
+            style={{
+              left: `${circle.x}px`,
+              top: `${circle.y}px`,
+              opacity: circle.opacity,
+            }}
+          />
+        ))}
       </div>
 
       {/* Hero Section */}
@@ -192,7 +310,7 @@ const LandingPage: React.FC = () => {
                   <div className="relative z-10">
                     <div className="flex items-center space-x-3 md:space-x-4 rtl:space-x-reverse mb-2 md:mb-4">
                       <div className="p-1.5 md:p-3 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-lg">
-                        <BookOpen className="h-3 w-3 md:h-6 md:w-6" />
+                        <BookOpen className="h-5 w-5 md:h-6 md:w-6" />
                       </div>
                       <div>
                         <h3 className="text-base md:text-xl font-semibold text-gray-900 group-hover:text-gray-800 transition-colors">
@@ -219,7 +337,7 @@ const LandingPage: React.FC = () => {
                   <div className="relative z-10">
                     <div className="flex items-center space-x-3 md:space-x-4 rtl:space-x-reverse mb-2 md:mb-4">
                       <div className="p-1.5 md:p-3 rounded-xl bg-gradient-to-br from-red-500 to-pink-600 text-white shadow-lg">
-                        <Heart className="h-3 w-3 md:h-6 md:w-6" />
+                        <Heart className="h-5 w-5 md:h-6 md:w-6" />
                       </div>
                       <div>
                         <h3 className="text-base md:text-xl font-semibold text-gray-900 group-hover:text-gray-800 transition-colors">
@@ -246,7 +364,7 @@ const LandingPage: React.FC = () => {
                   <div className="relative z-10">
                     <div className="flex items-center space-x-3 md:space-x-4 rtl:space-x-reverse mb-2 md:mb-4">
                       <div className="p-1.5 md:p-3 rounded-xl bg-gradient-to-br from-green-500 to-teal-600 text-white shadow-lg">
-                        <Layers className="h-3 w-3 md:h-6 md:w-6" />
+                        <Layers className="h-5 w-5 md:h-6 md:w-6" />
                       </div>
                       <div>
                         <h3 className="text-base md:text-xl font-semibold text-gray-900 group-hover:text-gray-800 transition-colors">
@@ -273,7 +391,7 @@ const LandingPage: React.FC = () => {
                   <div className="relative z-10">
                     <div className="flex items-center space-x-3 md:space-x-4 rtl:space-x-reverse mb-2 md:mb-4">
                       <div className="p-1.5 md:p-3 rounded-xl bg-gradient-to-br from-orange-500 to-yellow-600 text-white shadow-lg">
-                        <Search className="h-3 w-3 md:h-6 md:w-6" />
+                        <Search className="h-5 w-5 md:h-6 md:w-6" />
                       </div>
                       <div>
                         <h3 className="text-base md:text-xl font-semibold text-gray-900 group-hover:text-gray-800 transition-colors">

@@ -1,0 +1,17 @@
+{
+  "name": "maayan-recipes-scripts",
+  "version": "1.0.0",
+  "description": "Utility scripts for Maayan's Recipe Website",
+  "main": "add_recipe_images.js",
+  "scripts": {
+    "add-images": "node add_recipe_images.js",
+    "test": "echo \"No tests specified\""
+  },
+  "dependencies": {
+    "pg": "^8.11.3"
+  },
+  "devDependencies": {},
+  "keywords": ["recipes", "images", "database"],
+  "author": "Maayan Recipes",
+  "license": "MIT"
+}

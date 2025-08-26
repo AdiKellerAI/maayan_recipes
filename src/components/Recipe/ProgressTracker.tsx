@@ -1,7 +1,9 @@
 import React from 'react';
-import { Check, Circle } from 'lucide-react';
+import { Check } from 'lucide-react';
+import { recipeProgressCache } from '../../lib/cache';
 
 interface ProgressTrackerProps {
+  recipeId: string;
   directions: string[];
   currentStep: number;
   onStepClick: (stepIndex: number) => void;
@@ -11,6 +13,7 @@ interface ProgressTrackerProps {
 }
 
 const ProgressTracker: React.FC<ProgressTrackerProps> = ({
+  recipeId,
   directions,
   currentStep,
   onStepClick,
@@ -18,23 +21,40 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
   onAdditionalStepClick,
   additionalCurrentSteps = {}
 }) => {
-  // Local state for tracking progress since we're not using DB
-  const [localCurrentStep, setLocalCurrentStep] = React.useState(currentStep);
-  const [localAdditionalSteps, setLocalAdditionalSteps] = React.useState(additionalCurrentSteps);
+  // Initialize state from cache or props
+  const [localCurrentStep, setLocalCurrentStep] = React.useState(() => {
+    const cachedProgress = recipeProgressCache.loadProgress(recipeId);
+    return cachedProgress?.currentStep ?? currentStep;
+  });
+  
+  const [localAdditionalSteps, setLocalAdditionalSteps] = React.useState(() => {
+    const cachedProgress = recipeProgressCache.loadProgress(recipeId);
+    return cachedProgress?.additionalSteps ?? additionalCurrentSteps;
+  });
 
   const handleStepClick = (stepIndex: number) => {
     const newStep = stepIndex === localCurrentStep ? stepIndex + 1 : stepIndex;
     setLocalCurrentStep(newStep);
+    
+    // Save progress to cache
+    recipeProgressCache.saveProgress(recipeId, newStep, localAdditionalSteps);
+    
     onStepClick(stepIndex);
   };
 
   const handleAdditionalStepClick = (sectionName: string, stepIndex: number) => {
     const currentSectionStep = localAdditionalSteps[sectionName] || 0;
     const newStep = stepIndex === currentSectionStep ? stepIndex + 1 : stepIndex;
-    setLocalAdditionalSteps(prev => ({
-      ...prev,
+    const newAdditionalSteps = {
+      ...localAdditionalSteps,
       [sectionName]: newStep
-    }));
+    };
+    
+    setLocalAdditionalSteps(newAdditionalSteps);
+    
+    // Save progress to cache
+    recipeProgressCache.saveProgress(recipeId, localCurrentStep, newAdditionalSteps);
+    
     onAdditionalStepClick?.(sectionName, stepIndex);
   };
 

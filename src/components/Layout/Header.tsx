@@ -270,29 +270,29 @@ const Header: React.FC = () => {
                     executeProtectedAction(() => navigate('/add'));
                     setIsMenuOpen(false);
                   }}
-                  className="w-full flex items-center space-x-2 rtl:space-x-reverse py-2.5 px-3 rounded-lg transition-all duration-300 transform hover:scale-105 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 hover:from-gray-200 hover:to-gray-300 border border-gray-300 hover:border-gray-400"
+                  className="w-full flex items-center space-x-2 rtl:space-x-reverse py-2 px-2.5 rounded-lg transition-all duration-300 transform hover:scale-105 bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700 hover:from-blue-100 hover:to-purple-100 border border-blue-200 hover:border-blue-300"
                 >
-                  <div className="w-7 h-7 bg-gray-300 rounded-full flex items-center justify-center">
-                    <Plus className="h-3.5 w-3.5 text-gray-600" />
+                  <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                    <Plus className="h-3.5 w-3.5 text-white" />
                   </div>
-                  <span className="text-sm font-semibold">הוספת מתכון</span>
+                  <span className="text-xs font-semibold">הוספת מתכון</span>
                 </button>
                 
                 {/* Favorites Button */}
                 <button
                   onClick={toggleFavorites}
-                  className={`w-full flex items-center space-x-2 rtl:space-x-reverse py-2.5 px-3 rounded-lg transition-all duration-300 transform hover:scale-105 ${
+                  className={`w-full flex items-center space-x-2 rtl:space-x-reverse py-2 px-2.5 rounded-lg transition-all duration-300 transform hover:scale-105 ${
                     showFavoritesOnly 
-                      ? 'bg-gradient-to-r from-red-100 to-red-200 text-red-700 border border-red-300 shadow-md' 
-                      : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 hover:from-gray-200 hover:to-gray-300 border border-gray-300 hover:border-gray-400'
+                      ? 'bg-gradient-to-r from-red-100 to-pink-100 text-red-700 border border-red-300 shadow-md' 
+                      : 'bg-gradient-to-r from-red-50 to-pink-50 text-red-700 hover:from-red-100 hover:to-pink-100 border border-red-200 hover:border-red-300'
                   }`}
                 >
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center ${
-                    showFavoritesOnly ? 'bg-red-200' : 'bg-gray-300'
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                    showFavoritesOnly ? 'bg-gradient-to-br from-red-500 to-pink-600' : 'bg-gradient-to-br from-red-500 to-pink-600'
                   }`}>
-                    <Heart className={`h-3.5 w-3.5 ${showFavoritesOnly ? 'text-red-600 fill-current' : 'text-gray-600'}`} />
+                    <Heart className={`h-3.5 w-3.5 ${showFavoritesOnly ? 'text-white fill-current' : 'text-white'}`} />
                   </div>
-                  <span className="text-sm font-semibold">מועדפים</span>
+                  <span className="text-xs font-semibold">מועדפים</span>
                 </button>
                 
                 {/* Filter Button */}
@@ -301,20 +301,20 @@ const Header: React.FC = () => {
                     setIsFilterOpen(!isFilterOpen);
                     setIsMenuOpen(false);
                   }}
-                  className={`w-full flex items-center space-x-2 rtl:space-x-reverse py-2.5 px-3 rounded-lg transition-all duration-300 transform hover:scale-105 ${
+                  className={`w-full flex items-center space-x-2 rtl:space-x-reverse py-2 px-2.5 rounded-lg transition-all duration-300 transform hover:scale-105 ${
                     hasActiveFilters
-                      ? 'bg-gradient-to-r from-primary-100 to-primary-200 text-primary-700 border border-primary-300 shadow-md' 
-                      : 'bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 hover:from-gray-200 hover:to-gray-300 border border-gray-300 hover:border-gray-400'
+                      ? 'bg-gradient-to-r from-green-100 to-teal-100 text-green-700 border border-green-300 shadow-md' 
+                      : 'bg-gradient-to-r from-green-50 to-teal-50 text-green-700 hover:from-green-100 hover:to-teal-100 border border-green-200 hover:border-green-300'
                   }`}
                 >
-                  <div className={`w-7 h-7 rounded-full flex items-center justify-center ${
-                    hasActiveFilters ? 'bg-primary-200' : 'bg-gray-300'
+                  <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                    hasActiveFilters ? 'bg-gradient-to-br from-green-500 to-teal-600' : 'bg-gradient-to-br from-green-500 to-teal-600'
                   }`}>
-                    <Filter className="h-3.5 w-3.5" />
+                    <Filter className="h-3.5 w-3.5 text-white" />
                   </div>
-                  <span className="text-sm font-semibold">סינון מתכונים</span>
+                  <span className="text-xs font-semibold">סינון מתכונים</span>
                   {hasActiveFilters && (
-                    <div className="w-2.5 h-2.5 bg-red-500 rounded-full animate-pulse ml-auto rtl:mr-auto rtl:ml-0"></div>
+                    <div className="w-2.5 h-2.5 bg-rose-500 rounded-full animate-pulse ml-auto rtl:mr-auto rtl:ml-0"></div>
                   )}
                 </button>
                 
@@ -332,10 +332,10 @@ const Header: React.FC = () => {
                       window.dispatchEvent(timerEvent);
                       setIsMenuOpen(false);
                     }}
-                    className="w-full flex items-center space-x-2 rtl:space-x-reverse py-1.5 px-2.5 rounded-md bg-gradient-to-r from-orange-100 to-orange-200 text-orange-700 hover:from-orange-200 hover:to-orange-300 transition-all duration-300 transform hover:scale-105"
+                    className="w-full flex items-center space-x-2 rtl:space-x-reverse py-1.5 px-2.5 rounded-md bg-gradient-to-r from-orange-50 to-yellow-50 text-orange-700 hover:from-orange-100 hover:to-yellow-100 transition-all duration-300 transform hover:scale-105"
                   >
-                    <div className="w-5 h-5 bg-orange-200 rounded-full flex items-center justify-center">
-                      <span className="text-xs">⏰</span>
+                    <div className="w-5 h-5 bg-gradient-to-br from-orange-500 to-yellow-600 rounded-full flex items-center justify-center">
+                      <span className="text-xs text-white">⏰</span>
                     </div>
                     <span className="text-xs font-medium">טיימר בישול</span>
                   </button>
@@ -347,9 +347,9 @@ const Header: React.FC = () => {
                       navigate('/landing');
                       setIsMenuOpen(false);
                     }}
-                    className="w-full flex items-center space-x-2 rtl:space-x-reverse py-1.5 px-2.5 rounded-md bg-gradient-to-r from-blue-100 to-blue-200 text-blue-700 hover:from-blue-200 hover:to-blue-300 transition-all duration-300 transform hover:scale-105"
+                    className="w-full flex items-center space-x-2 rtl:space-x-reverse py-1.5 px-2.5 rounded-md bg-gradient-to-r from-violet-100 to-violet-200 text-violet-700 hover:from-violet-200 hover:to-violet-300 transition-all duration-300 transform hover:scale-105"
                   >
-                    <div className="w-5 h-5 bg-blue-200 rounded-full flex items-center justify-center">
+                    <div className="w-5 h-5 bg-violet-200 rounded-full flex items-center justify-center">
                       <ChefHat className="h-2.5 w-2.5" />
                     </div>
                     <span className="text-xs font-medium">דף הבית</span>

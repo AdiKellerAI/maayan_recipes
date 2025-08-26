@@ -6,6 +6,7 @@ import { useProtectedAction } from '../hooks/useProtectedAction';
 import { categories } from '../data/categories';
 import { getCategoryColor } from '../data/categories';
 import ProgressTracker from '../components/Recipe/ProgressTracker';
+import { recipeProgressCache } from '../lib/cache';
 
 const RecipeDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -16,6 +17,7 @@ const RecipeDetailPage: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   const [showImageModal, setShowImageModal] = React.useState(false);
   const [additionalCurrentSteps, setAdditionalCurrentSteps] = React.useState<{ [key: string]: number }>({});
+  const [progressTrackerKey, setProgressTrackerKey] = React.useState(0);
   
   // Touch gesture states
   const [touchStart, setTouchStart] = React.useState<number | null>(null);
@@ -60,7 +62,12 @@ const RecipeDetailPage: React.FC = () => {
   };
 
   const resetProgress = async () => {
-    // For now, don't update database - just handle locally
+    if (!id) return;
+    
+    // Clear progress from cache
+    recipeProgressCache.clearProgress(id);
+    
+    // Reset local state
     setAdditionalCurrentSteps(prev => {
       const reset: { [key: string]: number } = {};
       Object.keys(prev).forEach(key => {
@@ -68,6 +75,9 @@ const RecipeDetailPage: React.FC = () => {
       });
       return reset;
     });
+    
+    // Force re-render of ProgressTracker by updating its key
+    setProgressTrackerKey(prev => prev + 1);
     console.log('Progress reset');
   };
 
@@ -329,6 +339,8 @@ const RecipeDetailPage: React.FC = () => {
               {/* Progress Tracker */}
               <div>
                 <ProgressTracker
+                  key={progressTrackerKey}
+                  recipeId={recipe.id}
                   directions={recipe.directions}
                   currentStep={recipe.current_step || 0}
                   onStepClick={handleStepClick}

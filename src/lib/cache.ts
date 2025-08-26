@@ -107,5 +107,62 @@ export const CACHE_KEYS = {
   RECIPE_BY_ID: (id: string) => `recipe_${id}`,
   RECIPES_BY_CATEGORY: (category: string) => `recipes_category_${category}`,
   FAVORITE_RECIPES: 'favorite_recipes',
-  RECENT_RECIPES: 'recent_recipes'
+  RECENT_RECIPES: 'recent_recipes',
+  RECIPE_PROGRESS: (id: string) => `recipe_progress_${id}`
+};
+
+// Recipe progress cache functions
+export const recipeProgressCache = {
+  // Save recipe progress
+  saveProgress(recipeId: string, currentStep: number, additionalSteps?: { [key: string]: number }) {
+    if (typeof window === 'undefined') return;
+    
+    try {
+      const progressData = {
+        currentStep,
+        additionalSteps: additionalSteps || {},
+        timestamp: Date.now()
+      };
+      localStorage.setItem(`recipe_progress_${recipeId}`, JSON.stringify(progressData));
+    } catch (error) {
+      console.warn('Failed to save recipe progress:', error);
+    }
+  },
+
+  // Load recipe progress
+  loadProgress(recipeId: string): { currentStep: number; additionalSteps: { [key: string]: number } } | null {
+    if (typeof window === 'undefined') return null;
+    
+    try {
+      const cached = localStorage.getItem(`recipe_progress_${recipeId}`);
+      if (!cached) return null;
+
+      const progressData = JSON.parse(cached);
+      return {
+        currentStep: progressData.currentStep || 0,
+        additionalSteps: progressData.additionalSteps || {}
+      };
+    } catch (error) {
+      console.warn('Failed to load recipe progress:', error);
+      return null;
+    }
+  },
+
+  // Clear progress for a specific recipe
+  clearProgress(recipeId: string) {
+    if (typeof window === 'undefined') return;
+    localStorage.removeItem(`recipe_progress_${recipeId}`);
+  },
+
+  // Clear all recipe progress
+  clearAllProgress() {
+    if (typeof window === 'undefined') return;
+    
+    const keys = Object.keys(localStorage);
+    keys.forEach(key => {
+      if (key.startsWith('recipe_progress_')) {
+        localStorage.removeItem(key);
+      }
+    });
+  }
 };

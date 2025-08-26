@@ -33,12 +33,11 @@ interface MultiTimerProps {
 const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
 	const savedData = localStorage.getItem("multiTimers");
 	let initialTimers: TimerData[] = [];
-	let initialNextId = 1;
 
 	if (savedData) {
 		try {
-			const { timers: savedTimers, nextTimerId: savedId } =
-				JSON.parse(savedData);
+			const parsed = JSON.parse(savedData);
+			const savedTimers = parsed.timers || [];
 			const now = Date.now();
 			initialTimers = savedTimers.map((t: TimerData) => {
 				if (t.isRunning) {
@@ -56,7 +55,6 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
 				}
 				return t;
 			});
-			initialNextId = savedId || 1;
 		} catch (error) {
 			console.error("Failed to load timers:", error);
 		}
@@ -65,7 +63,6 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
 	const [timers, setTimers] = useState<TimerData[]>(initialTimers);
 	const [showAlert, setShowAlert] = useState(false);
 	const [alertTimerId, setAlertTimerId] = useState<string | null>(null);
-	const [nextTimerId, setNextTimerId] = useState(initialNextId);
 	const [globalHours, setGlobalHours] = useState(0);
 	const [globalMinutes, setGlobalMinutes] = useState(10);
 	const [globalSeconds, setGlobalSeconds] = useState(0);
@@ -251,14 +248,34 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
 		}
 	};
 
+	// Helper function to get next available timer number
+	const getNextTimerNumber = () => {
+		const existingNumbers = timers
+			.map(timer => {
+				const match = timer.label?.match(/^טיימר (\d+)$/);
+				return match ? parseInt(match[1]) : null;
+			})
+			.filter(num => num !== null)
+			.sort((a, b) => a! - b!);
+
+		// Find the first missing number starting from 1
+		for (let i = 1; i <= existingNumbers.length + 1; i++) {
+			if (!existingNumbers.includes(i)) {
+				return i;
+			}
+		}
+		return 1;
+	};
+
 	// Timer management functions
 	const addTimer = () => {
 		if (timers.length >= 5) return;
 
-		const finalTimerName = timerName.trim() || `טיימר ${nextTimerId}`;
+		const timerNumber = getNextTimerNumber();
+		const finalTimerName = timerName.trim() || `טיימר ${timerNumber}`;
 
 		const newTimer: TimerData = {
-			id: `timer-${nextTimerId}`,
+			id: `timer-${Date.now()}-${timerNumber}`, // Use timestamp + number for unique ID
 			hours: globalHours,
 			minutes: globalMinutes,
 			seconds: globalSeconds,
@@ -272,7 +289,6 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
 		};
 
 		setTimers((prev) => [...prev, newTimer]);
-		setNextTimerId((prev) => prev + 1);
 		setTimerName(""); // Reset timer name input
 	};
 
@@ -498,9 +514,9 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
 	useEffect(() => {
 		localStorage.setItem(
 			"multiTimers",
-			JSON.stringify({ timers, nextTimerId }),
+			JSON.stringify({ timers }),
 		);
-	}, [timers, nextTimerId]);
+	}, [timers]);
 
 	const formatTime = (totalSeconds: number) => {
 		const hrs = Math.floor(totalSeconds / 3600);
@@ -956,10 +972,7 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose }) => {
 															className="bg-orange-500 h-1.5 rounded-full transition-all duration-1000"
 															style={{
 																width: `${(() => {
-																	const totalTime =
-																		globalHours * 3600 +
-																		globalMinutes * 60 +
-																		globalSeconds;
+																	const totalTime = timer.hours * 3600 + timer.minutes * 60 + timer.seconds;
 																	if (totalTime === 0) return 0;
 																	const elapsed = totalTime - timer.timeLeft;
 																	return Math.min(
