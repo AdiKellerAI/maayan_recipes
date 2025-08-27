@@ -41,6 +41,28 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [showDatabaseStatus]);
 
+  // Add CSS to prevent pull-to-refresh on mobile
+  React.useEffect(() => {
+    // Add CSS rule to prevent overscroll behavior on mobile
+    const style = document.createElement('style');
+    style.textContent = `
+      html, body {
+        overscroll-behavior: none;
+        -webkit-overflow-scrolling: touch;
+      }
+      
+      /* Prevent pull-to-refresh specifically */
+      body {
+        overscroll-behavior-y: contain;
+      }
+    `;
+    document.head.appendChild(style);
+
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
+
   return (
     <ErrorBoundary>
       <Router>

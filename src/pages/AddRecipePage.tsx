@@ -95,27 +95,40 @@ const AddRecipePage: React.FC = () => {
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files) {
+    if (files && files.length > 0) {
       console.log('📸 Uploading images:', files.length);
       
       // Check if adding these images would exceed the 6 image limit
       if (images.length + files.length > 6) {
         alert(`ניתן להעלות עד 6 תמונות בלבד. כרגע יש לך ${images.length} תמונות ואתה מנסה להוסיף ${files.length} נוספות.`);
+        // Reset the input
+        e.target.value = '';
         return;
       }
       
+      // Show loading indicator for mobile
+      const loadingToast = setTimeout(() => {
+        console.log('📸 Processing images...');
+      }, 500);
+      
       compressImages(files) // Use HD quality compression
         .then(compressedImages => {
+          clearTimeout(loadingToast);
           console.log('✅ Images compressed successfully:', compressedImages.length);
           setImages(prev => {
             const newImages = [...prev, ...compressedImages];
             console.log('📸 Total images after upload:', newImages.length);
             return newImages.slice(0, 6); // Ensure we never exceed 6 images
           });
+          // Reset the input to allow selecting the same file again if needed
+          e.target.value = '';
         })
         .catch(error => {
+          clearTimeout(loadingToast);
           console.error('❌ Error compressing images:', error);
-          alert(error.message || 'שגיאה בדחיסת התמונות');
+          alert(error.message || 'שגיאה בדחיסת התמונות. אנא נסה שוב.');
+          // Reset the input
+          e.target.value = '';
         });
     }
   };
@@ -807,7 +820,7 @@ const AddRecipePage: React.FC = () => {
                     <input
                       type="file"
                       multiple
-                      accept="image/*"
+                      accept="image/*,image/heic,image/heif"
                       onChange={handleImageUpload}
                       className="hidden"
                     />
@@ -817,7 +830,7 @@ const AddRecipePage: React.FC = () => {
                     צלם תמונה
                     <input
                       type="file"
-                      accept="image/*"
+                      accept="image/*,image/heic,image/heif"
                       capture="environment"
                       onChange={handleImageUpload}
                       className="hidden"
