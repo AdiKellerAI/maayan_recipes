@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useRecipes } from '../contexts/RecipeContext';
 import { useProtectedAction } from '../hooks/useProtectedAction';
@@ -29,6 +29,10 @@ const AddRecipePage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showSectionNameModal, setShowSectionNameModal] = useState(false);
   const [newSectionName, setNewSectionName] = useState('');
+  
+  // Refs for auto-focusing new input fields
+  const ingredientRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const directionRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
 
   // Check authentication when page loads
   useEffect(() => {
@@ -42,7 +46,15 @@ const AddRecipePage: React.FC = () => {
   }, []);
 
   const addIngredient = () => {
+    const newIndex = ingredients.length;
     setIngredients([...ingredients, '']);
+    
+    // Focus the new input field after it's rendered
+    setTimeout(() => {
+      if (ingredientRefs.current[newIndex]) {
+        ingredientRefs.current[newIndex]?.focus();
+      }
+    }, 100);
   };
 
   const removeIngredient = (index: number) => {
@@ -58,7 +70,15 @@ const AddRecipePage: React.FC = () => {
   };
 
   const addDirection = () => {
+    const newIndex = directions.length;
     setDirections([...directions, '']);
+    
+    // Focus the new textarea field after it's rendered
+    setTimeout(() => {
+      if (directionRefs.current[newIndex]) {
+        directionRefs.current[newIndex]?.focus();
+      }
+    }, 100);
   };
 
   const removeDirection = (index: number) => {
@@ -634,6 +654,7 @@ const AddRecipePage: React.FC = () => {
                 {ingredients.map((ingredient, index) => (
                   <div key={index} className="flex gap-2">
                     <input
+                      ref={(el) => ingredientRefs.current[index] = el}
                       type="text"
                       value={ingredient}
                       onChange={(e) => updateIngredient(index, e.target.value)}
@@ -673,6 +694,7 @@ const AddRecipePage: React.FC = () => {
                       {index + 1}
                     </div>
                     <textarea
+                      ref={(el) => directionRefs.current[index] = el}
                       value={direction}
                       onChange={(e) => updateDirection(index, e.target.value)}
                       rows={2}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Plus, X, ArrowRight, Trash2, Upload, Camera } from 'lucide-react';
 import { useRecipes } from '../contexts/RecipeContext';
@@ -29,6 +29,10 @@ const EditRecipePage: React.FC = () => {
   const [showSectionNameModal, setShowSectionNameModal] = useState(false);
   const [newSectionName, setNewSectionName] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  
+  // Refs for auto-focusing new input fields
+  const ingredientRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const directionRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
 
   useEffect(() => {
     if (recipe) {
@@ -78,7 +82,19 @@ const EditRecipePage: React.FC = () => {
   };
 
   const addIngredient = () => {
-    setIngredients(prev => [...prev, '']);
+    setIngredients(prev => {
+      const newIndex = prev.length;
+      const newIngredients = [...prev, ''];
+      
+      // Focus the new input field after it's rendered
+      setTimeout(() => {
+        if (ingredientRefs.current[newIndex]) {
+          ingredientRefs.current[newIndex]?.focus();
+        }
+      }, 100);
+      
+      return newIngredients;
+    });
   };
 
   const updateIngredient = (index: number, value: string) => {
@@ -90,7 +106,19 @@ const EditRecipePage: React.FC = () => {
   };
 
   const addDirection = () => {
-    setDirections(prev => [...prev, '']);
+    setDirections(prev => {
+      const newIndex = prev.length;
+      const newDirections = [...prev, ''];
+      
+      // Focus the new textarea field after it's rendered
+      setTimeout(() => {
+        if (directionRefs.current[newIndex]) {
+          directionRefs.current[newIndex]?.focus();
+        }
+      }, 100);
+      
+      return newDirections;
+    });
   };
 
   const updateDirection = (index: number, value: string) => {
@@ -514,6 +542,7 @@ const EditRecipePage: React.FC = () => {
               {ingredients.map((ingredient, index) => (
                 <div key={index} className="flex items-center space-x-2 rtl:space-x-reverse">
                   <input
+                    ref={(el) => ingredientRefs.current[index] = el}
                     type="text"
                     value={ingredient}
                     onChange={(e) => updateIngredient(index, e.target.value)}
@@ -553,6 +582,7 @@ const EditRecipePage: React.FC = () => {
                     {index + 1}
                   </div>
                   <textarea
+                    ref={(el) => directionRefs.current[index] = el}
                     value={direction}
                     onChange={(e) => updateDirection(index, e.target.value)}
                     className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
