@@ -206,6 +206,7 @@ const AddRecipePage: React.FC = () => {
         else if (cat.includes('קינוח') || cat.includes('dessert')) parsedCategory = 'desserts';
         else if (cat.includes('ארוחת בוקר') || cat.includes('breakfast')) parsedCategory = 'breakfast';
         else if (cat.includes('תוספת') || cat.includes('טיבול') || cat.includes('sides')) parsedCategory = 'sides';
+        else if (cat.includes('פשטידה') || cat.includes('פשטידות') || cat.includes('pie') || cat.includes('pies')) parsedCategory = 'pies';
         currentSection = '';
         continue;
       }

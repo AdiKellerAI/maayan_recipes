@@ -8,6 +8,27 @@ import { getCategoryColor } from '../data/categories';
 import ProgressTracker from '../components/Recipe/ProgressTracker';
 import { recipeProgressCache } from '../lib/cache';
 
+// Category illustrations as emoji/unicode characters
+const getCategoryIllustration = (categoryId: string) => {
+  const illustrations = {
+    salads: '🥗',
+    soups: '🍲',
+    meat: '🥩',
+    vegetarian: '🥬',
+    pastries: '🥐',
+    cakes: '🎂',
+    cookies: '🍪',
+    desserts: '🍨',
+    breakfast: '🥚',
+    sides: '🫘',
+    pies: '🥧',
+    sauces: '🥣',
+    healthy: '🥑',
+    drinks: '🥤'
+  };
+  return illustrations[categoryId as keyof typeof illustrations] || '🍽️';
+};
+
 const RecipeDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -284,7 +305,7 @@ const RecipeDetailPage: React.FC = () => {
             <div className={`relative h-64 md:h-80 flex items-center justify-center ${getCategoryColor(recipe?.category || '')}`}>
               {category && (
                 <div className="text-6xl opacity-50">
-                  {/* Category icon would go here */}
+                  {getCategoryIllustration(recipe?.category || '')}
                 </div>
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />

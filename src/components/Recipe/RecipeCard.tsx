@@ -19,7 +19,11 @@ const getCategoryIllustration = (categoryId: string) => {
     cookies: '🍪',
     desserts: '🍨',
     breakfast: '🥚',
-    sides: '🫘'
+    sides: '🫘',
+    pies: '🥧',
+    sauces: '🥣',
+    healthy: '🥑',
+    drinks: '🥤'
   };
   return illustrations[categoryId as keyof typeof illustrations] || '🍽️';
 };
