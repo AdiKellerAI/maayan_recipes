@@ -19,13 +19,21 @@ function App() {
   const [showDatabaseStatus, setShowDatabaseStatus] = React.useState(false);
 
   // Listen for global timer events
+  const [initialTimerName, setInitialTimerName] = React.useState('');
+  
   React.useEffect(() => {
-    const handleShowTimer = () => {
+    const handleShowTimer = (event: CustomEvent) => {
+      const recipeName = event.detail?.recipeName;
+      if (recipeName) {
+        setInitialTimerName(recipeName);
+      } else {
+        setInitialTimerName('');
+      }
       setShowTimer(true);
     };
 
-    window.addEventListener('showTimer', handleShowTimer);
-    return () => window.removeEventListener('showTimer', handleShowTimer);
+    window.addEventListener('showTimer', handleShowTimer as EventListener);
+    return () => window.removeEventListener('showTimer', handleShowTimer as EventListener);
   }, []);
 
   // Show database status on development or when there are issues
@@ -82,10 +90,11 @@ function App() {
               </main>
               
               {/* Global Multi Timer */}
-              <MultiTimer
-                isVisible={showTimer}
-                onClose={() => setShowTimer(false)}
-              />
+                          <MultiTimer 
+              isVisible={showTimer}
+              onClose={() => setShowTimer(false)}
+              initialTimerName={initialTimerName}
+            />
               
               {/* Authentication Modal */}
               <AuthModal />

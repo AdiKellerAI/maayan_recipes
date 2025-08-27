@@ -202,7 +202,9 @@ const RecipeDetailPage: React.FC = () => {
           <div className="flex items-center space-x-2 rtl:space-x-reverse">
             <button
               onClick={() => {
-                const timerEvent = new CustomEvent('showTimer');
+                const timerEvent = new CustomEvent('showTimer', {
+                  detail: { recipeName: recipe.title }
+                });
                 window.dispatchEvent(timerEvent);
               }}
               className="p-2 rounded-full bg-white text-gray-600 hover:text-orange-600 hover:bg-orange-50 shadow-sm transition-colors border border-gray-200"
