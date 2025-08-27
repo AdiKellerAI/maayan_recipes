@@ -86,12 +86,12 @@ const EditRecipePage: React.FC = () => {
       const newIndex = prev.length;
       const newIngredients = [...prev, ''];
       
-      // Focus the new input field after it's rendered
+      // Focus the new input field immediately after render without losing focus
       setTimeout(() => {
         if (ingredientRefs.current[newIndex]) {
           ingredientRefs.current[newIndex]?.focus();
         }
-      }, 100);
+      }, 10); // Reduced timeout for smoother experience
       
       return newIngredients;
     });
@@ -110,12 +110,12 @@ const EditRecipePage: React.FC = () => {
       const newIndex = prev.length;
       const newDirections = [...prev, ''];
       
-      // Focus the new textarea field after it's rendered
+      // Focus the new textarea field immediately after render without losing focus
       setTimeout(() => {
         if (directionRefs.current[newIndex]) {
           directionRefs.current[newIndex]?.focus();
         }
-      }, 100);
+      }, 10); // Reduced timeout for smoother experience
       
       return newDirections;
     });
@@ -562,6 +562,8 @@ const EditRecipePage: React.FC = () => {
               <button
                 type="button"
                 onClick={addIngredient}
+                onMouseDown={(e) => e.preventDefault()} // Prevent focus on button click
+                onTouchStart={(e) => e.preventDefault()} // Prevent focus on touch
                 className="flex items-center space-x-1 rtl:space-x-reverse text-amber-600 hover:text-amber-700"
               >
                 <Plus className="h-4 w-4" />
@@ -602,6 +604,8 @@ const EditRecipePage: React.FC = () => {
               <button
                 type="button"
                 onClick={addDirection}
+                onMouseDown={(e) => e.preventDefault()} // Prevent focus on button click
+                onTouchStart={(e) => e.preventDefault()} // Prevent focus on touch
                 className="flex items-center space-x-1 rtl:space-x-reverse text-amber-600 hover:text-amber-700"
               >
                 <Plus className="h-4 w-4" />

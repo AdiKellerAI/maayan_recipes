@@ -49,12 +49,12 @@ const AddRecipePage: React.FC = () => {
     const newIndex = ingredients.length;
     setIngredients([...ingredients, '']);
     
-    // Focus the new input field after it's rendered
+    // Focus the new input field immediately after render without losing focus
     setTimeout(() => {
       if (ingredientRefs.current[newIndex]) {
         ingredientRefs.current[newIndex]?.focus();
       }
-    }, 100);
+    }, 10); // Reduced timeout for smoother experience
   };
 
   const removeIngredient = (index: number) => {
@@ -73,12 +73,12 @@ const AddRecipePage: React.FC = () => {
     const newIndex = directions.length;
     setDirections([...directions, '']);
     
-    // Focus the new textarea field after it's rendered
+    // Focus the new textarea field immediately after render without losing focus
     setTimeout(() => {
       if (directionRefs.current[newIndex]) {
         directionRefs.current[newIndex]?.focus();
       }
-    }, 100);
+    }, 10); // Reduced timeout for smoother experience
   };
 
   const removeDirection = (index: number) => {
@@ -675,6 +675,8 @@ const AddRecipePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={addIngredient}
+                  onMouseDown={(e) => e.preventDefault()} // Prevent focus on button click
+                  onTouchStart={(e) => e.preventDefault()} // Prevent focus on touch
                   className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium"
                 >
                   <Plus className="w-5 h-5" />
@@ -715,6 +717,8 @@ const AddRecipePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={addDirection}
+                  onMouseDown={(e) => e.preventDefault()} // Prevent focus on button click
+                  onTouchStart={(e) => e.preventDefault()} // Prevent focus on touch
                   className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium"
                 >
                   <Plus className="w-5 h-5" />
