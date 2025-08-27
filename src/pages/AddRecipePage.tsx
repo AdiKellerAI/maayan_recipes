@@ -78,13 +78,19 @@ const AddRecipePage: React.FC = () => {
     if (files) {
       console.log('📸 Uploading images:', files.length);
       
-      compressImages(files) // Use default database-friendly compression
+      // Check if adding these images would exceed the 6 image limit
+      if (images.length + files.length > 6) {
+        alert(`ניתן להעלות עד 6 תמונות בלבד. כרגע יש לך ${images.length} תמונות ואתה מנסה להוסיף ${files.length} נוספות.`);
+        return;
+      }
+      
+      compressImages(files) // Use HD quality compression
         .then(compressedImages => {
           console.log('✅ Images compressed successfully:', compressedImages.length);
           setImages(prev => {
             const newImages = [...prev, ...compressedImages];
             console.log('📸 Total images after upload:', newImages.length);
-            return newImages;
+            return newImages.slice(0, 6); // Ensure we never exceed 6 images
           });
         })
         .catch(error => {

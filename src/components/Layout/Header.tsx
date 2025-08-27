@@ -108,12 +108,11 @@ const Header: React.FC = () => {
             }}
           >
             <div 
-              className={`px-4 py-2 rounded-lg shadow-md border h-10 flex items-center justify-center transition-all duration-500 ease-in-out ${
+              className={`px-4 py-2 rounded-lg shadow-md border h-10 flex items-center justify-center transition-all duration-500 ease-in-out bg-gradient-to-br from-orange-500/80 to-yellow-600/80 border-orange-400/80 hover:from-orange-600/80 hover:to-yellow-700/80 ${
                 location.pathname === '/' 
                   ? 'md:px-16' // 4x wider on desktop landing page
                   : 'px-4'     // normal width on other pages
               }`}
-              style={{backgroundColor: '#593622', borderColor: '#5c3b28'}}
             >
               <ChefHat className="h-5 w-5 text-white mr-3 rtl:ml-3 rtl:mr-0" />
               <div className="text-base font-bold text-white tracking-wide">

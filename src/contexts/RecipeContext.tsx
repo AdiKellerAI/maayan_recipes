@@ -106,6 +106,9 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (!forceRefresh && isInitialized && lastSyncTime && 
           Date.now() - lastSyncTime.getTime() < 5 * 60 * 1000) { // 5 minutes cache
         console.log('🔄 Using cached recipes (last sync:', lastSyncTime.toLocaleTimeString(), ')');
+        // Still check database status even when using cache
+        const isUsingPostgreSQL = await recipeService.checkPostgreSQLConnection();
+        setPostgresqlStatus(isUsingPostgreSQL ? 'connected' : 'disconnected');
         return;
       }
 
@@ -113,13 +116,14 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setError(null);
       setPostgresqlStatus('checking');
       
+      // Check database connection first
+      const isUsingPostgreSQL = await recipeService.checkPostgreSQLConnection();
+      console.log('🔍 CONTEXT: Database connection status:', isUsingPostgreSQL ? 'connected' : 'disconnected');
+      setPostgresqlStatus(isUsingPostgreSQL ? 'connected' : 'disconnected');
+      
       const data = await recipeService.getAllRecipes();
       console.log(`🎯 CONTEXT: Setting ${data.length} recipes in state`);
       setRecipes(data);
-      
-      // Check if we got data from PostgreSQL or fallback
-      const isUsingPostgreSQL = await recipeService.checkPostgreSQLConnection();
-      setPostgresqlStatus(isUsingPostgreSQL ? 'connected' : 'disconnected');
       
       setLastSyncTime(new Date());
       setIsInitialized(true);
@@ -157,7 +161,30 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     
     const savedViewMode = loadViewMode() as ViewMode;
     setViewModeState(savedViewMode === 'large' || savedViewMode === 'list' ? 'medium' : savedViewMode);
-  }, []);
+    
+    // Set up periodic database status check (every 30 seconds)
+    const statusCheckInterval = setInterval(async () => {
+      if (!loading) {
+        try {
+          const isConnected = await recipeService.checkPostgreSQLConnection();
+          const newStatus = isConnected ? 'connected' : 'disconnected';
+          if (newStatus !== postgresqlStatus) {
+            console.log('🔄 PERIODIC CHECK: Database status changed to:', newStatus);
+            setPostgresqlStatus(newStatus);
+          }
+        } catch (error) {
+          console.warn('🔄 PERIODIC CHECK: Database status check failed:', error);
+          if (postgresqlStatus !== 'disconnected') {
+            setPostgresqlStatus('disconnected');
+          }
+        }
+      }
+    }, 30000);
+    
+    return () => {
+      clearInterval(statusCheckInterval);
+    };
+  }, [loading, postgresqlStatus]);
 
   useEffect(() => {
     // Only sync if we don't have recipes yet or if it's been a while

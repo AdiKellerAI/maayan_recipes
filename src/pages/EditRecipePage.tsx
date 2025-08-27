@@ -4,6 +4,7 @@ import { Plus, X, ArrowRight, Trash2, Upload, Camera } from 'lucide-react';
 import { useRecipes } from '../contexts/RecipeContext';
 import { useProtectedAction } from '../hooks/useProtectedAction';
 import { categories } from '../data/categories';
+import { compressImages } from '../utils/imageCompression';
 
 const EditRecipePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -101,27 +102,29 @@ const EditRecipePage: React.FC = () => {
   };
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length > 0) {
-      const remainingSlots = 6 - images.length;
-      const filesToProcess = files.slice(0, remainingSlots);
+    const files = e.target.files;
+    if (files) {
+      console.log('📸 Uploading images:', files.length);
       
-      let processedCount = 0;
-      const newImages: string[] = [];
+      // Check if adding these images would exceed the 6 image limit
+      if (images.length + files.length > 6) {
+        alert(`ניתן להעלות עד 6 תמונות בלבד. כרגע יש לך ${images.length} תמונות ואתה מנסה להוסיף ${files.length} נוספות.`);
+        return;
+      }
       
-      filesToProcess.forEach(file => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const result = e.target?.result as string;
-          newImages.push(result);
-          processedCount++;
-          
-          if (processedCount === filesToProcess.length) {
-            setImages(prev => [...prev, ...newImages]);
-          }
-        };
-        reader.readAsDataURL(file);
-      });
+      compressImages(files) // Use HD quality compression
+        .then(compressedImages => {
+          console.log('✅ Images compressed successfully:', compressedImages.length);
+          setImages(prev => {
+            const newImages = [...prev, ...compressedImages];
+            console.log('📸 Total images after upload:', newImages.length);
+            return newImages.slice(0, 6); // Ensure we never exceed 6 images
+          });
+        })
+        .catch(error => {
+          console.error('❌ Error compressing images:', error);
+          alert(error.message || 'שגיאה בדחיסת התמונות');
+        });
     }
   };
 

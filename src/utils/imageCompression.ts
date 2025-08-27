@@ -1,5 +1,5 @@
-// Image compression utility with size limits for database storage
-export const compressImage = (file: File, maxWidth: number = 600, quality: number = 0.5): Promise<string> => {
+// Image compression utility with HD quality for database storage
+export const compressImage = (file: File, maxWidth: number = 1200, quality: number = 0.8): Promise<string> => {
   return new Promise((resolve, reject) => {
     // Check file size limit (5MB)
     if (file.size > 5 * 1024 * 1024) {
@@ -37,17 +37,17 @@ export const compressImage = (file: File, maxWidth: number = 600, quality: numbe
         // Draw the image
         ctx.drawImage(img, 0, 0, width, height);
         
-        // Convert to compressed JPEG with lower quality for database storage
+        // Convert to compressed JPEG with HD quality for database storage
         let compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
         
-        // Check if the compressed image is still too large (aim for under 100KB per image)
-        const maxSize = 100 * 1024; // 100KB in bytes (base64 is ~33% larger than binary)
-        if (compressedDataUrl.length > maxSize && quality > 0.2) {
-          // Try with even lower quality
-          compressedDataUrl = canvas.toDataURL('image/jpeg', 0.3);
+        // Check if the compressed image is still too large (aim for under 500KB per image for HD quality)
+        const maxSize = 500 * 1024; // 500KB in bytes (base64 is ~33% larger than binary)
+        if (compressedDataUrl.length > maxSize && quality > 0.4) {
+          // Try with slightly lower quality but still HD
+          compressedDataUrl = canvas.toDataURL('image/jpeg', 0.6);
           
           if (compressedDataUrl.length > maxSize) {
-            compressedDataUrl = canvas.toDataURL('image/jpeg', 0.2);
+            compressedDataUrl = canvas.toDataURL('image/jpeg', 0.5);
           }
         }
         
@@ -76,8 +76,8 @@ export const compressImage = (file: File, maxWidth: number = 600, quality: numbe
   });
 };
 
-// Compress multiple images with database-friendly settings
-export const compressImages = async (files: FileList, maxWidth: number = 600, quality: number = 0.5): Promise<string[]> => {
+// Compress multiple images with HD quality settings
+export const compressImages = async (files: FileList, maxWidth: number = 1200, quality: number = 0.8): Promise<string[]> => {
   const compressionPromises = Array.from(files).map(file => compressImage(file, maxWidth, quality));
   return Promise.all(compressionPromises);
 };
