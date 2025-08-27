@@ -27,7 +27,7 @@ const Header: React.FC = () => {
   const location = useLocation();
 
   useEffect(() => {
-    if (location.pathname === '/landing') {
+    if (location.pathname === '/') {
       setSearchQuery('');
       setLocalSearchQuery('');
     }
@@ -37,7 +37,7 @@ const Header: React.FC = () => {
     e.preventDefault();
     if (localSearchQuery.trim()) {
       setSearchQuery(localSearchQuery.trim());
-      navigate('/');
+      navigate('/recipes');
     } else {
       setSearchQuery('');
     }
@@ -53,7 +53,7 @@ const Header: React.FC = () => {
   const toggleFavorites = () => {
     setShowFavoritesOnly(!showFavoritesOnly);
     setShowRecentOnly(false);
-    navigate('/');
+    navigate('/recipes');
     setIsMenuOpen(false);
   };
 
@@ -99,17 +99,17 @@ const Header: React.FC = () => {
 
           {/* Logo - Right side */}
           <Link 
-            to="/landing" 
+            to="/" 
             className="flex items-center"
             onClick={(e) => {
               e.preventDefault();
               resetFilters();
-              navigate('/landing');
+              navigate('/');
             }}
           >
             <div 
               className={`px-4 py-2 rounded-lg shadow-md border h-10 flex items-center justify-center transition-all duration-500 ease-in-out ${
-                location.pathname === '/landing' 
+                location.pathname === '/' 
                   ? 'md:px-16' // 4x wider on desktop landing page
                   : 'px-4'     // normal width on other pages
               }`}
@@ -123,7 +123,7 @@ const Header: React.FC = () => {
           </Link>
 
           {/* Fixed Search Bar - Desktop */}
-          {location.pathname !== '/landing' && (
+          {location.pathname !== '/' && (
             <div className="hidden sm:flex flex-1 max-w-md mx-8">
               <form onSubmit={handleSearch} className="relative w-full">
                 <input
@@ -342,7 +342,7 @@ const Header: React.FC = () => {
                   <button
                     onClick={() => {
                       resetFilters();
-                      navigate('/landing');
+                      navigate('/');
                       setIsMenuOpen(false);
                     }}
                     className="w-full flex items-center space-x-2 rtl:space-x-reverse py-2 px-2.5 rounded-lg bg-gradient-to-r from-violet-50 to-purple-50 text-violet-700 hover:from-violet-100 hover:to-purple-100 transition-all duration-300 transform hover:scale-105 border border-violet-200 hover:border-violet-300"
@@ -391,7 +391,7 @@ const Header: React.FC = () => {
       </div>
 
       {/* Fixed Mobile Search Bar */}
-      {location.pathname !== '/landing' && (
+      {location.pathname !== '/' && (
         <div className="md:hidden bg-white border-b border-gray-200 px-4 py-1.5">
           <form onSubmit={handleSearch} className="relative">
             <input
@@ -434,7 +434,7 @@ const Header: React.FC = () => {
                 value={difficultyFilter}
                 onChange={(e) => {
                   setDifficultyFilter(e.target.value);
-                  navigate('/'); // Navigate to home to show filtered results
+                  navigate('/recipes'); // Navigate to home to show filtered results
                 }}
                 className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base bg-white"
               >
@@ -451,7 +451,7 @@ const Header: React.FC = () => {
                 value={imageFilter}
                 onChange={(e) => {
                   setImageFilter(e.target.value);
-                  navigate('/'); // Navigate to home to show filtered results
+                  navigate('/recipes'); // Navigate to home to show filtered results
                 }}
                 className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base bg-white"
               >
@@ -467,7 +467,7 @@ const Header: React.FC = () => {
                 value={flourFilter}
                 onChange={(e) => {
                   setFlourFilter(e.target.value);
-                  navigate('/'); // Navigate to home to show filtered results
+                  navigate('/recipes'); // Navigate to home to show filtered results
                 }}
                 className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base bg-white"
               >

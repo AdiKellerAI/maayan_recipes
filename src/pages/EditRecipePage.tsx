@@ -61,7 +61,7 @@ const EditRecipePage: React.FC = () => {
         <div className="text-center">
           <h2 className="text-2xl font-bold text-gray-900 mb-2">מתכון לא נמצא</h2>
           <button
-            onClick={() => navigate('/')}
+            onClick={() => navigate('/recipes')}
             className="text-amber-600 hover:text-amber-700"
           >
             חזור לדף הבית

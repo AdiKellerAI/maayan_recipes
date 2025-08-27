@@ -50,8 +50,8 @@ function App() {
               <Header />
               <main>
                 <Routes>
-                  <Route path="/" element={<HomePage />} />
-                  <Route path="/landing" element={<LandingPage />} />
+                  <Route path="/" element={<LandingPage />} />
+                  <Route path="/recipes" element={<HomePage />} />
                   <Route path="/recipe/:id" element={<RecipeDetailPage />} />
                   <Route path="/add" element={<AddRecipePage />} />
                   <Route path="/edit/:id" element={<EditRecipePage />} />

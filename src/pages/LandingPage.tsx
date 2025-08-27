@@ -169,7 +169,7 @@ const LandingPage: React.FC = () => {
           }
         };
         preloadAllRecipes();
-        navigate('/?recipes=true');
+        navigate('/recipes');
         break;
       case 'favorites':
         // Preload favorite recipes before navigation
@@ -181,7 +181,7 @@ const LandingPage: React.FC = () => {
           }
         };
         preloadFavorites();
-        navigate('/?favorites=true');
+        navigate('/recipes?favorites=true');
         break;
       case 'categories':
         setShowCategories(true);
@@ -203,13 +203,13 @@ const LandingPage: React.FC = () => {
       }
     };
     preloadCategoryRecipes();
-    navigate(`/?category=${categoryId}`);
+    navigate(`/recipes?category=${categoryId}`);
   };
 
   const handleSearch = (query: string) => {
     if (query.trim()) {
       setShowSearch(false);
-      navigate(`/?search=${encodeURIComponent(query.trim())}`);
+      navigate(`/recipes?search=${encodeURIComponent(query.trim())}`);
     }
   };
 
@@ -462,7 +462,7 @@ const LandingPage: React.FC = () => {
                       }
                     };
                     preloadAllRecipes();
-                    navigate('/?recipes=true');
+                    navigate('/recipes');
                   }}
                   className="px-6 py-3 rounded-full text-sm font-medium transition-colors bg-primary-500 text-white hover:bg-primary-600"
                 >

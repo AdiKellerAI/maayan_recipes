@@ -1,6 +1,6 @@
 import React from 'react';
 import { useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import { ArrowUpDown } from 'lucide-react';
 import { useRecipes } from '../contexts/RecipeContext';
 import CategoryNav from '../components/Layout/CategoryNav';
@@ -13,41 +13,24 @@ const HomePage: React.FC = () => {
   const recipes = getFilteredRecipes();
   const selectedCategoryData = categories.find(c => c.id === selectedCategory);
   const [isSortOpen, setIsSortOpen] = React.useState(false);
-  const navigate = useNavigate();
   const location = useLocation();
 
-  // Check if user came from landing page or has valid navigation
+  // Handle URL parameters for filtering
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
     const favoritesParam = urlParams.get('favorites');
     const categoryParam = urlParams.get('category');
     const searchParam = urlParams.get('search');
-    const recipesParam = urlParams.get('recipes');
     
     // Handle URL parameters
     if (favoritesParam === 'true') {
-      // Set favorites filter
-      // This will be handled by the RecipeContext
+      // Set favorites filter - handled by RecipeContext
     } else if (categoryParam) {
-      // Set category filter
-      // This will be handled by the RecipeContext
+      // Set category filter - handled by RecipeContext
     } else if (searchParam) {
-      // Set search query
-      // This will be handled by the RecipeContext
-    } else if (recipesParam === 'true') {
-      // Show all recipes - no special filters needed
+      // Set search query - handled by RecipeContext
     }
-    
-    const hasValidNavigation = searchQuery || showFavoritesOnly || showRecentOnly || selectedCategory || 
-                              favoritesParam || categoryParam || searchParam || recipesParam;
-    
-    // Allow direct access to home page - don't redirect to landing on refresh
-    // Only redirect if user navigates to root without any parameters and without coming from a valid route
-    const isDirectAccess = !document.referrer || document.referrer.includes(window.location.origin);
-    if (!hasValidNavigation && location.pathname === '/' && !location.search && !isDirectAccess) {
-      navigate('/landing');
-    }
-  }, [navigate, location, searchQuery, showFavoritesOnly, showRecentOnly, selectedCategory]);
+  }, [location]);
 
   // Separate useEffect for scrolling to top when URL parameters change
   useEffect(() => {

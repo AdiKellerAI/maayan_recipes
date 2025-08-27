@@ -832,7 +832,7 @@ const AddRecipePage: React.FC = () => {
               </button>
               <button
                 type="button"
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/recipes')}
                 className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
               >
                 ביטול
