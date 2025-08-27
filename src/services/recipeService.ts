@@ -29,25 +29,42 @@ const isAPIAvailable = async (): Promise<boolean> => {
         'Content-Type': 'application/json',
       },
       // Add timeout to prevent hanging requests
-      signal: AbortSignal.timeout(5000)
+      signal: AbortSignal.timeout(8000) // Increased timeout for better reliability
     });
     
     if (!response.ok) {
       console.warn('❌ SERVICE: API response not OK:', response.status, response.statusText);
+      
+      // Try to get error details
+      try {
+        const errorData = await response.json();
+        console.warn('❌ SERVICE: Error details:', errorData);
+      } catch (e) {
+        console.warn('❌ SERVICE: Could not parse error response');
+      }
+      
       return false;
     }
     
     const result = await response.json();
-    console.log('🔍 SERVICE: API response:', result);
+    console.log('✅ SERVICE: API response:', result);
     
-    return result.connected === true || result.success === true || result.message?.includes('connected');
+    const isConnected = result.connected === true || result.success === true || result.message?.includes('Connected');
+    
+    if (isConnected) {
+      console.log('🎉 SERVICE: PostgreSQL database is connected and working!');
+    } else {
+      console.warn('⚠️ SERVICE: API responded but database connection unclear:', result);
+    }
+    
+    return isConnected;
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      console.warn('❌ SERVICE: API connection timeout');
+      console.warn('❌ SERVICE: API connection timeout after 8 seconds');
     } else {
       console.warn('❌ SERVICE: API connection test failed:', error);
     }
-    console.log('📦 Using localStorage fallback');
+    console.log('📦 SERVICE: Falling back to localStorage');
     return false;
   }
 };

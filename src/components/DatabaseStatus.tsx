@@ -1,0 +1,168 @@
+import React, { useState, useEffect } from 'react';
+import { Database, Wifi, WifiOff, AlertCircle, CheckCircle, RefreshCw } from 'lucide-react';
+
+interface DatabaseStatusProps {
+  isVisible?: boolean;
+}
+
+const DatabaseStatus: React.FC<DatabaseStatusProps> = ({ isVisible = false }) => {
+  const [status, setStatus] = useState<'checking' | 'connected' | 'disconnected' | 'error'>('checking');
+  const [details, setDetails] = useState<any>(null);
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const checkConnection = async () => {
+    setStatus('checking');
+    try {
+      console.log('🔍 DATABASE STATUS: Testing connection...');
+      
+      const response = await fetch('/api/test-connection', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        signal: AbortSignal.timeout(8000)
+      });
+      
+      if (!response.ok) {
+        console.warn('❌ DATABASE STATUS: API response not OK:', response.status);
+        setStatus('error');
+        setDetails({ error: `HTTP ${response.status}: ${response.statusText}` });
+        return;
+      }
+      
+      const result = await response.json();
+      console.log('✅ DATABASE STATUS: API response:', result);
+      setDetails(result);
+      
+      if (result.connected === true || result.success === true) {
+        setStatus('connected');
+      } else {
+        setStatus('disconnected');
+      }
+    } catch (error) {
+      console.error('❌ DATABASE STATUS: Connection test failed:', error);
+      setStatus('error');
+      setDetails({ 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        type: error instanceof Error ? error.name : 'Error'
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (isVisible) {
+      checkConnection();
+    }
+  }, [isVisible]);
+
+  if (!isVisible) return null;
+
+  const getStatusIcon = () => {
+    switch (status) {
+      case 'checking':
+        return <RefreshCw className="h-4 w-4 animate-spin text-blue-500" />;
+      case 'connected':
+        return <CheckCircle className="h-4 w-4 text-green-500" />;
+      case 'disconnected':
+        return <WifiOff className="h-4 w-4 text-orange-500" />;
+      case 'error':
+        return <AlertCircle className="h-4 w-4 text-red-500" />;
+    }
+  };
+
+  const getStatusText = () => {
+    switch (status) {
+      case 'checking':
+        return 'בודק חיבור...';
+      case 'connected':
+        return 'מחובר למאגר המידע';
+      case 'disconnected':
+        return 'לא מחובר למאגר המידע';
+      case 'error':
+        return 'שגיאה בחיבור';
+    }
+  };
+
+  const getStatusColor = () => {
+    switch (status) {
+      case 'checking':
+        return 'border-blue-200 bg-blue-50';
+      case 'connected':
+        return 'border-green-200 bg-green-50';
+      case 'disconnected':
+        return 'border-orange-200 bg-orange-50';
+      case 'error':
+        return 'border-red-200 bg-red-50';
+    }
+  };
+
+  return (
+    <div className={`fixed bottom-4 right-4 z-50 max-w-sm border-2 rounded-lg p-3 shadow-lg ${getStatusColor()}`}>
+      <div 
+        className="flex items-center justify-between cursor-pointer"
+        onClick={() => setIsExpanded(!isExpanded)}
+      >
+        <div className="flex items-center space-x-2 rtl:space-x-reverse">
+          <Database className="h-4 w-4 text-gray-600" />
+          {getStatusIcon()}
+          <span className="text-sm font-medium text-gray-800">
+            {getStatusText()}
+          </span>
+        </div>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            checkConnection();
+          }}
+          className="p-1 hover:bg-white/50 rounded"
+          title="בדוק שוב"
+        >
+          <RefreshCw className="h-3 w-3 text-gray-500" />
+        </button>
+      </div>
+      
+      {isExpanded && details && (
+        <div className="mt-2 pt-2 border-t border-gray-200">
+          <div className="text-xs text-gray-600 space-y-1">
+            {status === 'connected' && (
+              <>
+                <div>✅ שרת API: פעיל</div>
+                <div>✅ PostgreSQL: מחובר</div>
+                {details.server_time && (
+                  <div>🕒 זמן שרת: {new Date(details.server_time).toLocaleTimeString('he-IL')}</div>
+                )}
+                {details.pg_version && (
+                  <div>🗄️ גרסת DB: {details.pg_version}</div>
+                )}
+              </>
+            )}
+            
+            {status === 'disconnected' && (
+              <>
+                <div>⚠️ שרת API: פעיל</div>
+                <div>❌ PostgreSQL: לא מחובר</div>
+                <div>📦 משתמש ב-localStorage</div>
+              </>
+            )}
+            
+            {status === 'error' && (
+              <>
+                <div>❌ שגיאה: {details.error}</div>
+                {details.type && <div>סוג: {details.type}</div>}
+                <div>📦 משתמש ב-localStorage</div>
+              </>
+            )}
+            
+            <div className="mt-2 pt-1 border-t border-gray-300">
+              <div className="text-xs text-gray-500">
+                לחץ כדי לרענן • לחץ על 🔄 כדי לבדוק שוב
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default DatabaseStatus;

@@ -12,9 +12,11 @@ import SearchResultsPage from './pages/SearchResultsPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import MultiTimer from './components/Timer/MultiTimer';
 import AuthModal from './components/AuthModal';
+import DatabaseStatus from './components/DatabaseStatus';
 
 function App() {
   const [showTimer, setShowTimer] = React.useState(false);
+  const [showDatabaseStatus, setShowDatabaseStatus] = React.useState(false);
 
   // Listen for global timer events
   React.useEffect(() => {
@@ -25,6 +27,19 @@ function App() {
     window.addEventListener('showTimer', handleShowTimer);
     return () => window.removeEventListener('showTimer', handleShowTimer);
   }, []);
+
+  // Show database status on development or when there are issues
+  React.useEffect(() => {
+    // Show database status in development or when user presses Ctrl+Shift+D
+    const handleKeyPress = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === 'D') {
+        setShowDatabaseStatus(!showDatabaseStatus);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [showDatabaseStatus]);
 
   return (
     <ErrorBoundary>
@@ -52,6 +67,9 @@ function App() {
               
               {/* Authentication Modal */}
               <AuthModal />
+              
+              {/* Database Status Diagnostic (Ctrl+Shift+D to toggle) */}
+              <DatabaseStatus isVisible={showDatabaseStatus} />
             </div>
           </RecipeProvider>
         </AuthProvider>

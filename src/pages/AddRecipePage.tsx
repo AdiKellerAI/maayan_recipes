@@ -78,7 +78,7 @@ const AddRecipePage: React.FC = () => {
     if (files) {
       console.log('📸 Uploading images:', files.length);
       
-      compressImages(files, 800, 0.6) // 60% quality for better compression
+      compressImages(files) // Use default database-friendly compression
         .then(compressedImages => {
           console.log('✅ Images compressed successfully:', compressedImages.length);
           setImages(prev => {
@@ -89,7 +89,7 @@ const AddRecipePage: React.FC = () => {
         })
         .catch(error => {
           console.error('❌ Error compressing images:', error);
-          alert('שגיאה בדחיסת התמונות');
+          alert(error.message || 'שגיאה בדחיסת התמונות');
         });
     }
   };

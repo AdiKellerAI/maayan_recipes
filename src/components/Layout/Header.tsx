@@ -1,7 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Heart, Plus, Filter, Menu, X, ChefHat, Database } from 'lucide-react';
 import { useRecipes } from '../../contexts/RecipeContext';
-import { useAuth } from '../../contexts/AuthContext';
 import { useProtectedAction } from '../../hooks/useProtectedAction';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 
@@ -9,7 +8,6 @@ const Header: React.FC = () => {
   const { 
     showFavoritesOnly, 
     setShowFavoritesOnly, 
-    showRecentOnly, 
     setShowRecentOnly, 
     setSearchQuery,
     difficultyFilter,
@@ -18,14 +16,11 @@ const Header: React.FC = () => {
     setImageFilter,
     flourFilter,
     setFlourFilter,
-    sortBy,
-    setSortBy,
     postgresqlStatus,
     resetFilters
   } = useRecipes();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [isSortOpen, setIsSortOpen] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   const navigate = useNavigate();
   const { executeProtectedAction } = useProtectedAction();
@@ -62,12 +57,7 @@ const Header: React.FC = () => {
     setIsMenuOpen(false);
   };
 
-  const toggleRecent = () => {
-    setShowRecentOnly(!showRecentOnly);
-    setShowFavoritesOnly(false);
-    navigate('/');
-    setIsMenuOpen(false);
-  };
+
 
   const clearFilters = () => {
     setDifficultyFilter('');
@@ -306,8 +296,8 @@ const Header: React.FC = () => {
                 <button
                   onClick={() => {
                     setIsFilterOpen(!isFilterOpen);
-                    // Don't close menu immediately on mobile to allow filter overlay to show
-                    setTimeout(() => setIsMenuOpen(false), 100);
+                    // Close menu immediately on mobile to show filter overlay properly
+                    setIsMenuOpen(false);
                   }}
                   className={`w-full flex items-center space-x-2 rtl:space-x-reverse py-2 px-2.5 rounded-lg transition-all duration-300 transform hover:scale-105 ${
                     hasActiveFilters
@@ -340,12 +330,12 @@ const Header: React.FC = () => {
                       window.dispatchEvent(timerEvent);
                       setIsMenuOpen(false);
                     }}
-                    className="w-full flex items-center space-x-2 rtl:space-x-reverse py-1.5 px-2.5 rounded-md bg-gradient-to-r from-orange-50 to-yellow-50 text-orange-700 hover:from-orange-100 hover:to-yellow-100 transition-all duration-300 transform hover:scale-105"
+                    className="w-full flex items-center space-x-2 rtl:space-x-reverse py-2 px-2.5 rounded-lg bg-gradient-to-r from-orange-50 to-yellow-50 text-orange-700 hover:from-orange-100 hover:to-yellow-100 transition-all duration-300 transform hover:scale-105 border border-orange-200 hover:border-orange-300"
                   >
-                    <div className="w-5 h-5 bg-gradient-to-br from-orange-500 to-yellow-600 rounded-full flex items-center justify-center">
-                      <span className="text-xs text-white">⏰</span>
+                    <div className="w-6 h-6 bg-gradient-to-br from-orange-500 to-yellow-600 rounded-full flex items-center justify-center">
+                      <span className="text-sm text-white">⏰</span>
                     </div>
-                    <span className="text-xs font-medium">טיימר בישול</span>
+                    <span className="text-xs font-semibold">טיימר בישול</span>
                   </button>
                   
                   {/* Landing Page Button */}
@@ -355,12 +345,12 @@ const Header: React.FC = () => {
                       navigate('/landing');
                       setIsMenuOpen(false);
                     }}
-                    className="w-full flex items-center space-x-2 rtl:space-x-reverse py-1.5 px-2.5 rounded-md bg-gradient-to-r from-violet-100 to-violet-200 text-violet-700 hover:from-violet-200 hover:to-violet-300 transition-all duration-300 transform hover:scale-105"
+                    className="w-full flex items-center space-x-2 rtl:space-x-reverse py-2 px-2.5 rounded-lg bg-gradient-to-r from-violet-50 to-purple-50 text-violet-700 hover:from-violet-100 hover:to-purple-100 transition-all duration-300 transform hover:scale-105 border border-violet-200 hover:border-violet-300"
                   >
-                    <div className="w-5 h-5 bg-violet-200 rounded-full flex items-center justify-center">
-                      <ChefHat className="h-2.5 w-2.5" />
+                    <div className="w-6 h-6 bg-gradient-to-br from-violet-500 to-purple-600 rounded-full flex items-center justify-center">
+                      <ChefHat className="h-3.5 w-3.5 text-white" />
                     </div>
-                    <span className="text-xs font-medium">דף הבית</span>
+                    <span className="text-xs font-semibold">דף הבית</span>
                   </button>
                   
                   {/* Divider */}
@@ -416,21 +406,18 @@ const Header: React.FC = () => {
         </div>
       )}
       
-      {/* Click outside to close filters */}
-      {(isFilterOpen || isMenuOpen) && (
+      {/* Click outside to close filters and menu */}
+      {isFilterOpen && (
         <div 
-          className="fixed inset-0 z-40 md:hidden" 
-          onClick={() => {
-            setIsFilterOpen(false);
-            setIsMenuOpen(false);
-          }}
+          className="fixed inset-0 z-40 bg-black bg-opacity-30" 
+          onClick={() => setIsFilterOpen(false)}
         />
       )}
       </header>
       
-      {/* Mobile Filter Overlay - Separate from desktop */}
+      {/* Mobile Filter Overlay - Fixed positioning for better mobile support */}
       {isFilterOpen && (
-        <div className="md:hidden absolute top-full left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50 max-h-[70vh] overflow-y-auto">
+        <div className="md:hidden fixed top-16 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50 max-h-[70vh] overflow-y-auto">
           <div className="p-4 space-y-4">
             <div className="flex items-center justify-between mb-4">
               <h4 className="text-base font-semibold text-gray-800">סינון מתכונים</h4>
@@ -445,7 +432,10 @@ const Header: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">רמת קושי</label>
               <select
                 value={difficultyFilter}
-                onChange={(e) => setDifficultyFilter(e.target.value)}
+                onChange={(e) => {
+                  setDifficultyFilter(e.target.value);
+                  navigate('/'); // Navigate to home to show filtered results
+                }}
                 className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base bg-white"
               >
                 <option value="">כל הרמות</option>
@@ -459,7 +449,10 @@ const Header: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">תמונות</label>
               <select
                 value={imageFilter}
-                onChange={(e) => setImageFilter(e.target.value)}
+                onChange={(e) => {
+                  setImageFilter(e.target.value);
+                  navigate('/'); // Navigate to home to show filtered results
+                }}
                 className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base bg-white"
               >
                 <option value="">הכל</option>
@@ -472,7 +465,10 @@ const Header: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">קמח</label>
               <select
                 value={flourFilter}
-                onChange={(e) => setFlourFilter(e.target.value)}
+                onChange={(e) => {
+                  setFlourFilter(e.target.value);
+                  navigate('/'); // Navigate to home to show filtered results
+                }}
                 className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base bg-white"
               >
                 <option value="">הכל</option>

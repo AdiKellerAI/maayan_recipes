@@ -1,7 +1,7 @@
 import React from 'react';
 import { useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Plus, ArrowUpDown } from 'lucide-react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { ArrowUpDown } from 'lucide-react';
 import { useRecipes } from '../contexts/RecipeContext';
 import CategoryNav from '../components/Layout/CategoryNav';
 import ViewModeToggle from '../components/Layout/ViewModeToggle';
@@ -9,7 +9,7 @@ import RecipeGrid from '../components/Recipe/RecipeGrid';
 import { categories } from '../data/categories';
 
 const HomePage: React.FC = () => {
-  const { getFilteredRecipes, selectedCategory, showFavoritesOnly, showRecentOnly, searchQuery, refreshRecipes, sortBy, setSortBy } = useRecipes();
+  const { getFilteredRecipes, selectedCategory, showFavoritesOnly, showRecentOnly, searchQuery, sortBy, setSortBy } = useRecipes();
   const recipes = getFilteredRecipes();
   const selectedCategoryData = categories.find(c => c.id === selectedCategory);
   const [isSortOpen, setIsSortOpen] = React.useState(false);
@@ -41,8 +41,10 @@ const HomePage: React.FC = () => {
     const hasValidNavigation = searchQuery || showFavoritesOnly || showRecentOnly || selectedCategory || 
                               favoritesParam || categoryParam || searchParam || recipesParam;
     
-    // If no valid navigation and no direct access, redirect to landing
-    if (!hasValidNavigation && location.pathname === '/' && !location.search) {
+    // Allow direct access to home page - don't redirect to landing on refresh
+    // Only redirect if user navigates to root without any parameters and without coming from a valid route
+    const isDirectAccess = !document.referrer || document.referrer.includes(window.location.origin);
+    if (!hasValidNavigation && location.pathname === '/' && !location.search && !isDirectAccess) {
       navigate('/landing');
     }
   }, [navigate, location, searchQuery, showFavoritesOnly, showRecentOnly, selectedCategory]);
