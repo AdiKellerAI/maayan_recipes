@@ -133,9 +133,9 @@ const RecipeDetailPage: React.FC = () => {
     executeProtectedAction(async () => {
       try {
         await deleteRecipe(recipe.id);
-        // Return to recipes list immediately after successful deletion
+        // Return to previous page immediately after successful deletion
         setShowDeleteModal(false);
-        navigate('/recipes');
+        navigate(-1);
       } catch (error) {
         console.error('Failed to delete recipe:', error);
         // You could add a toast notification here instead of alert
@@ -192,7 +192,7 @@ const RecipeDetailPage: React.FC = () => {
         {/* Navigation */}
         <div className="flex items-center justify-between mb-6">
           <button
-            onClick={() => navigate('/recipes')}
+            onClick={() => navigate(-1)}
             className="flex items-center space-x-2 rtl:space-x-reverse text-gray-600 hover:text-gray-900"
           >
             <ArrowRight className="h-5 w-5" />
