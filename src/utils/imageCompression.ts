@@ -62,13 +62,49 @@ export const compressImage = (file: File, maxWidth: number = 1200, quality: numb
       }
     };
     
+    // Add timeout for mobile devices that might be slow
+    const timeoutId = setTimeout(() => {
+      reject(new Error('Image processing timed out. Please try a smaller image.'));
+    }, 30000); // 30 second timeout
+    
+    // Set up event handlers with timeout
+    const handleImageLoad = () => {
+      clearTimeout(timeoutId);
+      processImage();
+    };
+    
+    img.onload = handleImageLoad;
+    
+    img.onerror = (error) => {
+      clearTimeout(timeoutId);
+      console.error('Image load error:', error);
+      reject(new Error('Failed to load image. Please try a different format (JPG, PNG).'));
+    };
+    
     // Load the image with better mobile support
     const reader = new FileReader();
     reader.onload = (event) => {
       if (event.target?.result) {
         // Add crossOrigin for better mobile compatibility
         img.crossOrigin = 'anonymous';
-        img.src = event.target.result as string;
+        
+        // Handle different result types for mobile compatibility
+        const result = event.target.result;
+        if (typeof result === 'string') {
+          img.src = result;
+        } else {
+          // Convert ArrayBuffer to data URL for mobile compatibility
+          const blob = new Blob([result], { type: file.type });
+          const url = URL.createObjectURL(blob);
+          
+          // Override the onload to clean up the URL
+          img.onload = () => {
+            URL.revokeObjectURL(url);
+            handleImageLoad();
+          };
+          
+          img.src = url;
+        }
       } else {
         reject(new Error('Failed to load image data'));
       }
@@ -76,23 +112,6 @@ export const compressImage = (file: File, maxWidth: number = 1200, quality: numb
     reader.onerror = (error) => {
       console.error('FileReader error:', error);
       reject(new Error('Failed to read file. Please try a different image.'));
-    };
-    
-    // Add timeout for mobile devices that might be slow
-    const timeoutId = setTimeout(() => {
-      reject(new Error('Image processing timed out. Please try a smaller image.'));
-    }, 30000); // 30 second timeout
-    
-    // Set up event handlers with timeout
-    img.onload = () => {
-      clearTimeout(timeoutId);
-      processImage();
-    };
-    
-    img.onerror = (error) => {
-      clearTimeout(timeoutId);
-      console.error('Image load error:', error);
-      reject(new Error('Failed to load image. Please try a different format (JPG, PNG).'));
     };
     
     reader.readAsDataURL(file);

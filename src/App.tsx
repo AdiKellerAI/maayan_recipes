@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { RecipeProvider } from './contexts/RecipeContext';
 import { AuthProvider } from './contexts/AuthContext';
+import { NavigationProvider } from './contexts/NavigationContext';
 import Header from './components/Layout/Header';
 import LandingPage from './pages/LandingPage';
 import HomePage from './pages/HomePage';
@@ -74,36 +75,38 @@ function App() {
   return (
     <ErrorBoundary>
       <Router>
-        <AuthProvider>
-          <RecipeProvider>
-            <div className="min-h-screen" dir="rtl">
-              <Header />
-              <main>
-                <Routes>
-                  <Route path="/" element={<LandingPage />} />
-                  <Route path="/recipes" element={<HomePage />} />
-                  <Route path="/recipe/:id" element={<RecipeDetailPage />} />
-                  <Route path="/add" element={<AddRecipePage />} />
-                  <Route path="/edit/:id" element={<EditRecipePage />} />
-                  <Route path="/search" element={<SearchResultsPage />} />
-                </Routes>
-              </main>
-              
-              {/* Global Multi Timer */}
-                          <MultiTimer 
-              isVisible={showTimer}
-              onClose={() => setShowTimer(false)}
-              initialTimerName={initialTimerName}
-            />
-              
-              {/* Authentication Modal */}
-              <AuthModal />
-              
-              {/* Database Status Diagnostic (Ctrl+Shift+D to toggle) */}
-              <DatabaseStatus isVisible={showDatabaseStatus} />
-            </div>
-          </RecipeProvider>
-        </AuthProvider>
+        <NavigationProvider>
+          <AuthProvider>
+            <RecipeProvider>
+              <div className="min-h-screen" dir="rtl">
+                <Header />
+                <main>
+                  <Routes>
+                    <Route path="/" element={<LandingPage />} />
+                    <Route path="/recipes" element={<HomePage />} />
+                    <Route path="/recipe/:id" element={<RecipeDetailPage />} />
+                    <Route path="/add" element={<AddRecipePage />} />
+                    <Route path="/edit/:id" element={<EditRecipePage />} />
+                    <Route path="/search" element={<SearchResultsPage />} />
+                  </Routes>
+                </main>
+                
+                {/* Global Multi Timer */}
+                            <MultiTimer 
+                isVisible={showTimer}
+                onClose={() => setShowTimer(false)}
+                initialTimerName={initialTimerName}
+              />
+                
+                {/* Authentication Modal */}
+                <AuthModal />
+                
+                {/* Database Status Diagnostic (Ctrl+Shift+D to toggle) */}
+                <DatabaseStatus isVisible={showDatabaseStatus} />
+              </div>
+            </RecipeProvider>
+          </AuthProvider>
+        </NavigationProvider>
       </Router>
     </ErrorBoundary>
   );

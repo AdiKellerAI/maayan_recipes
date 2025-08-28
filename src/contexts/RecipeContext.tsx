@@ -3,6 +3,7 @@ import type { Recipe, ViewMode, RecipeInsert } from '../types/recipe';
 import { recipeService } from '../services/recipeService';
 import { saveViewMode, loadViewMode } from '../utils/storage';
 import { useLocation } from 'react-router-dom';
+import { cacheManager, CACHE_KEYS } from '../lib/cache';
 
 interface RecipeContextType {
   recipes: Recipe[];
@@ -121,8 +122,31 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       console.log('🔍 CONTEXT: Database connection status:', isUsingPostgreSQL ? 'connected' : 'disconnected');
       setPostgresqlStatus(isUsingPostgreSQL ? 'connected' : 'disconnected');
       
-      const data = await recipeService.getAllRecipes();
-      console.log(`🎯 CONTEXT: Setting ${data.length} recipes in state`);
+      // Use smart loading: start with category preview for faster initial load
+      let data: Recipe[];
+      if (!isInitialized && !forceRefresh) {
+        console.log('🚀 CONTEXT: Using category preview for fast initial load');
+        data = await recipeService.getCategoryPreview();
+        console.log(`🎯 CONTEXT: Loaded ${data.length} preview recipes`);
+        
+        // Load full recipes in background after setting preview
+        setTimeout(async () => {
+          try {
+            console.log('🔄 CONTEXT: Loading full recipes in background');
+            const fullData = await recipeService.getAllRecipes();
+            console.log(`🎯 CONTEXT: Background loaded ${fullData.length} full recipes`);
+            setRecipes(fullData);
+            cacheManager.set(CACHE_KEYS.ALL_RECIPES, fullData);
+          } catch (error) {
+            console.log('Background full load failed:', error);
+          }
+        }, 1000);
+      } else {
+        console.log('🔄 CONTEXT: Loading all recipes');
+        data = await recipeService.getAllRecipes();
+        console.log(`🎯 CONTEXT: Loaded ${data.length} recipes`);
+      }
+      
       setRecipes(data);
       
       setLastSyncTime(new Date());

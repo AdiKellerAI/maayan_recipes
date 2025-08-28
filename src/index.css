@@ -2,6 +2,40 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Mobile-specific improvements for file uploads */
+.touch-manipulation {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Improve button responsiveness on mobile */
+@media (hover: none) and (pointer: coarse) {
+  .touch-manipulation:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+  
+  /* Ensure file inputs work on mobile */
+  input[type="file"] {
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  
+  /* Better touch targets for mobile */
+  label[for] {
+    min-height: 44px;
+    min-width: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
 /* RTL Support */
 html {
   direction: rtl;

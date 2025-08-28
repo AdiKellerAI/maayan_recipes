@@ -4,8 +4,9 @@ import { useRecipes } from '../contexts/RecipeContext';
 import { useProtectedAction } from '../hooks/useProtectedAction';
 import type { RecipeInsert, Recipe } from '../types/recipe';
 import { categories } from '../data/categories';
-import { Plus, X, Upload, Camera, Sparkles, Link, Eye, Edit, Trash2 } from 'lucide-react';
+import { Plus, X, Upload, Camera, Sparkles, Link, Eye, Edit, Trash2, Search, Download } from 'lucide-react';
 import { compressImages } from '../utils/imageCompression';
+import { imageSearchService, ImageSearchResult } from '../services/imageSearchService';
 
 const AddRecipePage: React.FC = () => {
   const navigate = useNavigate();
@@ -20,7 +21,7 @@ const AddRecipePage: React.FC = () => {
   const [directions, setDirections] = useState(['']);
   const [images, setImages] = useState<string[]>([]);
   const [additionalInstructions, setAdditionalInstructions] = useState<{ [key: string]: string[] }>({});
-  const [showAdditionalInstructions, setShowAdditionalInstructions] = useState(false);
+
   const [showSmartImport, setShowSmartImport] = useState(false);
   const [smartImportText, setSmartImportText] = useState('');
   const [smartImportUrl, setSmartImportUrl] = useState('');
@@ -29,6 +30,11 @@ const AddRecipePage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showSectionNameModal, setShowSectionNameModal] = useState(false);
   const [newSectionName, setNewSectionName] = useState('');
+  
+  // Smart image search states
+  const [showSmartImageSearch, setShowSmartImageSearch] = useState(false);
+  const [searchResults, setSearchResults] = useState<ImageSearchResult[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   
   // Refs for auto-focusing new input fields
   const ingredientRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -98,9 +104,28 @@ const AddRecipePage: React.FC = () => {
     if (files && files.length > 0) {
       console.log('📸 Uploading images:', files.length);
       
+      // Filter out non-image files (workaround for Android 14 compatibility)
+      const imageFiles = Array.from(files).filter(file => {
+        const isImage = file.type.startsWith('image/');
+        if (!isImage) {
+          console.log('⚠️ Skipping non-image file:', file.name, file.type);
+        }
+        return isImage;
+      });
+      
+      if (imageFiles.length === 0) {
+        alert('אנא בחר קבצי תמונה בלבד (JPG, PNG, WEBP, HEIC).');
+        e.target.value = '';
+        return;
+      }
+      
+      if (imageFiles.length !== files.length) {
+        alert(`נבחרו ${imageFiles.length} קבצי תמונה מתוך ${files.length} קבצים. רק קבצי התמונה יועלו.`);
+      }
+      
       // Check if adding these images would exceed the 6 image limit
-      if (images.length + files.length > 6) {
-        alert(`ניתן להעלות עד 6 תמונות בלבד. כרגע יש לך ${images.length} תמונות ואתה מנסה להוסיף ${files.length} נוספות.`);
+      if (images.length + imageFiles.length > 6) {
+        alert(`ניתן להעלות עד 6 תמונות בלבד. כרגע יש לך ${images.length} תמונות ואתה מנסה להוסיף ${imageFiles.length} נוספות.`);
         // Reset the input
         e.target.value = '';
         return;
@@ -111,7 +136,10 @@ const AddRecipePage: React.FC = () => {
         console.log('📸 Processing images...');
       }, 500);
       
-      compressImages(files) // Use HD quality compression
+      // Convert Array to FileList-like object for compression
+      const fileList = imageFiles as unknown as FileList;
+      
+      compressImages(fileList) // Use HD quality compression
         .then(compressedImages => {
           clearTimeout(loadingToast);
           console.log('✅ Images compressed successfully:', compressedImages.length);
@@ -152,6 +180,68 @@ const AddRecipePage: React.FC = () => {
       console.log('📸 Images after removal:', newImages.length);
       return newImages;
     });
+  };
+
+  // Smart Image Search Functions
+  const handleSmartImageSearch = async () => {
+    if (!title.trim()) {
+      alert('כדי לחפש תמונות רלוונטיות, אנא הכנס תחילה את שם המתכון');
+      return;
+    }
+
+    setIsSearching(true);
+    setShowSmartImageSearch(true);
+    
+    try {
+      console.log('🔍 Searching images for:', title);
+      const results = await imageSearchService.searchRecipeImages(
+        title,
+        ingredients.filter(ing => ing.trim())
+      );
+      
+      console.log('✅ Found', results.length, 'images');
+      setSearchResults(results);
+    } catch (error) {
+      console.error('❌ Image search failed:', error);
+      alert('שגיאה בחיפוש תמונות. אנא נסה שוב.');
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const selectSearchImage = async (imageResult: ImageSearchResult) => {
+    if (images.length >= 6) {
+      alert('ניתן להעלות עד 6 תמונות בלבד');
+      return;
+    }
+
+    try {
+      console.log('📥 Downloading selected image:', imageResult.url);
+      
+      // Download and compress the selected image
+      const response = await fetch(imageResult.url);
+      const blob = await response.blob();
+      
+      // Create a File object from the blob
+      const file = new File([blob], `${title}-search-image.jpg`, { type: 'image/jpeg' });
+      const fileList = [file] as unknown as FileList;
+      
+      // Compress the image
+      const compressedImages = await compressImages(fileList);
+      
+      if (compressedImages.length > 0) {
+        setImages(prev => [...prev, compressedImages[0]]);
+        console.log('✅ Image added successfully');
+        
+        // Close search modal after selection
+        setShowSmartImageSearch(false);
+        setSearchResults([]);
+      }
+      
+    } catch (error) {
+      console.error('❌ Error downloading image:', error);
+      alert('שגיאה בהורדת התמונה. אנא נסה שוב.');
+    }
   };
 
   const addAdditionalInstructionSection = () => {
@@ -234,7 +324,6 @@ const AddRecipePage: React.FC = () => {
       
       if (trimmedLine.includes('קטגוריה') || trimmedLine.includes('category')) {
         currentSection = 'category';
-        const catMatch = trimmedLine.split(':')[1];
         continue;
       }
       
@@ -258,7 +347,6 @@ const AddRecipePage: React.FC = () => {
       
       if (trimmedLine.includes('קושי') || trimmedLine.includes('difficulty')) {
         currentSection = 'difficulty';
-        const diffMatch = trimmedLine.split(':')[1];
         continue;
       }
       
@@ -825,32 +913,47 @@ const AddRecipePage: React.FC = () => {
                 תמונות
               </label>
               <div className="space-y-4">
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg cursor-pointer transition-colors">
-                    <Upload className="w-5 h-5" />
-                    העלה תמונות
+                <div className="grid grid-cols-3 gap-2">
+                  <label className="cursor-pointer">
+                    <div className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation">
+                      <Upload className="w-4 h-4" />
+                      <span className="text-sm">העלה</span>
+                    </div>
                     <input
                       type="file"
                       multiple
-                      accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif"
+                      accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif,text/plain"
                       onChange={handleImageUpload}
                       className="hidden"
                       title="העלה תמונות"
                     />
                   </label>
-                  <label className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg cursor-pointer transition-colors">
-                    <Camera className="w-5 h-5" />
-                    צלם תמונה
+                  <label className="cursor-pointer">
+                    <div className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation">
+                      <Camera className="w-4 h-4" />
+                      <span className="text-sm">צלם</span>
+                    </div>
                     <input
                       type="file"
-                      accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif"
+                      accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif,text/plain"
                       capture="environment"
-                      multiple
                       onChange={handleImageUpload}
                       className="hidden"
                       title="צלם תמונה"
                     />
                   </label>
+                  <button
+                    type="button"
+                    onClick={handleSmartImageSearch}
+                    disabled={images.length >= 6 || !title.trim()}
+                    className={`flex items-center justify-center gap-2 px-3 py-2 border border-purple-300 bg-gradient-to-r from-purple-50 to-blue-50 text-purple-700 rounded-lg hover:from-purple-100 hover:to-blue-100 transition-colors touch-manipulation ${
+                      (images.length >= 6 || !title.trim()) ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                    title="חיפוש תמונה חכם"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    <span className="text-sm">חיפוש חכם</span>
+                  </button>
                 </div>
 
                 {images.length > 0 && (
@@ -1075,6 +1178,93 @@ const AddRecipePage: React.FC = () => {
               >
                 ביטול
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Smart Image Search Modal */}
+      {showSmartImageSearch && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto mx-2 sm:mx-0">
+            <div className="p-4 sm:p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900">חיפוש תמונה חכם</h2>
+                <button
+                  onClick={() => {
+                    setShowSmartImageSearch(false);
+                    setSearchResults([]);
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+
+              {isSearching ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">מחפש תמונות מתאימות למתכון "{title}"...</p>
+                  </div>
+                </div>
+              ) : searchResults.length > 0 ? (
+                <div>
+                  <p className="text-gray-600 mb-4">
+                    נמצאו {searchResults.length} תמונות מתאימות למתכון "{title}". לחץ על תמונה כדי להוסיף אותה למתכון:
+                  </p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {searchResults.map((result, index) => (
+                      <div
+                        key={index}
+                        className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
+                        onClick={() => selectSearchImage(result)}
+                      >
+                        <div className="aspect-video bg-gray-100 relative">
+                          <img
+                            src={result.thumbnail}
+                            alt={result.title}
+                            className="w-full h-full object-cover"
+                            loading="lazy"
+                          />
+                          <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 transition-all flex items-center justify-center">
+                            <Download className="text-white opacity-0 hover:opacity-100 transition-opacity w-8 h-8" />
+                          </div>
+                        </div>
+                        <div className="p-3">
+                          <p className="text-sm text-gray-600 truncate">{result.title}</p>
+                          <p className="text-xs text-gray-400">{result.source}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-4 text-center">
+                    <button
+                      onClick={() => {
+                        setShowSmartImageSearch(false);
+                        setSearchResults([]);
+                      }}
+                      className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
+                    >
+                      סגור ללא בחירה
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                  <p className="text-gray-600">לא נמצאו תמונות מתאימות למתכון. נסה שם מתכון אחר או הוסף תמונה ידנית.</p>
+                  <button
+                    onClick={() => {
+                      setShowSmartImageSearch(false);
+                      setSearchResults([]);
+                    }}
+                    className="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    סגור
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </div>

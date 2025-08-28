@@ -2,6 +2,7 @@ import React from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { Heart, ChefHat, Share2, Edit, ArrowRight, ChevronLeft, ChevronRight, Trash2, X, RotateCcw } from 'lucide-react';
 import { useRecipes } from '../contexts/RecipeContext';
+import { useNavigation } from '../contexts/NavigationContext';
 import { useProtectedAction } from '../hooks/useProtectedAction';
 import { categories } from '../data/categories';
 import { getCategoryColor } from '../data/categories';
@@ -33,6 +34,7 @@ const RecipeDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { recipes, toggleFavorite, deleteRecipe } = useRecipes();
+  const { navigateToLastRecipesPage } = useNavigation();
   const { executeProtectedAction } = useProtectedAction();
   const [currentImageIndex, setCurrentImageIndex] = React.useState(0);
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
@@ -133,9 +135,9 @@ const RecipeDetailPage: React.FC = () => {
     executeProtectedAction(async () => {
       try {
         await deleteRecipe(recipe.id);
-        // Return to previous page immediately after successful deletion
+        // Return to last recipes page immediately after successful deletion
         setShowDeleteModal(false);
-        navigate(-1);
+        navigate(navigateToLastRecipesPage());
       } catch (error) {
         console.error('Failed to delete recipe:', error);
         // You could add a toast notification here instead of alert
@@ -192,7 +194,7 @@ const RecipeDetailPage: React.FC = () => {
         {/* Navigation */}
         <div className="flex items-center justify-between mb-6">
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate(navigateToLastRecipesPage())}
             className="flex items-center space-x-2 rtl:space-x-reverse text-gray-600 hover:text-gray-900"
           >
             <ArrowRight className="h-5 w-5" />

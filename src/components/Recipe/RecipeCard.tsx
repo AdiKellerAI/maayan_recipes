@@ -6,6 +6,7 @@ import { useProtectedAction } from '../../hooks/useProtectedAction';
 import { getCategoryColor } from '../../data/categories';
 import { useNavigate } from 'react-router-dom';
 import { categories } from '../../data/categories';
+import LazyImage from '../LazyImage';
 
 // Category illustrations as emoji/unicode characters
 const getCategoryIllustration = (categoryId: string) => {
@@ -371,10 +372,10 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
         <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden h-full flex flex-col">
         {primaryImage ? (
           <div className="relative h-48 sm:h-56 md:h-64 overflow-hidden">
-            <img
+            <LazyImage
               src={primaryImage}
               alt={recipe.title}
-              className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+              className="w-full h-full transition-transform duration-300 hover:scale-105"
             />
             {recipe.images && recipe.images.length > 1 && (
               <div className="absolute bottom-3 left-3 rtl:right-3 rtl:left-auto bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs flex items-center space-x-1 rtl:space-x-reverse">
@@ -629,10 +630,10 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
       <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden h-full flex flex-col transform hover:scale-[1.02] hover:-translate-y-1">
       {primaryImage ? (
         <div className="relative h-24 sm:h-28 md:h-32 overflow-hidden">
-          <img
+          <LazyImage
             src={primaryImage}
             alt={recipe.title}
-            className="w-full h-full object-cover"
+            className="w-full h-full"
           />
           {recipe.images && recipe.images.length > 1 && (
             <div className="absolute bottom-1 left-1 rtl:right-1 rtl:left-auto bg-black/60 backdrop-blur-sm text-white px-1.5 py-0.5 rounded-full text-xs flex items-center space-x-1 rtl:space-x-reverse">

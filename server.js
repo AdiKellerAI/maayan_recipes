@@ -1,6 +1,7 @@
 console.log('Starting server...');
 
 import express from 'express';
+import compression from 'compression';
 import { Pool } from 'pg';
 import cors from 'cors';
 
@@ -9,21 +10,56 @@ console.log('Loading dependencies...');
 const app = express();
 
 // Middleware
-app.use(cors());
-app.use(express.json());
+app.use(compression()); // Enable gzip compression
+app.use(cors({
+  origin: process.env.NODE_ENV === 'production' ? ['https://your-domain.com'] : true,
+  credentials: true
+}));
+app.use(express.json({ limit: '10mb' })); // Increase limit for image uploads
+
+// Add response caching middleware
+app.use((req, res, next) => {
+  // Set default cache headers for API responses
+  if (req.path.startsWith('/api/')) {
+    res.set({
+      'Cache-Control': 'public, max-age=300', // 5 minutes cache
+      'Vary': 'Accept-Encoding'
+    });
+  }
+  next();
+});
 
 console.log('Middleware configured...');
 
-// PostgreSQL connection
+// PostgreSQL connection with optimized pooling
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 'postgres://postgres:MaayanRecipes2025@34.132.167.99:5432/recipes',
   ssl: { rejectUnauthorized: false },
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
+  max: 25, // Increased pool size for better performance
+  min: 5, // Keep minimum connections alive
+  idleTimeoutMillis: 60000, // Increased idle timeout
+  connectionTimeoutMillis: 15000, // Increased connection timeout
+  acquireTimeoutMillis: 10000, // Time to wait for connection from pool
+  createTimeoutMillis: 10000, // Time to wait for new connection creation
+  destroyTimeoutMillis: 5000, // Time to wait for connection destruction
+  reapIntervalMillis: 1000, // How often to check for idle connections
+  createRetryIntervalMillis: 200, // Retry interval for connection creation
 });
 
 console.log('PostgreSQL pool created...');
+
+// Pool monitoring for performance insights
+pool.on('connect', (client) => {
+  console.log('✅ New client connected to PostgreSQL');
+});
+
+pool.on('error', (err, client) => {
+  console.error('❌ PostgreSQL pool error:', err);
+});
+
+pool.on('remove', (client) => {
+  console.log('🔌 Client removed from PostgreSQL pool');
+});
 
 // Helper function to map database row to Recipe type
 const mapRowToRecipe = (row) => ({
@@ -142,6 +178,60 @@ const ensureRecipesTable = async (client) => {
   }
 };
 
+// Performance monitoring endpoint
+app.get('/api/performance', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    const startTime = Date.now();
+    
+    // Test query performance
+    await client.query('SELECT 1');
+    const queryTime = Date.now() - startTime;
+    
+    // Get pool stats
+    const poolStats = {
+      totalCount: pool.totalCount,
+      idleCount: pool.idleCount,
+      waitingCount: pool.waitingCount
+    };
+    
+    // Get database stats
+    const dbStats = await client.query(`
+      SELECT 
+        schemaname,
+        tablename,
+        n_tup_ins as inserts,
+        n_tup_upd as updates,
+        n_tup_del as deletes,
+        n_live_tup as live_tuples,
+        n_dead_tup as dead_tuples
+      FROM pg_stat_user_tables 
+      WHERE tablename = 'recipes'
+    `);
+    
+    client.release();
+    
+    res.json({
+      timestamp: new Date().toISOString(),
+      database: {
+        queryTime: `${queryTime}ms`,
+        connected: true,
+        stats: dbStats.rows[0] || {}
+      },
+      pool: poolStats,
+      performance: {
+        queryTime,
+        status: queryTime < 100 ? 'excellent' : queryTime < 500 ? 'good' : 'needs_optimization'
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Performance check failed',
+      message: error.message
+    });
+  }
+});
+
 // Test connection endpoint
 app.get('/api/test-connection', async (req, res) => {
   try {
@@ -180,20 +270,99 @@ app.get('/api/test-connection', async (req, res) => {
   }
 });
 
-// Get all recipes
+// Get all recipes with smart loading and caching
 app.get('/api/recipes', async (req, res) => {
   try {
-    console.log('📊 Fetching all recipes from PostgreSQL...');
+    console.log('📊 Fetching recipes from PostgreSQL...');
     const client = await pool.connect();
     
     // Ensure table exists
     await ensureRecipesTable(client);
     
-    const result = await client.query('SELECT * FROM recipes ORDER BY created_at DESC');
+    // Parse query parameters for optimization
+    const limit = parseInt(req.query.limit) || null;
+    const offset = parseInt(req.query.offset) || 0;
+    const category = req.query.category;
+    const favorites = req.query.favorites === 'true';
+    const preview = req.query.preview === 'true'; // For category previews (5 per category)
+    
+    let query = 'SELECT * FROM recipes';
+    let params = [];
+    let paramIndex = 1;
+    
+    // Add WHERE conditions
+    const conditions = [];
+    if (category) {
+      conditions.push(`category = $${paramIndex++}`);
+      params.push(category);
+    }
+    if (favorites) {
+      conditions.push(`is_favorite = $${paramIndex++}`);
+      params.push(true);
+    }
+    
+    if (conditions.length > 0) {
+      query += ' WHERE ' + conditions.join(' AND ');
+    }
+    
+    // Add ordering
+    query += ' ORDER BY created_at DESC';
+    
+    // Add pagination
+    if (limit) {
+      query += ` LIMIT $${paramIndex++}`;
+      params.push(limit);
+      
+      if (offset > 0) {
+        query += ` OFFSET $${paramIndex++}`;
+        params.push(offset);
+      }
+    }
+    
+    console.log('🔍 Optimized query:', query, 'Params:', params);
+    
+    const result = await client.query(query, params);
     const recipes = result.rows.map(mapRowToRecipe);
+    
+    // If preview mode, get limited recipes per category
+    if (preview && !category) {
+      console.log('📋 Preview mode: Getting 5 recipes per category');
+      const categoryQuery = `
+        WITH ranked_recipes AS (
+          SELECT *, 
+                 ROW_NUMBER() OVER (PARTITION BY category ORDER BY created_at DESC) as rn
+          FROM recipes
+        )
+        SELECT * FROM ranked_recipes 
+        WHERE rn <= 5 
+        ORDER BY category, created_at DESC
+      `;
+      
+      const previewResult = await client.query(categoryQuery);
+      const previewRecipes = previewResult.rows.map(mapRowToRecipe);
+      console.log(`✅ Retrieved ${previewRecipes.length} preview recipes`);
+      
+      client.release();
+      
+      // Set cache headers for better performance
+      res.set({
+        'Cache-Control': 'public, max-age=300', // 5 minutes cache
+        'ETag': `"preview-${previewRecipes.length}-${Date.now()}"`
+      });
+      
+      return sendJsonResponse(res, previewRecipes);
+    }
+    
     console.log(`✅ Retrieved ${recipes.length} recipes`);
     
     client.release();
+    
+    // Set cache headers for better performance
+    res.set({
+      'Cache-Control': 'public, max-age=300', // 5 minutes cache
+      'ETag': `"recipes-${recipes.length}-${Date.now()}"`
+    });
+    
     sendJsonResponse(res, recipes);
   } catch (error) {
     console.error('❌ Error fetching recipes:', error);
