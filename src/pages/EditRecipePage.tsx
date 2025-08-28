@@ -162,7 +162,19 @@ const EditRecipePage: React.FC = () => {
         .catch(error => {
           clearTimeout(loadingToast);
           console.error('❌ Error compressing images:', error);
-          alert(error.message || 'שגיאה בדחיסת התמונות. אנא נסה שוב.');
+          const errorMessage = error.message || 'שגיאה בדחיסת התמונות. אנא נסה שוב.';
+          
+          // Provide more specific error messages for mobile users
+          if (errorMessage.includes('timed out')) {
+            alert('עיבוד התמונה נמשך יותר מדי. אנא נסה תמונה קטנה יותר או בפורמט JPG/PNG.');
+          } else if (errorMessage.includes('Failed to load image')) {
+            alert('לא ניתן לטעון את התמונה. אנא נסה פורמט אחר (JPG, PNG) או תמונה אחרת.');
+          } else if (errorMessage.includes('גדול מדי')) {
+            alert('התמונה גדולה מדי. אנא בחר תמונה קטנה יותר (עד 10MB).');
+          } else {
+            alert(errorMessage);
+          }
+          
           // Reset the input
           e.target.value = '';
         });
@@ -406,11 +418,12 @@ const EditRecipePage: React.FC = () => {
                     </div>
                     <input
                       type="file"
-                      accept="image/*,image/heic,image/heif"
+                      accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif"
                       multiple
                       onChange={handleImageUpload}
                       disabled={images.length >= 6}
                       className="hidden"
+                      title="העלה תמונה"
                     />
                   </label>
                   <label className={`flex-1 cursor-pointer ${images.length >= 6 ? 'opacity-50 pointer-events-none' : ''}`}>
@@ -420,12 +433,13 @@ const EditRecipePage: React.FC = () => {
                     </div>
                     <input
                       type="file"
-                      accept="image/*,image/heic,image/heif"
+                      accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif"
                       capture="environment"
                       multiple
                       onChange={handleImageUpload}
                       disabled={images.length >= 6}
                       className="hidden"
+                      title="צלם תמונה"
                     />
                   </label>
                 </div>

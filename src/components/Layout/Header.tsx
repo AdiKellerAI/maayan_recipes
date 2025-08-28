@@ -17,7 +17,8 @@ const Header: React.FC = () => {
     flourFilter,
     setFlourFilter,
     postgresqlStatus,
-    resetFilters
+    resetFilters,
+    recipes
   } = useRecipes();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -25,6 +26,17 @@ const Header: React.FC = () => {
   const navigate = useNavigate();
   const { executeProtectedAction } = useProtectedAction();
   const location = useLocation();
+
+  // Get current recipe name if we're on a recipe detail page
+  const getCurrentRecipeName = () => {
+    const pathMatch = location.pathname.match(/^\/recipe\/(.+)$/);
+    if (pathMatch) {
+      const recipeId = pathMatch[1];
+      const recipe = recipes.find(r => r.id === recipeId);
+      return recipe?.title || '';
+    }
+    return '';
+  };
 
   useEffect(() => {
     if (location.pathname === '/') {
@@ -86,8 +98,11 @@ const Header: React.FC = () => {
             {/* Timer Button - Always visible */}
             <button
               onClick={() => {
-                // Open timer
-                const timerEvent = new CustomEvent('showTimer');
+                // Open timer with current recipe name if available
+                const recipeName = getCurrentRecipeName();
+                const timerEvent = new CustomEvent('showTimer', {
+                  detail: { recipeName }
+                });
                 window.dispatchEvent(timerEvent);
               }}
               className="p-2 rounded-lg transition-colors text-gray-600 hover:bg-gray-100 hover:text-orange-600"
@@ -325,7 +340,10 @@ const Header: React.FC = () => {
                   {/* Timer Button */}
                   <button
                     onClick={() => {
-                      const timerEvent = new CustomEvent('showTimer');
+                      const recipeName = getCurrentRecipeName();
+                      const timerEvent = new CustomEvent('showTimer', {
+                        detail: { recipeName }
+                      });
                       window.dispatchEvent(timerEvent);
                       setIsMenuOpen(false);
                     }}

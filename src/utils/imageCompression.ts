@@ -1,9 +1,9 @@
 // Image compression utility with HD quality for database storage
 export const compressImage = (file: File, maxWidth: number = 1200, quality: number = 0.8): Promise<string> => {
   return new Promise((resolve, reject) => {
-    // Check file size limit (5MB)
-    if (file.size > 5 * 1024 * 1024) {
-      reject(new Error('קובץ התמונה גדול מדי. אנא בחר תמונה קטנה יותר (עד 5MB)'));
+    // Check file size limit (10MB for mobile - larger limit to accommodate mobile photos)
+    if (file.size > 10 * 1024 * 1024) {
+      reject(new Error('קובץ התמונה גדול מדי. אנא בחר תמונה קטנה יותר (עד 10MB)'));
       return;
     }
 
@@ -11,15 +11,19 @@ export const compressImage = (file: File, maxWidth: number = 1200, quality: numb
     const ctx = canvas.getContext('2d');
     const img = new Image();
     
-    img.onload = () => {
+    const processImage = () => {
       // Calculate new dimensions while maintaining aspect ratio
       let { width, height } = img;
       
-      // Determine the scaling factor - be more aggressive with compression
-      const scaleFactor = Math.min(maxWidth / width, maxWidth / height);
+      // For mobile photos, be more aggressive with resizing to ensure compatibility
+      const isMobilePhoto = width > 2000 || height > 2000 || file.size > 2 * 1024 * 1024;
+      const targetMaxWidth = isMobilePhoto ? Math.min(maxWidth, 1024) : maxWidth;
+      
+      // Determine the scaling factor - be more aggressive with compression for mobile
+      const scaleFactor = Math.min(targetMaxWidth / width, targetMaxWidth / height);
       
       // Always resize to keep images reasonable for database storage
-      if (scaleFactor < 1 || width > maxWidth || height > maxWidth) {
+      if (scaleFactor < 1 || width > targetMaxWidth || height > targetMaxWidth) {
         width = Math.floor(width * scaleFactor);
         height = Math.floor(height * scaleFactor);
       }
@@ -58,20 +62,39 @@ export const compressImage = (file: File, maxWidth: number = 1200, quality: numb
       }
     };
     
-    img.onerror = () => {
-      reject(new Error('Failed to load image'));
-    };
-    
-    // Load the image
+    // Load the image with better mobile support
     const reader = new FileReader();
     reader.onload = (event) => {
       if (event.target?.result) {
+        // Add crossOrigin for better mobile compatibility
+        img.crossOrigin = 'anonymous';
         img.src = event.target.result as string;
+      } else {
+        reject(new Error('Failed to load image data'));
       }
     };
-    reader.onerror = () => {
-      reject(new Error('Failed to read file'));
+    reader.onerror = (error) => {
+      console.error('FileReader error:', error);
+      reject(new Error('Failed to read file. Please try a different image.'));
     };
+    
+    // Add timeout for mobile devices that might be slow
+    const timeoutId = setTimeout(() => {
+      reject(new Error('Image processing timed out. Please try a smaller image.'));
+    }, 30000); // 30 second timeout
+    
+    // Set up event handlers with timeout
+    img.onload = () => {
+      clearTimeout(timeoutId);
+      processImage();
+    };
+    
+    img.onerror = (error) => {
+      clearTimeout(timeoutId);
+      console.error('Image load error:', error);
+      reject(new Error('Failed to load image. Please try a different format (JPG, PNG).'));
+    };
+    
     reader.readAsDataURL(file);
   });
 };
