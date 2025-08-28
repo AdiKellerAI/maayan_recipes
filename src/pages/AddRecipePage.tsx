@@ -4,9 +4,9 @@ import { useRecipes } from '../contexts/RecipeContext';
 import { useProtectedAction } from '../hooks/useProtectedAction';
 import type { RecipeInsert, Recipe } from '../types/recipe';
 import { categories } from '../data/categories';
-import { Plus, X, Upload, Camera, Sparkles, Link, Eye, Edit, Trash2, Search, Download } from 'lucide-react';
+import { Plus, X, Upload, Camera, Sparkles, Link, Eye, Edit, Trash2 } from 'lucide-react';
 import { compressImages } from '../utils/imageCompression';
-import { imageSearchService, ImageSearchResult } from '../services/imageSearchService';
+import { searchImages, imageUrlToDataUrl, ImageSearchResult } from '../services/imageSearchService';
 
 const AddRecipePage: React.FC = () => {
   const navigate = useNavigate();
@@ -30,11 +30,12 @@ const AddRecipePage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showSectionNameModal, setShowSectionNameModal] = useState(false);
   const [newSectionName, setNewSectionName] = useState('');
-  
+
   // Smart image search states
   const [showSmartImageSearch, setShowSmartImageSearch] = useState(false);
-  const [searchResults, setSearchResults] = useState<ImageSearchResult[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
+  const [imageSearchResults, setImageSearchResults] = useState<ImageSearchResult[]>([]);
+  const [isSearchingImages, setIsSearchingImages] = useState(false);
+  const [imageSearchError, setImageSearchError] = useState<string | null>(null);
   
   // Refs for auto-focusing new input fields
   const ingredientRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -180,68 +181,6 @@ const AddRecipePage: React.FC = () => {
       console.log('📸 Images after removal:', newImages.length);
       return newImages;
     });
-  };
-
-  // Smart Image Search Functions
-  const handleSmartImageSearch = async () => {
-    if (!title.trim()) {
-      alert('כדי לחפש תמונות רלוונטיות, אנא הכנס תחילה את שם המתכון');
-      return;
-    }
-
-    setIsSearching(true);
-    setShowSmartImageSearch(true);
-    
-    try {
-      console.log('🔍 Searching images for:', title);
-      const results = await imageSearchService.searchRecipeImages(
-        title,
-        ingredients.filter(ing => ing.trim())
-      );
-      
-      console.log('✅ Found', results.length, 'images');
-      setSearchResults(results);
-    } catch (error) {
-      console.error('❌ Image search failed:', error);
-      alert('שגיאה בחיפוש תמונות. אנא נסה שוב.');
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
-  const selectSearchImage = async (imageResult: ImageSearchResult) => {
-    if (images.length >= 6) {
-      alert('ניתן להעלות עד 6 תמונות בלבד');
-      return;
-    }
-
-    try {
-      console.log('📥 Downloading selected image:', imageResult.url);
-      
-      // Download and compress the selected image
-      const response = await fetch(imageResult.url);
-      const blob = await response.blob();
-      
-      // Create a File object from the blob
-      const file = new File([blob], `${title}-search-image.jpg`, { type: 'image/jpeg' });
-      const fileList = [file] as unknown as FileList;
-      
-      // Compress the image
-      const compressedImages = await compressImages(fileList);
-      
-      if (compressedImages.length > 0) {
-        setImages(prev => [...prev, compressedImages[0]]);
-        console.log('✅ Image added successfully');
-        
-        // Close search modal after selection
-        setShowSmartImageSearch(false);
-        setSearchResults([]);
-      }
-      
-    } catch (error) {
-      console.error('❌ Error downloading image:', error);
-      alert('שגיאה בהורדת התמונה. אנא נסה שוב.');
-    }
   };
 
   const addAdditionalInstructionSection = () => {
@@ -500,6 +439,59 @@ const AddRecipePage: React.FC = () => {
       console.error('Error importing from URL:', error);
       alert('שגיאה בקריאת הקישור. נסה שוב או השתמש ביבוא מטקסט.');
     }
+  };
+
+  // Smart image search functions
+  const handleSmartImageSearch = async () => {
+    if (!title.trim() && ingredients.filter(ing => ing.trim()).length === 0) {
+      alert('אנא הכנס שם מתכון או רכיבים לפני החיפוש החכם');
+      return;
+    }
+
+    setIsSearchingImages(true);
+    setImageSearchError(null);
+    setShowSmartImageSearch(true);
+
+    try {
+      // Create search query from recipe title and ingredients
+      const searchQuery = title.trim() || ingredients.filter(ing => ing.trim()).slice(0, 3).join(' ');
+      
+      const results = await searchImages({
+        query: searchQuery,
+        count: 4
+      });
+
+      setImageSearchResults(results);
+    } catch (error) {
+      console.error('Smart image search failed:', error);
+      setImageSearchError(error instanceof Error ? error.message : 'שגיאה בחיפוש תמונות');
+    } finally {
+      setIsSearchingImages(false);
+    }
+  };
+
+  const handleSelectSearchImage = async (searchResult: ImageSearchResult) => {
+    if (images.length >= 6) {
+      alert('ניתן להעלות עד 6 תמונות בלבד');
+      return;
+    }
+
+    try {
+      // Convert the selected image URL to data URL and add to images
+      const dataUrl = await imageUrlToDataUrl(searchResult.url);
+      setImages(prev => [...prev, dataUrl]);
+      setShowSmartImageSearch(false);
+      setImageSearchResults([]);
+    } catch (error) {
+      console.error('Failed to add selected image:', error);
+      alert('שגיאה בהוספת התמונה. אנא נסה שוב.');
+    }
+  };
+
+  const closeSmartImageSearch = () => {
+    setShowSmartImageSearch(false);
+    setImageSearchResults([]);
+    setImageSearchError(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -913,12 +905,10 @@ const AddRecipePage: React.FC = () => {
                 תמונות
               </label>
               <div className="space-y-4">
-                <div className="grid grid-cols-3 gap-2">
-                  <label className="cursor-pointer">
-                    <div className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation">
-                      <Upload className="w-4 h-4" />
-                      <span className="text-sm">העלה</span>
-                    </div>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 px-4 py-2 rounded-lg cursor-pointer transition-colors touch-manipulation">
+                    <Upload className="w-5 h-5" />
+                    העלה תמונות
                     <input
                       type="file"
                       multiple
@@ -928,11 +918,9 @@ const AddRecipePage: React.FC = () => {
                       title="העלה תמונות"
                     />
                   </label>
-                  <label className="cursor-pointer">
-                    <div className="flex items-center justify-center gap-2 px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation">
-                      <Camera className="w-4 h-4" />
-                      <span className="text-sm">צלם</span>
-                    </div>
+                  <label className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 px-4 py-2 rounded-lg cursor-pointer transition-colors touch-manipulation">
+                    <Camera className="w-5 h-5" />
+                    צלם תמונה
                     <input
                       type="file"
                       accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif,text/plain"
@@ -942,17 +930,21 @@ const AddRecipePage: React.FC = () => {
                       title="צלם תמונה"
                     />
                   </label>
+                </div>
+                <div className="flex justify-center">
                   <button
                     type="button"
                     onClick={handleSmartImageSearch}
-                    disabled={images.length >= 6 || !title.trim()}
-                    className={`flex items-center justify-center gap-2 px-3 py-2 border border-purple-300 bg-gradient-to-r from-purple-50 to-blue-50 text-purple-700 rounded-lg hover:from-purple-100 hover:to-blue-100 transition-colors touch-manipulation ${
-                      (images.length >= 6 || !title.trim()) ? 'opacity-50 cursor-not-allowed' : ''
+                    disabled={images.length >= 6}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
+                      images.length >= 6
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700 shadow-md hover:shadow-lg'
                     }`}
-                    title="חיפוש תמונה חכם"
+                    title="חיפוש חכם לתמונות מתאימות למתכון"
                   >
-                    <Sparkles className="w-4 h-4" />
-                    <span className="text-sm">חיפוש חכם</span>
+                    <Sparkles className="h-4 w-4" />
+                    <span>חיפוש חכם</span>
                   </button>
                 </div>
 
@@ -1186,85 +1178,86 @@ const AddRecipePage: React.FC = () => {
       {/* Smart Image Search Modal */}
       {showSmartImageSearch && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto mx-2 sm:mx-0">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto mx-2 sm:mx-4">
             <div className="p-4 sm:p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-900">חיפוש תמונה חכם</h2>
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-6 w-6 text-purple-600" />
+                  <h2 className="text-xl font-bold text-gray-900">חיפוש חכם לתמונות</h2>
+                </div>
                 <button
-                  onClick={() => {
-                    setShowSmartImageSearch(false);
-                    setSearchResults([]);
-                  }}
-                  className="text-gray-500 hover:text-gray-700"
+                  onClick={closeSmartImageSearch}
+                  className="text-gray-500 hover:text-gray-700 p-1"
                 >
-                  <X className="w-6 h-6" />
+                  <X className="h-6 w-6" />
                 </button>
               </div>
 
-              {isSearching ? (
-                <div className="flex items-center justify-center py-8">
+              {isSearchingImages ? (
+                <div className="flex items-center justify-center py-12">
                   <div className="text-center">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">מחפש תמונות מתאימות למתכון "{title}"...</p>
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600 mx-auto mb-4"></div>
+                    <p className="text-gray-600">מחפש תמונות מתאימות...</p>
                   </div>
                 </div>
-              ) : searchResults.length > 0 ? (
+              ) : imageSearchError ? (
+                <div className="text-center py-12">
+                  <div className="text-red-400 text-4xl mb-4">⚠️</div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">שגיאה בחיפוש</h3>
+                  <p className="text-red-600 mb-4">{imageSearchError}</p>
+                  <button
+                    onClick={handleSmartImageSearch}
+                    className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                  >
+                    נסה שוב
+                  </button>
+                </div>
+              ) : imageSearchResults.length > 0 ? (
                 <div>
-                  <p className="text-gray-600 mb-4">
-                    נמצאו {searchResults.length} תמונות מתאימות למתכון "{title}". לחץ על תמונה כדי להוסיף אותה למתכון:
+                  <p className="text-gray-600 mb-4 text-center">
+                    בחר תמונה מתאימה למתכון שלך:
                   </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {searchResults.map((result, index) => (
-                      <div
-                        key={index}
-                        className="border border-gray-200 rounded-lg overflow-hidden hover:shadow-lg transition-shadow cursor-pointer"
-                        onClick={() => selectSearchImage(result)}
-                      >
-                        <div className="aspect-video bg-gray-100 relative">
+                  <div className="grid grid-cols-2 gap-4">
+                    {imageSearchResults.map((result) => (
+                      <div key={result.id} className="group cursor-pointer" onClick={() => handleSelectSearchImage(result)}>
+                        <div className="relative overflow-hidden rounded-lg border-2 border-transparent group-hover:border-purple-500 transition-colors">
                           <img
-                            src={result.thumbnail}
+                            src={result.thumbnailUrl}
                             alt={result.title}
-                            className="w-full h-full object-cover"
-                            loading="lazy"
+                            className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-200"
                           />
-                          <div className="absolute inset-0 bg-black bg-opacity-0 hover:bg-opacity-20 transition-all flex items-center justify-center">
-                            <Download className="text-white opacity-0 hover:opacity-100 transition-opacity w-8 h-8" />
+                          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-opacity duration-200 flex items-center justify-center">
+                            <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                              <div className="bg-white rounded-full p-2 shadow-lg">
+                                <Plus className="h-6 w-6 text-purple-600" />
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        <div className="p-3">
-                          <p className="text-sm text-gray-600 truncate">{result.title}</p>
-                          <p className="text-xs text-gray-400">{result.source}</p>
+                        <div className="mt-2 text-center">
+                          <p className="text-sm text-gray-700 font-medium truncate">{result.title}</p>
+                          <p className="text-xs text-gray-500">{result.source}</p>
                         </div>
                       </div>
                     ))}
                   </div>
-                  <div className="mt-4 text-center">
-                    <button
-                      onClick={() => {
-                        setShowSmartImageSearch(false);
-                        setSearchResults([]);
-                      }}
-                      className="px-4 py-2 text-gray-600 hover:text-gray-800 transition-colors"
-                    >
-                      סגור ללא בחירה
-                    </button>
-                  </div>
                 </div>
               ) : (
-                <div className="text-center py-8">
-                  <Search className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-600">לא נמצאו תמונות מתאימות למתכון. נסה שם מתכון אחר או הוסף תמונה ידנית.</p>
-                  <button
-                    onClick={() => {
-                      setShowSmartImageSearch(false);
-                      setSearchResults([]);
-                    }}
-                    className="mt-4 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-                  >
-                    סגור
-                  </button>
+                <div className="text-center py-12">
+                  <div className="text-gray-400 text-4xl mb-4">🔍</div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">לא נמצאו תמונות</h3>
+                  <p className="text-gray-600 mb-4">נסה חיפוש אחר או הוסף תמונה ידנית</p>
                 </div>
               )}
+
+              <div className="mt-6 flex justify-center">
+                <button
+                  onClick={closeSmartImageSearch}
+                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  סגור
+                </button>
+              </div>
             </div>
           </div>
         </div>
