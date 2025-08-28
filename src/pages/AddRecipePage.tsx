@@ -6,6 +6,7 @@ import type { RecipeInsert, Recipe } from '../types/recipe';
 import { categories } from '../data/categories';
 import { Plus, X, Upload, Camera, Sparkles, Link, Eye, Edit, Trash2 } from 'lucide-react';
 import { compressImages } from '../utils/imageCompression';
+import SmartImageSearch from '../components/SmartImageSearch';
 
 const AddRecipePage: React.FC = () => {
   const navigate = useNavigate();
@@ -29,6 +30,7 @@ const AddRecipePage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showSectionNameModal, setShowSectionNameModal] = useState(false);
   const [newSectionName, setNewSectionName] = useState('');
+  const [showSmartImageSearch, setShowSmartImageSearch] = useState(false);
   
   // Refs for auto-focusing new input fields
   const ingredientRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -174,6 +176,16 @@ const AddRecipePage: React.FC = () => {
       console.log('📸 Images after removal:', newImages.length);
       return newImages;
     });
+  };
+
+  const handleSmartImageSelect = (imageUrl: string) => {
+    if (images.length >= 6) {
+      alert('ניתן להעלות עד 6 תמונות בלבד.');
+      return;
+    }
+    
+    setImages(prev => [...prev, imageUrl]);
+    console.log('✨ Smart image added:', imageUrl);
   };
 
   const addAdditionalInstructionSection = () => {
@@ -845,10 +857,10 @@ const AddRecipePage: React.FC = () => {
                 תמונות
               </label>
               <div className="space-y-4">
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 px-4 py-2 rounded-lg cursor-pointer transition-colors touch-manipulation">
-                    <Upload className="w-5 h-5" />
-                    העלה תמונות
+                <div className="flex gap-2 flex-wrap">
+                  <label className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 px-4 py-3 rounded-lg cursor-pointer transition-colors touch-manipulation text-sm font-medium min-h-[44px]">
+                    <Upload className="w-5 h-5 flex-shrink-0" />
+                    <span className="whitespace-nowrap">העלה תמונות</span>
                     <input
                       type="file"
                       multiple
@@ -858,9 +870,9 @@ const AddRecipePage: React.FC = () => {
                       title="העלה תמונות"
                     />
                   </label>
-                  <label className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 px-4 py-2 rounded-lg cursor-pointer transition-colors touch-manipulation">
-                    <Camera className="w-5 h-5" />
-                    צלם תמונה
+                  <label className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 px-4 py-3 rounded-lg cursor-pointer transition-colors touch-manipulation text-sm font-medium min-h-[44px]">
+                    <Camera className="w-5 h-5 flex-shrink-0" />
+                    <span className="whitespace-nowrap">צלם תמונה</span>
                     <input
                       type="file"
                       accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif,text/plain"
@@ -870,6 +882,15 @@ const AddRecipePage: React.FC = () => {
                       title="צלם תמונה"
                     />
                   </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowSmartImageSearch(true)}
+                    className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-3 rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all touch-manipulation text-sm font-medium min-h-[44px]"
+                    title="חיפוש חכם לתמונות"
+                  >
+                    <Sparkles className="w-5 h-5 flex-shrink-0" />
+                    <span className="whitespace-nowrap">חיפוש חכם</span>
+                  </button>
                 </div>
 
                 {images.length > 0 && (
@@ -1097,6 +1118,16 @@ const AddRecipePage: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Smart Image Search Modal */}
+      {showSmartImageSearch && (
+        <SmartImageSearch
+          recipeName={title}
+          ingredients={ingredients}
+          onImageSelect={handleSmartImageSelect}
+          onClose={() => setShowSmartImageSearch(false)}
+        />
       )}
     </div>
   );

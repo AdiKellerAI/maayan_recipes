@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, X, ArrowRight, Trash2, Upload, Camera } from 'lucide-react';
+import { Plus, X, ArrowRight, Trash2, Upload, Camera, Sparkles } from 'lucide-react';
 import { useRecipes } from '../contexts/RecipeContext';
+import { useNavigation } from '../contexts/NavigationContext';
 import { useProtectedAction } from '../hooks/useProtectedAction';
 import { categories } from '../data/categories';
 import { compressImages } from '../utils/imageCompression';
+import SmartImageSearch from '../components/SmartImageSearch';
 
 const EditRecipePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { recipes, updateRecipe, deleteRecipe } = useRecipes();
+  const { navigateToLastRecipesPage } = useNavigation();
   const { executeProtectedAction } = useProtectedAction();
   
   const recipe = recipes.find(r => r.id === id);
@@ -29,6 +32,7 @@ const EditRecipePage: React.FC = () => {
   const [showSectionNameModal, setShowSectionNameModal] = useState(false);
   const [newSectionName, setNewSectionName] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showSmartImageSearch, setShowSmartImageSearch] = useState(false);
   
   // Refs for auto-focusing new input fields
   const ingredientRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -206,6 +210,16 @@ const EditRecipePage: React.FC = () => {
     setImages(prev => prev.filter((_, i) => i !== index));
   };
 
+  const handleSmartImageSelect = (imageUrl: string) => {
+    if (images.length >= 6) {
+      alert('ניתן להעלות עד 6 תמונות בלבד.');
+      return;
+    }
+    
+    setImages(prev => [...prev, imageUrl]);
+    console.log('✨ Smart image added:', imageUrl);
+  };
+
   const addAdditionalInstructionSection = () => {
     setShowSectionNameModal(true);
   };
@@ -300,9 +314,9 @@ const EditRecipePage: React.FC = () => {
     executeProtectedAction(async () => {
       try {
         await deleteRecipe(recipe.id);
-        // Return to previous page immediately after successful deletion
+        // Return to last recipes page immediately after successful deletion
         setShowDeleteModal(false);
-        navigate(-1);
+        navigate(navigateToLastRecipesPage());
       } catch (error) {
         console.error('Failed to delete recipe:', error);
         // You could add a toast notification here instead of alert
@@ -430,11 +444,11 @@ const EditRecipePage: React.FC = () => {
                 תמונות (עד 6)
               </label>
               <div className="space-y-3">
-                <div className="flex space-x-2 rtl:space-x-reverse">
-                  <label className={`flex-1 cursor-pointer ${images.length >= 6 ? 'opacity-50 pointer-events-none' : ''}`}>
-                    <div className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation">
-                      <Upload className="h-4 w-4 ml-2 rtl:mr-2 rtl:ml-0" />
-                      <span>העלה תמונה</span>
+                <div className="grid grid-cols-3 gap-2">
+                  <label className={`cursor-pointer ${images.length >= 6 ? 'opacity-50 pointer-events-none' : ''}`}>
+                    <div className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation text-sm font-medium min-h-[44px]">
+                      <Upload className="h-5 w-5 ml-2 rtl:mr-2 rtl:ml-0 flex-shrink-0" />
+                      <span className="truncate">העלה תמונה</span>
                     </div>
                     <input
                       type="file"
@@ -446,10 +460,10 @@ const EditRecipePage: React.FC = () => {
                       title="העלה תמונה"
                     />
                   </label>
-                  <label className={`flex-1 cursor-pointer ${images.length >= 6 ? 'opacity-50 pointer-events-none' : ''}`}>
-                    <div className="flex items-center justify-center px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation">
-                      <Camera className="h-4 w-4 ml-2 rtl:mr-2 rtl:ml-0" />
-                      <span>צלם תמונה</span>
+                  <label className={`cursor-pointer ${images.length >= 6 ? 'opacity-50 pointer-events-none' : ''}`}>
+                    <div className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation text-sm font-medium min-h-[44px]">
+                      <Camera className="h-5 w-5 ml-2 rtl:mr-2 rtl:ml-0 flex-shrink-0" />
+                      <span className="truncate">צלם תמונה</span>
                     </div>
                     <input
                       type="file"
@@ -461,6 +475,16 @@ const EditRecipePage: React.FC = () => {
                       title="צלם תמונה"
                     />
                   </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowSmartImageSearch(true)}
+                    className={`flex items-center justify-center px-4 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all touch-manipulation text-sm font-medium min-h-[44px] ${images.length >= 6 ? 'opacity-50 pointer-events-none' : ''}`}
+                    title="חיפוש חכם לתמונות"
+                    disabled={images.length >= 6}
+                  >
+                    <Sparkles className="h-5 w-5 ml-2 rtl:mr-2 rtl:ml-0 flex-shrink-0" />
+                    <span className="truncate">חיפוש חכם</span>
+                  </button>
                 </div>
                 {images.length > 0 && (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
@@ -715,6 +739,16 @@ const EditRecipePage: React.FC = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Smart Image Search Modal */}
+        {showSmartImageSearch && (
+          <SmartImageSearch
+            recipeName={formData.title}
+            ingredients={ingredients}
+            onImageSelect={handleSmartImageSelect}
+            onClose={() => setShowSmartImageSearch(false)}
+          />
         )}
       </div>
     </div>

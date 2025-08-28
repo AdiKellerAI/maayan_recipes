@@ -8,6 +8,38 @@ http://localhost:5173/
 
 ✅ You should now see the app running locally!
 
+## ✨ Smart Image Search Feature
+
+The app includes a **robust Smart Image Search** feature that automatically finds relevant food images for your recipes using multiple reliable APIs with comprehensive fallback mechanisms.
+
+### 🔧 How It Works
+1. **Primary Method**: Unsplash API - High-quality food images with proper attribution
+2. **Fallback 1**: Source Unsplash - No API key required, direct image URLs
+3. **Fallback 2**: TheMealDB - Recipe-specific images from meal database
+4. **Final Fallback**: Curated food images from Lorem Picsum
+
+### 🎯 Smart Search Logic
+- **Recipe Name**: Uses `recipeName + "food recipe cooking"` keywords
+- **Ingredients Only**: Uses `top 3 ingredients + "food dish cooking"` 
+- **Optimization**: Landscape orientation, food-related content prioritization
+- **Error Handling**: Comprehensive try-catch blocks with graceful degradation
+
+### ⚙️ Setup (Optional)
+For production use with higher rate limits:
+1. Get free API key from [Unsplash Developers](https://unsplash.com/developers)
+2. Add to your `.env` file:
+   ```env
+   VITE_UNSPLASH_ACCESS_KEY=your_access_key_here
+   ```
+3. The feature works without API key using fallback methods
+
+### 🎨 UI Features
+- ✨ Sparkle icon for visual appeal
+- 🖼️ 4-image grid layout with hover effects
+- 📱 Mobile-optimized touch interactions
+- 🔄 One-click refresh for different images
+- ⚡ Fast loading with progressive fallbacks
+
 
 ## 🚀 Publish to Production
 
