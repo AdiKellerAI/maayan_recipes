@@ -853,33 +853,33 @@ const AddRecipePage: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                תמונות
+              <label className="block text-sm font-bold text-gray-900 mb-2">
+                תמונות (עד 6)
               </label>
               <div className="space-y-4">
                 <div className="flex gap-2 flex-wrap">
                   <label className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 px-4 py-3 rounded-lg cursor-pointer transition-colors touch-manipulation text-sm font-medium min-h-[44px]">
                     <Upload className="w-5 h-5 flex-shrink-0" />
-                    <span className="whitespace-nowrap">העלה תמונות</span>
+                    <span className="whitespace-nowrap">העלה</span>
                     <input
                       type="file"
                       multiple
                       accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif,text/plain"
                       onChange={handleImageUpload}
                       className="hidden"
-                      title="העלה תמונות"
+                      title="העלה"
                     />
                   </label>
                   <label className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 px-4 py-3 rounded-lg cursor-pointer transition-colors touch-manipulation text-sm font-medium min-h-[44px]">
                     <Camera className="w-5 h-5 flex-shrink-0" />
-                    <span className="whitespace-nowrap">צלם תמונה</span>
+                    <span className="whitespace-nowrap">צלם</span>
                     <input
                       type="file"
                       accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif,text/plain"
                       capture="environment"
                       onChange={handleImageUpload}
                       className="hidden"
-                      title="צלם תמונה"
+                      title="צלם"
                     />
                   </label>
                   <button

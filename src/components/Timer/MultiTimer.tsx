@@ -922,48 +922,48 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose, initialTime
 																globalMinutes === 0 &&
 																globalSeconds === 0
 															}
-															className="p-1 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-200"
+															className="p-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-200 touch-manipulation min-w-[36px] min-h-[36px] flex items-center justify-center"
 															title="הפעל טיימר"
 															type="button"
 														>
-															<Play className="h-3 w-3" />
+															<Play className="h-4 w-4" />
 														</button>
 													) : (
 														<button
 															onClick={() => pauseTimer(timer.id)}
-															className="p-1 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-all duration-200"
+															className="p-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-all duration-200 touch-manipulation min-w-[36px] min-h-[36px] flex items-center justify-center"
 															title="השהה טיימר"
 															type="button"
 														>
-															<Pause className="h-3 w-3" />
+															<Pause className="h-4 w-4" />
 														</button>
 													)}
 
 													<button
 														onClick={() => stopTimer(timer.id)}
-														className="p-1 bg-red-500 text-white rounded-md hover:bg-red-600 transition-all duration-200"
+														className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-all duration-200 touch-manipulation min-w-[36px] min-h-[36px] flex items-center justify-center"
 														title="עצור טיימר"
 														type="button"
 													>
-														<Square className="h-3 w-3" />
+														<Square className="h-4 w-4" />
 													</button>
 
 													<button
 														onClick={() => resetTimer(timer.id)}
-														className="p-1 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-all duration-200"
+														className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-all duration-200 touch-manipulation min-w-[36px] min-h-[36px] flex items-center justify-center"
 														title="אפס טיימר"
 														type="button"
 													>
-														<RotateCcw className="h-3 w-3" />
+														<RotateCcw className="h-4 w-4" />
 													</button>
 
 													<button
 														onClick={() => removeTimer(timer.id)}
-														className="p-1 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-all duration-200"
+														className="p-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-all duration-200 touch-manipulation min-w-[36px] min-h-[36px] flex items-center justify-center"
 														title="מחק טיימר"
 														type="button"
 													>
-														<X className="h-3 w-3" />
+														<X className="h-4 w-4" />
 													</button>
 												</div>
 											</div>

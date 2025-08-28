@@ -124,17 +124,16 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
                         <li key={index} className="flex space-x-3 rtl:space-x-reverse">
                           <button
                             onClick={() => handleAdditionalStepClick(sectionName, index)}
-                            className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center font-medium text-sm transition-all duration-200 hover:scale-110 touch-manipulation ${
+                            className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-medium transition-all duration-200 hover:scale-110 touch-manipulation ${
                               isCompleted
                                 ? 'bg-green-500 text-white shadow-md'
                                 : isCurrent
                                 ? 'bg-orange-500 text-white shadow-md ring-2 ring-orange-200'
                                 : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                             }`}
-                            style={{ minWidth: '28px', minHeight: '28px' }}
                           >
                             {isCompleted ? (
-                              <Check className="h-3 w-3" />
+                              <Check className="h-4 w-4" />
                             ) : (
                               <span>{index + 1}</span>
                             )}

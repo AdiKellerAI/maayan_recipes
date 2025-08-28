@@ -440,7 +440,7 @@ const EditRecipePage: React.FC = () => {
 
           <div className="grid md:grid-cols-2 gap-6">
             <div>
-              <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-2">
+              <label htmlFor="image" className="block text-sm font-bold text-gray-900 mb-2">
                 תמונות (עד 6)
               </label>
               <div className="space-y-3">
@@ -448,7 +448,7 @@ const EditRecipePage: React.FC = () => {
                   <label className={`cursor-pointer ${images.length >= 6 ? 'opacity-50 pointer-events-none' : ''}`}>
                     <div className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation text-sm font-medium min-h-[44px]">
                       <Upload className="h-5 w-5 ml-2 rtl:mr-2 rtl:ml-0 flex-shrink-0" />
-                      <span className="truncate">העלה תמונה</span>
+                      <span className="truncate">העלה</span>
                     </div>
                     <input
                       type="file"
@@ -457,13 +457,13 @@ const EditRecipePage: React.FC = () => {
                       onChange={handleImageUpload}
                       disabled={images.length >= 6}
                       className="hidden"
-                      title="העלה תמונה"
+                      title="העלה"
                     />
                   </label>
                   <label className={`cursor-pointer ${images.length >= 6 ? 'opacity-50 pointer-events-none' : ''}`}>
                     <div className="flex items-center justify-center px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 active:bg-gray-100 transition-colors touch-manipulation text-sm font-medium min-h-[44px]">
                       <Camera className="h-5 w-5 ml-2 rtl:mr-2 rtl:ml-0 flex-shrink-0" />
-                      <span className="truncate">צלם תמונה</span>
+                      <span className="truncate">צלם</span>
                     </div>
                     <input
                       type="file"
@@ -472,7 +472,7 @@ const EditRecipePage: React.FC = () => {
                       onChange={handleImageUpload}
                       disabled={images.length >= 6}
                       className="hidden"
-                      title="צלם תמונה"
+                      title="צלם"
                     />
                   </label>
                   <button
