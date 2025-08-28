@@ -10,7 +10,10 @@
     "build": "tsc && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start": "node server/server.js"
+    "start": "node server/server.js",
+    "optimize": "node scripts/apply-performance-migration.js",
+    "optimize:benchmark": "node scripts/apply-performance-migration.js --with-benchmark",
+    "benchmark": "node scripts/apply-performance-migration.js --benchmark"
   },
   "dependencies": {
     "@types/pg": "^8.15.4",

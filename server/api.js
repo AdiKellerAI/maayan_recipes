@@ -43,38 +43,169 @@ app.get('/api/test-connection', async (req, res) => {
   }
 });
 
-// Get all recipes
+// Get paginated recipes (optimized for performance)
 app.get('/api/recipes', async (req, res) => {
   try {
-    console.log('📊 API: Fetching all recipes from PostgreSQL...');
+    const {
+      page = 1,
+      limit = 12,
+      category,
+      favorites,
+      search,
+      difficulty,
+      hasImages,
+      sortBy = 'created_at_desc',
+      detailed = false // For backward compatibility
+    } = req.query;
+
+    const offset = (parseInt(page) - 1) * parseInt(limit);
+    
+    console.log('📊 API: Fetching paginated recipes...', {
+      page: parseInt(page),
+      limit: parseInt(limit),
+      offset,
+      category,
+      favorites: favorites === 'true',
+      search,
+      difficulty,
+      hasImages: hasImages ? hasImages === 'true' : null,
+      sortBy,
+      detailed: detailed === 'true'
+    });
+
     const client = await pool.connect();
-    const result = await client.query('SELECT * FROM recipes ORDER BY created_at DESC');
-    client.release();
     
-    const recipes = result.rows.map(mapRowToRecipe);
-    console.log(`✅ API: Retrieved ${recipes.length} recipes`);
-    
-    res.json(recipes);
+    if (detailed === 'true') {
+      // Legacy mode: return full recipes for backward compatibility
+      const result = await client.query('SELECT * FROM recipes ORDER BY created_at DESC LIMIT $1 OFFSET $2', [parseInt(limit), offset]);
+      const countResult = await client.query('SELECT COUNT(*) FROM recipes');
+      client.release();
+      
+      const recipes = result.rows.map(mapRowToRecipe);
+      const totalCount = parseInt(countResult.rows[0].count);
+      
+      console.log(`✅ API: Retrieved ${recipes.length} detailed recipes (${totalCount} total)`);
+      
+      res.json({
+        recipes,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: totalCount,
+          totalPages: Math.ceil(totalCount / parseInt(limit)),
+          hasNext: offset + recipes.length < totalCount,
+          hasPrev: parseInt(page) > 1
+        }
+      });
+    } else {
+      // Optimized mode: use materialized view for better performance
+      const result = await client.query(
+        `SELECT * FROM get_recipes_paginated($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          parseInt(limit),
+          offset,
+          category || null,
+          favorites === 'true',
+          search || null,
+          difficulty || null,
+          hasImages ? hasImages === 'true' : null,
+          sortBy
+        ]
+      );
+      client.release();
+      
+      const recipes = result.rows.map(row => ({
+        id: row.id,
+        title: row.title,
+        category: row.category,
+        difficulty: row.difficulty,
+        prep_time: row.prep_time,
+        is_favorite: row.is_favorite,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+        first_image: row.first_image,
+        image_count: parseInt(row.image_count),
+        ingredient_count: parseInt(row.ingredient_count),
+        step_count: parseInt(row.step_count)
+      }));
+      
+      const totalCount = result.rows.length > 0 ? parseInt(result.rows[0].total_count) : 0;
+      
+      console.log(`✅ API: Retrieved ${recipes.length} recipe summaries (${totalCount} total)`);
+      
+      res.json({
+        recipes,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: totalCount,
+          totalPages: Math.ceil(totalCount / parseInt(limit)),
+          hasNext: offset + recipes.length < totalCount,
+          hasPrev: parseInt(page) > 1
+        }
+      });
+    }
   } catch (error) {
     console.error('❌ API: Error fetching recipes:', error);
     res.status(500).json({ error: 'Failed to fetch recipes', message: error.message });
   }
 });
 
-// Get recipe by ID
+// Get recipe by ID (optimized)
 app.get('/api/recipes/:id', async (req, res) => {
   try {
     const { id } = req.params;
+    const { detailed = true } = req.query;
+    
+    console.log(`📊 API: Fetching recipe ${id} (detailed: ${detailed})`);
+    
     const client = await pool.connect();
-    const result = await client.query('SELECT * FROM recipes WHERE id = $1', [id]);
-    client.release();
     
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Recipe not found' });
+    if (detailed === 'false') {
+      // Return summary data only
+      const result = await client.query(
+        'SELECT * FROM recipe_summaries WHERE id = $1',
+        [id]
+      );
+      client.release();
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Recipe not found' });
+      }
+      
+      const recipeSummary = {
+        id: result.rows[0].id,
+        title: result.rows[0].title,
+        category: result.rows[0].category,
+        difficulty: result.rows[0].difficulty,
+        prep_time: result.rows[0].prep_time,
+        is_favorite: result.rows[0].is_favorite,
+        created_at: result.rows[0].created_at,
+        updated_at: result.rows[0].updated_at,
+        first_image: result.rows[0].first_image,
+        image_count: parseInt(result.rows[0].image_count),
+        ingredient_count: parseInt(result.rows[0].ingredient_count),
+        step_count: parseInt(result.rows[0].step_count)
+      };
+      
+      console.log(`✅ API: Retrieved recipe summary for ${id}`);
+      res.json(recipeSummary);
+    } else {
+      // Return full recipe details using optimized function
+      const result = await client.query(
+        'SELECT * FROM get_recipe_details($1)',
+        [id]
+      );
+      client.release();
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'Recipe not found' });
+      }
+      
+      const recipe = mapRowToRecipe(result.rows[0]);
+      console.log(`✅ API: Retrieved full recipe details for ${id}`);
+      res.json(recipe);
     }
-    
-    const recipe = mapRowToRecipe(result.rows[0]);
-    res.json(recipe);
   } catch (error) {
     console.error('❌ API: Error fetching recipe:', error);
     res.status(500).json({ error: 'Failed to fetch recipe', message: error.message });
@@ -237,9 +368,110 @@ app.delete('/api/recipes/:id', async (req, res) => {
   }
 });
 
+// Get recipe categories with counts
+app.get('/api/categories', async (req, res) => {
+  try {
+    console.log('📊 API: Fetching category counts...');
+    const client = await pool.connect();
+    const result = await client.query(`
+      SELECT 
+        category,
+        COUNT(*) as recipe_count
+      FROM recipe_summaries 
+      GROUP BY category 
+      ORDER BY category
+    `);
+    client.release();
+    
+    const categories = result.rows.map(row => ({
+      id: row.category,
+      name: row.category,
+      count: parseInt(row.recipe_count)
+    }));
+    
+    console.log(`✅ API: Retrieved ${categories.length} categories`);
+    res.json(categories);
+  } catch (error) {
+    console.error('❌ API: Error fetching categories:', error);
+    res.status(500).json({ error: 'Failed to fetch categories', message: error.message });
+  }
+});
+
+// Get performance stats
+app.get('/api/stats', async (req, res) => {
+  try {
+    const client = await pool.connect();
+    const result = await client.query(`
+      SELECT 
+        COUNT(*) as total_recipes,
+        COUNT(*) FILTER (WHERE is_favorite = true) as favorite_recipes,
+        COUNT(DISTINCT category) as total_categories,
+        COUNT(*) FILTER (WHERE jsonb_array_length(images) > 0) as recipes_with_images,
+        AVG(jsonb_array_length(ingredients))::numeric(10,2) as avg_ingredients,
+        AVG(jsonb_array_length(directions))::numeric(10,2) as avg_steps
+      FROM recipes
+    `);
+    client.release();
+    
+    const stats = {
+      totalRecipes: parseInt(result.rows[0].total_recipes),
+      favoriteRecipes: parseInt(result.rows[0].favorite_recipes),
+      totalCategories: parseInt(result.rows[0].total_categories),
+      recipesWithImages: parseInt(result.rows[0].recipes_with_images),
+      avgIngredients: parseFloat(result.rows[0].avg_ingredients || 0),
+      avgSteps: parseFloat(result.rows[0].avg_steps || 0)
+    };
+    
+    console.log('✅ API: Retrieved performance stats');
+    res.json(stats);
+  } catch (error) {
+    console.error('❌ API: Error fetching stats:', error);
+    res.status(500).json({ error: 'Failed to fetch stats', message: error.message });
+  }
+});
+
+// Health check endpoint with performance metrics
+app.get('/api/health', async (req, res) => {
+  try {
+    const startTime = Date.now();
+    const client = await pool.connect();
+    await client.query('SELECT 1');
+    client.release();
+    const dbResponseTime = Date.now() - startTime;
+    
+    res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      database: {
+        connected: true,
+        responseTime: dbResponseTime
+      },
+      performance: {
+        uptime: process.uptime(),
+        memory: process.memoryUsage(),
+        version: process.version
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'unhealthy',
+      timestamp: new Date().toISOString(),
+      database: {
+        connected: false,
+        error: error.message
+      }
+    });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Recipe API server running on http://localhost:${PORT}`);
   console.log('🔌 Testing PostgreSQL connection on startup...');
+  console.log('📊 Performance optimizations enabled:');
+  console.log('  - Paginated queries with materialized views');
+  console.log('  - Selective field loading');
+  console.log('  - Database indexing for common queries');
+  console.log('  - Health monitoring endpoints');
   testConnection();
 });
