@@ -86,92 +86,16 @@ class CacheManager {
     });
   }
 
-  // Cache statistics with performance insights
+  // Cache statistics
   getStats() {
-    if (typeof window === 'undefined') return { browserKeys: 0, performance: 'N/A' };
+    if (typeof window === 'undefined') return { browserKeys: 0 };
     
     const keys = Object.keys(localStorage);
     const cacheKeys = keys.filter(key => key.startsWith('cache_'));
-    let totalSize = 0;
-    let validCaches = 0;
-    let expiredCaches = 0;
-    
-    // Calculate cache efficiency
-    cacheKeys.forEach(key => {
-      try {
-        const value = localStorage.getItem(key);
-        if (value) {
-          totalSize += value.length;
-          const cacheData = JSON.parse(value);
-          const now = Date.now();
-          
-          if (now - cacheData.timestamp > cacheData.ttl) {
-            expiredCaches++;
-          } else {
-            validCaches++;
-          }
-        }
-      } catch (e) {
-        // Invalid cache entry
-        localStorage.removeItem(key);
-      }
-    });
     
     return {
-      browserKeys: cacheKeys.length,
-      validCaches,
-      expiredCaches,
-      totalSize: `${(totalSize / 1024).toFixed(2)}KB`,
-      efficiency: validCaches > 0 ? `${((validCaches / (validCaches + expiredCaches)) * 100).toFixed(1)}%` : '0%',
-      performance: totalSize < 1024 * 1024 ? 'excellent' : totalSize < 5 * 1024 * 1024 ? 'good' : 'needs_cleanup'
+      browserKeys: cacheKeys.length
     };
-  }
-
-  // Preload method for better performance
-  async preload(key: string, dataLoader: () => Promise<any>, ttl?: number): Promise<any> {
-    const cached = this.get(key);
-    if (cached) {
-      return cached;
-    }
-
-    try {
-      const data = await dataLoader();
-      this.set(key, data, ttl);
-      return data;
-    } catch (error) {
-      console.warn('Failed to preload data:', error);
-      throw error;
-    }
-  }
-
-  // Cleanup expired cache entries
-  cleanup(): number {
-    if (typeof window === 'undefined') return 0;
-    
-    const keys = Object.keys(localStorage);
-    const cacheKeys = keys.filter(key => key.startsWith('cache_'));
-    let cleaned = 0;
-    
-    cacheKeys.forEach(key => {
-      try {
-        const value = localStorage.getItem(key);
-        if (value) {
-          const cacheData = JSON.parse(value);
-          const now = Date.now();
-          
-          if (now - cacheData.timestamp > cacheData.ttl) {
-            localStorage.removeItem(key);
-            cleaned++;
-          }
-        }
-      } catch (e) {
-        localStorage.removeItem(key);
-        cleaned++;
-      }
-    });
-    
-    console.log(`🧹 Cache cleanup: removed ${cleaned} expired entries`);
-    return cleaned;
   }
 }
 

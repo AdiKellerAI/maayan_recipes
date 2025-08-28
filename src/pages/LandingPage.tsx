@@ -18,12 +18,11 @@ interface CircleConfig {
 
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
-  const { refreshRecipes, recipes } = useRecipes();
+  const { refreshRecipes } = useRecipes();
   const [showCategories, setShowCategories] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [hasPreloaded, setHasPreloaded] = useState(false);
-
 
   // Circle properties arrays to maintain existing visual variety
   const circleColors = [
@@ -158,71 +157,31 @@ const LandingPage: React.FC = () => {
     return circles;
   }, []); // Empty dependency array ensures circles are generated only once
 
-  // Preload recipes when landing page loads
-  useEffect(() => {
-    const preloadRecipes = async () => {
-      if (!hasPreloaded) {
-        console.log('🚀 PRELOAD: Starting recipe preloading from landing page...');
-        
-        try {
-          await refreshRecipes();
-          setHasPreloaded(true);
-          console.log('✅ PRELOAD: Recipe preloading completed successfully');
-          
-        } catch (error) {
-          console.log('⚠️ PRELOAD: Recipe preloading failed, will load on demand');
-        }
-      }
-    };
-
-    // Start preloading after a short delay to let the landing page render first
-    const preloadTimer = setTimeout(preloadRecipes, 500);
-    
-    return () => {
-      clearTimeout(preloadTimer);
-    };
-  }, [hasPreloaded, refreshRecipes]);
-
   const handleNavigation = (type: string) => {
     switch (type) {
       case 'recipes':
-        // Navigate immediately if recipes are already preloaded
-        if (hasPreloaded || recipes.length > 0) {
-          console.log('🚀 FAST NAVIGATION: Recipes already loaded, navigating immediately');
-          navigate('/recipes');
-        } else {
-          console.log('🔄 LOADING NAVIGATION: Preloading recipes before navigation');
-          // Show loading and preload if not already done
-          const preloadAndNavigate = async () => {
-            try {
-              await refreshRecipes();
-              navigate('/recipes');
-            } catch (error) {
-              console.log('Navigation with preload error:', error);
-              navigate('/recipes'); // Navigate anyway
-            }
-          };
-          preloadAndNavigate();
-        }
+        // Preload all recipes before navigation
+        const preloadAllRecipes = async () => {
+          try {
+            await refreshRecipes();
+          } catch (error) {
+            console.log('Preloading all recipes...');
+          }
+        };
+        preloadAllRecipes();
+        navigate('/recipes');
         break;
       case 'favorites':
-        // Navigate immediately if recipes are already loaded
-        if (hasPreloaded || recipes.length > 0) {
-          console.log('🚀 FAST NAVIGATION: Favorites already loaded, navigating immediately');
-          navigate('/recipes?favorites=true');
-        } else {
-          console.log('🔄 LOADING NAVIGATION: Preloading before favorites navigation');
-          const preloadAndNavigate = async () => {
-            try {
-              await refreshRecipes();
-              navigate('/recipes?favorites=true');
-            } catch (error) {
-              console.log('Favorites navigation with preload error:', error);
-              navigate('/recipes?favorites=true'); // Navigate anyway
-            }
-          };
-          preloadAndNavigate();
-        }
+        // Preload favorite recipes before navigation
+        const preloadFavorites = async () => {
+          try {
+            await refreshRecipes();
+          } catch (error) {
+            console.log('Preloading favorites...');
+          }
+        };
+        preloadFavorites();
+        navigate('/recipes?favorites=true');
         break;
       case 'categories':
         setShowCategories(true);

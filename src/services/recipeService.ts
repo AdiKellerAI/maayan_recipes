@@ -2,6 +2,22 @@ import { cacheManager, CACHE_KEYS } from '../lib/cache';
 import { sampleRecipes } from '../data/sampleRecipes';
 import type { Recipe, RecipeInsert, RecipeUpdate } from '../types/recipe';
 
+// Convert database row to Recipe type
+const mapRowToRecipe = (row: any): Recipe => ({
+  id: row.id,
+  title: row.title,
+  images: row.images || [],
+  category: row.category,
+  ingredients: row.ingredients,
+  directions: row.directions,
+  additional_instructions: row.additional_instructions || {},
+  prep_time: row.prep_time,
+  difficulty: row.difficulty as 'קל' | 'בינוני' | 'קשה' | undefined,
+  is_favorite: row.is_favorite,
+  created_at: new Date(row.created_at),
+  updated_at: new Date(row.updated_at)
+});
+
 // Check if API server and PostgreSQL are available
 const isAPIAvailable = async (): Promise<boolean> => {
   try {
@@ -147,26 +163,14 @@ const saveFallbackRecipes = (recipes: Recipe[]) => {
 };
 
 export const recipeService = {
-  // Get all recipes with smart loading options
-  async getAllRecipes(options: {
-    limit?: number;
-    offset?: number;
-    category?: string;
-    favorites?: boolean;
-    preview?: boolean;
-  } = {}): Promise<Recipe[]> {
-    console.log('🔄 Getting recipes with options:', options);
-    
-    // Create cache key based on options
-    const cacheKey = options.preview ? 'preview_recipes' : 
-                    options.category ? `category_${options.category}` :
-                    options.favorites ? 'favorite_recipes' :
-                    CACHE_KEYS.ALL_RECIPES;
+  // Get all recipes
+  async getAllRecipes(): Promise<Recipe[]> {
+    console.log('🔄 Getting all recipes...');
     
     // Check cache first for faster initial load
-    const cached = cacheManager.get(cacheKey);
+    const cached = cacheManager.get(CACHE_KEYS.ALL_RECIPES);
     if (cached && Array.isArray(cached) && cached.length > 0) {
-      console.log(`📦 Using cached recipes (${cached.length} recipes) for key: ${cacheKey}`);
+      console.log(`📦 Using cached recipes (${cached.length} recipes)`);
       return cached;
     }
     
@@ -174,22 +178,11 @@ export const recipeService = {
     
     if (isAvailable) {
       try {
-        console.log('📊 Fetching recipes from API with options...');
-        
-        // Build query parameters
-        const params = new URLSearchParams();
-        if (options.limit) params.append('limit', options.limit.toString());
-        if (options.offset) params.append('offset', options.offset.toString());
-        if (options.category) params.append('category', options.category);
-        if (options.favorites) params.append('favorites', 'true');
-        if (options.preview) params.append('preview', 'true');
-        
-        const url = `/api/recipes${params.toString() ? '?' + params.toString() : ''}`;
-        console.log('🔗 Fetching from URL:', url);
+        console.log('📊 Fetching recipes from API...');
         
         const recipes = await retryApiCall(async () => {
-          const response = await fetch(url, {
-            signal: AbortSignal.timeout(15000) // 15 second timeout for complex queries
+          const response = await fetch('/api/recipes', {
+            signal: AbortSignal.timeout(10000) // 10 second timeout
           });
           
           if (!response.ok) {
@@ -220,8 +213,8 @@ export const recipeService = {
         // Save to localStorage as backup
         saveFallbackRecipes(processedRecipes);
         
-        // Cache the results with appropriate key
-        cacheManager.set(cacheKey, processedRecipes);
+        // Cache the results
+        cacheManager.set(CACHE_KEYS.ALL_RECIPES, processedRecipes);
         
         return processedRecipes;
       } catch (error) {
@@ -648,27 +641,17 @@ export const recipeService = {
 
   // Get recipes by category (with caching)
   async getRecipesByCategory(category: string): Promise<Recipe[]> {
-    return this.getAllRecipes({ category });
-  },
+    const cacheKey = CACHE_KEYS.RECIPES_BY_CATEGORY(category);
+    const cached = cacheManager.get(cacheKey);
+    if (cached) {
+      return cached;
+    }
 
-  // Get category preview (5 recipes per category for fast loading)
-  async getCategoryPreview(): Promise<Recipe[]> {
-    console.log('🔄 Getting category preview (5 recipes per category)...');
-    return this.getAllRecipes({ preview: true });
-  },
-
-  // Get paginated recipes
-  async getRecipesPaginated(limit: number = 20, offset: number = 0, options: {
-    category?: string;
-    favorites?: boolean;
-  } = {}): Promise<Recipe[]> {
-    console.log(`🔄 Getting paginated recipes: limit=${limit}, offset=${offset}, options=`, options);
-    return this.getAllRecipes({ 
-      limit, 
-      offset, 
-      category: options.category,
-      favorites: options.favorites 
-    });
+    const allRecipes = await this.getAllRecipes();
+    const filtered = allRecipes.filter(recipe => recipe.category === category);
+    
+    cacheManager.set(cacheKey, filtered);
+    return filtered;
   },
 
   // Get favorite recipes (with caching)
