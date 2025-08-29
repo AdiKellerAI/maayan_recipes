@@ -69,11 +69,10 @@ const Header: React.FC = () => {
     setIsMenuOpen(false);
   };
 
-
-
   const clearFilters = () => {
     setDifficultyFilter('');
     setImageFilter('');
+    setFlourFilter('');
     setShowFavoritesOnly(false);
     setShowRecentOnly(false);
   };
@@ -167,78 +166,20 @@ const Header: React.FC = () => {
               <Heart className={`h-5 w-5 ${showFavoritesOnly ? 'fill-current' : ''}`} />
             </button>
 
-            <div className="relative">
-              <button
-                onClick={() => setIsFilterOpen(!isFilterOpen)}
-                className={`p-2 rounded-lg transition-colors relative transform active:scale-95 ${
-                  hasActiveFilters || isFilterOpen
-                    ? 'bg-primary-100 text-primary-600' 
-                    : 'text-gray-600 hover:bg-gray-100'
-                }`}
-                title="סינון מתכונים"
-              >
-                <Filter className="h-5 w-5" />
-                {hasActiveFilters && (
-                  <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full"></div>
-                )}
-              </button>
-              
-              {isFilterOpen && (
-                <div className="absolute right-0 rtl:left-0 rtl:right-auto mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 p-4 z-50">
-                  <div className="space-y-4">
-                    <h4 className="text-sm font-semibold text-gray-800 mb-3">סינון</h4>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">רמת קושי</label>
-                      <select
-                        value={difficultyFilter}
-                        onChange={(e) => setDifficultyFilter(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                      >
-                        <option value="">כל הרמות</option>
-                        <option value="קל">קל</option>
-                        <option value="בינוני">בינוני</option>
-                        <option value="קשה">קשה</option>
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">תמונות</label>
-                      <select
-                        value={imageFilter}
-                        onChange={(e) => setImageFilter(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                      >
-                        <option value="">הכל</option>
-                        <option value="with">עם תמונות</option>
-                        <option value="without">ללא תמונות</option>
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">קמח</label>
-                      <select
-                        value={flourFilter}
-                        onChange={(e) => setFlourFilter(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm"
-                      >
-                        <option value="">הכל</option>
-                        <option value="with">עם קמח</option>
-                        <option value="without">ללא קמח</option>
-                      </select>
-                    </div>
-                    
-                    {hasActiveFilters && (
-                      <button
-                        onClick={clearFilters}
-                        className="w-full px-3 py-2 text-sm text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                      >
-                        נקה פילטרים
-                      </button>
-                    )}
-                  </div>
-                </div>
+            <button
+              onClick={() => setIsFilterOpen(true)}
+              className={`p-2 rounded-lg transition-colors relative transform active:scale-95 ${
+                hasActiveFilters
+                  ? 'bg-green-100 text-green-600' 
+                  : 'text-gray-600 hover:bg-gray-100'
+              }`}
+              title="סינון מתכונים"
+            >
+              <Filter className="h-5 w-5" />
+              {hasActiveFilters && (
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
               )}
-            </div>
+            </button>
             
             <button
               onClick={() => executeProtectedAction(() => navigate('/add'))}
@@ -309,18 +250,17 @@ const Header: React.FC = () => {
                 {/* Filter Button */}
                 <button
                   onClick={() => {
-                    setIsFilterOpen(!isFilterOpen);
-                    // Close menu immediately on mobile to show filter overlay properly
+                    setIsFilterOpen(true);
                     setIsMenuOpen(false);
                   }}
                   className={`w-full flex items-center space-x-2 rtl:space-x-reverse py-2 px-2.5 rounded-lg transition-all duration-300 transform hover:scale-105 ${
                     hasActiveFilters
-                      ? 'bg-gradient-to-r from-green-100 to-teal-100 text-green-700 border border-green-300 shadow-md' 
-                      : 'bg-gradient-to-r from-green-50 to-teal-50 text-green-700 hover:from-green-100 hover:to-teal-100 border border-green-200 hover:border-green-300'
+                      ? 'bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border border-green-300 shadow-md' 
+                      : 'bg-gradient-to-r from-green-50 to-emerald-50 text-green-700 hover:from-green-100 hover:to-emerald-100 border border-green-200 hover:border-green-300'
                   }`}
                 >
                   <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                    hasActiveFilters ? 'bg-gradient-to-br from-green-500 to-teal-600' : 'bg-gradient-to-br from-green-500 to-teal-600'
+                    hasActiveFilters ? 'bg-gradient-to-br from-green-500 to-emerald-600' : 'bg-gradient-to-br from-green-500 to-emerald-600'
                   }`}>
                     <Filter className="h-3.5 w-3.5 text-white" />
                   </div>
@@ -423,85 +363,129 @@ const Header: React.FC = () => {
         </div>
       )}
       
-      {/* Click outside to close filters and menu */}
-      {isFilterOpen && (
-        <div 
-          className="fixed inset-0 z-40 bg-black bg-opacity-30" 
-          onClick={() => setIsFilterOpen(false)}
-        />
-      )}
       </header>
       
-      {/* Mobile Filter Overlay - Fixed positioning for better mobile support */}
+      {/* Filter Modal - Elegant and modern design */}
       {isFilterOpen && (
-        <div className="md:hidden fixed top-16 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50 max-h-[70vh] overflow-y-auto">
-          <div className="p-4 space-y-4">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="text-base font-semibold text-gray-800">סינון מתכונים</h4>
-              <button
-                onClick={() => setIsFilterOpen(false)}
-                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-              >
-                <X className="h-5 w-5 text-gray-500" />
-              </button>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full max-h-[70vh] overflow-hidden border border-gray-100 transform transition-all duration-300">
+            {/* Header with gradient background */}
+            <div className="bg-gradient-to-r from-green-50 via-emerald-50 to-teal-50 border-b border-green-100 p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                  <div className="w-8 h-8 bg-gradient-to-br from-green-500 to-emerald-600 rounded-lg flex items-center justify-center shadow-md">
+                    <Filter className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-gray-800">
+                      סינון מתכונים
+                    </h3>
+                    <p className="text-xs text-gray-600">
+                      בחר קריטריונים לחיפוש
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsFilterOpen(false)}
+                  className="p-1.5 hover:bg-white/50 rounded-lg transition-all duration-200 hover:scale-110"
+                  type="button"
+                >
+                  <X className="h-4 w-4 text-gray-500" />
+                </button>
+              </div>
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">רמת קושי</label>
-              <select
-                value={difficultyFilter}
-                onChange={(e) => {
-                  setDifficultyFilter(e.target.value);
-                  navigate('/recipes'); // Navigate to home to show filtered results
-                }}
-                className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base bg-white"
-              >
-                <option value="">כל הרמות</option>
-                <option value="קל">קל</option>
-                <option value="בינוני">בינוני</option>
-                <option value="קשה">קשה</option>
-              </select>
+
+            {/* Scrollable Content */}
+            <div className="overflow-y-auto max-h-[calc(70vh-80px)]">
+              <div className="p-4">
+                {/* Filter Options */}
+                <div className="space-y-3">
+                  {/* Difficulty Filter */}
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 border border-green-200">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                      <span className="w-2 h-2 bg-gradient-to-r from-green-500 to-emerald-600 rounded-full mr-2 rtl:ml-2 rtl:mr-0"></span>
+                      רמת קושי
+                    </label>
+                    <select
+                      value={difficultyFilter}
+                      onChange={(e) => {
+                        setDifficultyFilter(e.target.value);
+                        navigate('/recipes');
+                      }}
+                      className="w-full px-3 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm bg-white shadow-sm transition-all duration-200 hover:border-green-300"
+                    >
+                      <option value="">כל הרמות</option>
+                      <option value="קל">קל</option>
+                      <option value="בינוני">בינוני</option>
+                      <option value="קשה">קשה</option>
+                    </select>
+                  </div>
+                  
+                  {/* Image Filter */}
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 border border-green-200">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                      <span className="w-2 h-2 bg-gradient-to-r from-emerald-500 to-teal-600 rounded-full mr-2 rtl:ml-2 rtl:mr-0"></span>
+                      תמונות
+                    </label>
+                    <select
+                      value={imageFilter}
+                      onChange={(e) => {
+                        setImageFilter(e.target.value);
+                        navigate('/recipes');
+                      }}
+                      className="w-full px-3 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm bg-white shadow-sm transition-all duration-200 hover:border-green-300"
+                    >
+                      <option value="">הכל</option>
+                      <option value="with">עם תמונות</option>
+                      <option value="without">ללא תמונות</option>
+                    </select>
+                  </div>
+                  
+                  {/* Flour Filter */}
+                  <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-lg p-3 border border-green-200">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2 flex items-center">
+                      <span className="w-2 h-2 bg-gradient-to-r from-teal-500 to-cyan-600 rounded-full mr-2 rtl:ml-2 rtl:mr-0"></span>
+                      קמח
+                    </label>
+                    <select
+                      value={flourFilter}
+                      onChange={(e) => {
+                        setFlourFilter(e.target.value);
+                        navigate('/recipes');
+                      }}
+                      className="w-full px-3 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm bg-white shadow-sm transition-all duration-200 hover:border-green-300"
+                    >
+                      <option value="">הכל</option>
+                      <option value="with">עם קמח</option>
+                      <option value="without">ללא קמח</option>
+                    </select>
+                  </div>
+                  
+                  {/* Clear Filters Button */}
+                  {hasActiveFilters && (
+                    <div className="pt-2">
+                      <button
+                        onClick={clearFilters}
+                        className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse bg-gradient-to-r from-red-500 to-pink-500 text-white px-4 py-2 rounded-lg hover:from-red-600 hover:to-pink-600 transition-all duration-200 text-sm font-semibold shadow-md hover:shadow-lg transform hover:scale-[1.02]"
+                        type="button"
+                      >
+                        <X className="h-4 w-4" />
+                        <span>נקה פילטרים</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Quick tip */}
+                <div className="mt-4 text-center">
+                  <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg p-2 border border-green-100">
+                    <p className="text-xs text-green-700 font-medium">
+                      💡 בחר פילטרים לצמצום התוצאות
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">תמונות</label>
-              <select
-                value={imageFilter}
-                onChange={(e) => {
-                  setImageFilter(e.target.value);
-                  navigate('/recipes'); // Navigate to home to show filtered results
-                }}
-                className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base bg-white"
-              >
-                <option value="">הכל</option>
-                <option value="with">עם תמונות</option>
-                <option value="without">ללא תמונות</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">קמח</label>
-              <select
-                value={flourFilter}
-                onChange={(e) => {
-                  setFlourFilter(e.target.value);
-                  navigate('/recipes'); // Navigate to home to show filtered results
-                }}
-                className="w-full px-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base bg-white"
-              >
-                <option value="">הכל</option>
-                <option value="with">עם קמח</option>
-                <option value="without">ללא קמח</option>
-              </select>
-            </div>
-            
-            {hasActiveFilters && (
-              <button
-                onClick={clearFilters}
-                className="w-full px-3 py-3 text-base text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-              >
-                נקה פילטרים
-              </button>
-            )}
           </div>
         </div>
       )}

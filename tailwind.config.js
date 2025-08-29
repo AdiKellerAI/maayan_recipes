@@ -57,6 +57,35 @@ export default {
       backgroundImage: {
         'gradient-base44': 'linear-gradient(135deg, #fed7aa 0%, #fdba74 50%, #fb923c 100%)',
         'gradient-hero': 'linear-gradient(135deg, #fff8f1 0%, #fef3f2 50%, #fff7ed 100%)',
+      },
+      keyframes: {
+        'fade-in': {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' }
+        }
+      },
+      animation: {
+        'fade-in-0': 'fade-in 0.5s ease-out 0s both',
+        'fade-in-100': 'fade-in 0.5s ease-out 0.1s both',
+        'fade-in-200': 'fade-in 0.5s ease-out 0.2s both',
+        'fade-in-300': 'fade-in 0.5s ease-out 0.3s both',
+        'fade-in-400': 'fade-in 0.5s ease-out 0.4s both',
+        'fade-in-500': 'fade-in 0.5s ease-out 0.5s both',
+        'fade-in-600': 'fade-in 0.5s ease-out 0.6s both',
+        'fade-in-700': 'fade-in 0.5s ease-out 0.7s both',
+        'fade-in-800': 'fade-in 0.5s ease-out 0.8s both',
+        'fade-in-900': 'fade-in 0.5s ease-out 0.9s both',
+        'fade-in-1000': 'fade-in 0.5s ease-out 1.0s both',
+        'fade-in-1100': 'fade-in 0.5s ease-out 1.1s both',
+        'fade-in-1200': 'fade-in 0.5s ease-out 1.2s both',
+        'fade-in-1300': 'fade-in 0.5s ease-out 1.3s both',
+        'fade-in-1400': 'fade-in 0.5s ease-out 1.4s both',
+        'fade-in-1500': 'fade-in 0.5s ease-out 1.5s both',
+        'fade-in-1600': 'fade-in 0.5s ease-out 1.6s both',
+        'fade-in-1700': 'fade-in 0.5s ease-out 1.7s both',
+        'fade-in-1800': 'fade-in 0.5s ease-out 1.8s both',
+        'fade-in-1900': 'fade-in 0.5s ease-out 1.9s both',
+        'fade-in-2000': 'fade-in 0.5s ease-out 2.0s both',
       }
     },
   },

@@ -14,6 +14,7 @@ interface CircleConfig {
   opacity: number;
   animation: string;
   delay: string;
+  fadeInDelay: string;
 }
 
 const LandingPage: React.FC = () => {
@@ -54,6 +55,15 @@ const LandingPage: React.FC = () => {
   const circleDelays = [
     'delay-200', 'delay-300', 'delay-400', 'delay-500', 'delay-600', 'delay-700',
     'delay-800', 'delay-900', 'delay-1000', 'delay-1100', 'delay-1200', 'delay-1350', 'delay-1450'
+  ];
+
+  // Fade-in animation delays (random timing up to 2 seconds)
+  const fadeInDelays = [
+    'animate-fade-in-0', 'animate-fade-in-100', 'animate-fade-in-200', 'animate-fade-in-300', 
+    'animate-fade-in-400', 'animate-fade-in-500', 'animate-fade-in-600', 'animate-fade-in-700',
+    'animate-fade-in-800', 'animate-fade-in-900', 'animate-fade-in-1000', 'animate-fade-in-1100',
+    'animate-fade-in-1200', 'animate-fade-in-1300', 'animate-fade-in-1400', 'animate-fade-in-1500',
+    'animate-fade-in-1600', 'animate-fade-in-1700', 'animate-fade-in-1800', 'animate-fade-in-1900', 'animate-fade-in-2000'
   ];
 
   // Generate uniformly distributed circles using useMemo to prevent regeneration on re-renders
@@ -119,6 +129,7 @@ const LandingPage: React.FC = () => {
       const animationSeed = i * 19 + 9;
       const opacitySeed = i * 23 + 11;
       const delaySeed = i * 29 + 13;
+      const fadeInSeed = i * 31 + 17;
       
       circles.push({
         id: `circle-${i}`,
@@ -128,7 +139,8 @@ const LandingPage: React.FC = () => {
         color: circleColors[Math.floor(seededRandom(colorSeed) * circleColors.length)],
         opacity: circleOpacities[Math.floor(seededRandom(opacitySeed) * circleOpacities.length)],
         animation: circleAnimations[Math.floor(seededRandom(animationSeed) * circleAnimations.length)],
-        delay: circleDelays[Math.floor(seededRandom(delaySeed) * circleDelays.length)]
+        delay: circleDelays[Math.floor(seededRandom(delaySeed) * circleDelays.length)],
+        fadeInDelay: fadeInDelays[Math.floor(seededRandom(fadeInSeed) * fadeInDelays.length)]
       });
     }
     
@@ -271,7 +283,7 @@ const LandingPage: React.FC = () => {
         {backgroundCircles.map((circle) => (
           <div
             key={circle.id}
-            className={`absolute rounded-full shadow-lg animate-pulse ${circle.size} ${circle.color} ${circle.animation} ${circle.delay}`}
+            className={`absolute rounded-full shadow-lg animate-pulse ${circle.size} ${circle.color} ${circle.animation} ${circle.delay} ${circle.fadeInDelay}`}
             style={{
               left: `${circle.x}px`,
               top: `${circle.y}px`,

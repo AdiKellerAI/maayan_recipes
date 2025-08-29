@@ -34,6 +34,35 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose, initialTime
 	const savedData = localStorage.getItem("multiTimers");
 	let initialTimers: TimerData[] = [];
 
+	// Handle Android back button and ESC key to close timer management window
+	useEffect(() => {
+		if (!isVisible) return;
+
+		const handleBackButton = (event: PopStateEvent) => {
+			event.preventDefault();
+			onClose();
+			// Push current state back to prevent actual navigation
+			window.history.pushState(null, '', window.location.href);
+		};
+
+		const handleKeyDown = (event: KeyboardEvent) => {
+			if (event.key === 'Escape') {
+				onClose();
+			}
+		};
+
+		// Push a state when timer opens to capture back button
+		window.history.pushState(null, '', window.location.href);
+		
+		window.addEventListener('popstate', handleBackButton);
+		document.addEventListener('keydown', handleKeyDown);
+
+		return () => {
+			window.removeEventListener('popstate', handleBackButton);
+			document.removeEventListener('keydown', handleKeyDown);
+		};
+	}, [isVisible, onClose]);
+
 	if (savedData) {
 		try {
 			const parsed = JSON.parse(savedData);
