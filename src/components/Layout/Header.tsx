@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Heart, Plus, Filter, Menu, X, ChefHat, Database } from 'lucide-react';
+import { Search, Heart, Plus, Filter, Menu, X, ChefHat, Database, Shield, ShieldCheck } from 'lucide-react';
 import { useRecipes } from '../../contexts/RecipeContext';
 import { useProtectedAction } from '../../hooks/useProtectedAction';
+import { useAuth } from '../../contexts/AuthContext';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 const Header: React.FC = () => {
@@ -25,6 +26,7 @@ const Header: React.FC = () => {
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   const navigate = useNavigate();
   const { executeProtectedAction } = useProtectedAction();
+  const { isAuthenticated } = useAuth();
   const location = useLocation();
 
   // Get current recipe name if we're on a recipe detail page
@@ -204,8 +206,8 @@ const Header: React.FC = () => {
             {/* Sidebar */}
             <div className="fixed top-0 right-0 w-56 bg-gradient-to-b from-white via-gray-50 to-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out rounded-l-2xl border-l border-gray-200">
               {/* Header */}
-              <div className="flex items-center justify-between p-3 border-b border-gray-200">
-                <h2 className="text-lg font-bold text-gray-800">תפריט</h2>
+              <div className="flex items-center justify-between p-2 border-b border-gray-200">
+                <h2 className="text-base font-bold text-black">תפריט</h2>
                 <button
                   onClick={() => setIsMenuOpen(false)}
                   className="p-1 hover:bg-gray-100 rounded-full transition-all duration-300 hover:scale-110"
@@ -227,7 +229,7 @@ const Header: React.FC = () => {
                   <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
                     <Plus className="h-3.5 w-3.5 text-white" />
                   </div>
-                  <span className="text-xs font-semibold">הוספת מתכון</span>
+                  <span className="text-xs font-semibold text-black">הוספת מתכון</span>
                 </button>
                 
                 {/* Favorites Button */}
@@ -244,7 +246,7 @@ const Header: React.FC = () => {
                   }`}>
                     <Heart className={`h-3.5 w-3.5 ${showFavoritesOnly ? 'text-white fill-current' : 'text-white'}`} />
                   </div>
-                  <span className="text-xs font-semibold">מועדפים</span>
+                  <span className="text-xs font-semibold text-black">מועדפים</span>
                 </button>
                 
                 {/* Filter Button */}
@@ -264,7 +266,7 @@ const Header: React.FC = () => {
                   }`}>
                     <Filter className="h-3.5 w-3.5 text-white" />
                   </div>
-                  <span className="text-xs font-semibold">סינון מתכונים</span>
+                  <span className="text-xs font-semibold text-black">סינון מתכונים</span>
                   {hasActiveFilters && (
                     <div className="w-2.5 h-2.5 bg-rose-500 rounded-full animate-pulse ml-auto rtl:mr-auto rtl:ml-0"></div>
                   )}
@@ -275,7 +277,7 @@ const Header: React.FC = () => {
                 
                 {/* Quick Actions */}
                 <div className="space-y-1.5">
-                  <h5 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">פעולות מהירות</h5>
+                  <h5 className="text-xs font-semibold text-black uppercase tracking-wide">פעולות מהירות</h5>
                   
                   {/* Timer Button */}
                   <button
@@ -292,7 +294,7 @@ const Header: React.FC = () => {
                     <div className="w-6 h-6 bg-gradient-to-br from-orange-500 to-yellow-600 rounded-full flex items-center justify-center">
                       <span className="text-sm text-white">⏰</span>
                     </div>
-                    <span className="text-xs font-semibold">טיימר בישול</span>
+                    <span className="text-xs font-semibold text-black">טיימר בישול</span>
                   </button>
                   
                   {/* Landing Page Button */}
@@ -307,7 +309,7 @@ const Header: React.FC = () => {
                     <div className="w-6 h-6 bg-gradient-to-br from-violet-500 to-purple-600 rounded-full flex items-center justify-center">
                       <ChefHat className="h-3.5 w-3.5 text-white" />
                     </div>
-                    <span className="text-xs font-semibold">דף הבית</span>
+                    <span className="text-xs font-semibold text-black">דף הבית</span>
                   </button>
                   
                   {/* Divider */}
@@ -315,7 +317,7 @@ const Header: React.FC = () => {
                   
                   {/* Database Section */}
                   <div className="space-y-1.5">
-                    <h5 className="text-xs font-semibold text-gray-600 uppercase tracking-wide">מאגר מידע</h5>
+                    <h5 className="text-xs font-semibold text-black uppercase tracking-wide">מאגר מידע והרשאות</h5>
                     
                     {/* Database Connection Status */}
                     <div className="w-full flex items-center space-x-2 rtl:space-x-reverse py-1.5 px-2.5">
@@ -328,15 +330,27 @@ const Header: React.FC = () => {
                       }`}>
                         <Database className="h-2.5 w-2.5 text-white" />
                       </div>
-                      <span className={`text-xs font-medium ${
-                        postgresqlStatus === 'connected' 
-                          ? 'text-green-700' 
-                          : postgresqlStatus === 'disconnected'
-                          ? 'text-red-700'
-                          : 'text-yellow-700'
+                      <span className="text-xs font-medium text-black">
+                        {postgresqlStatus === 'connected' ? 'מאגר מידע מחובר' : 
+                         postgresqlStatus === 'disconnected' ? 'מאגר מידע מנותק' : 'בודק...'}
+                      </span>
+                    </div>
+                    
+                    {/* Access Level Status */}
+                    <div className="w-full flex items-center space-x-2 rtl:space-x-reverse py-1.5 px-2.5">
+                      <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                        isAuthenticated 
+                          ? 'bg-gradient-to-br from-green-500 to-emerald-600' 
+                          : 'bg-gradient-to-br from-red-500 to-red-600'
                       }`}>
-                        {postgresqlStatus === 'connected' ? 'מחובר' : 
-                         postgresqlStatus === 'disconnected' ? 'מנותק' : 'בודק...'}
+                        {isAuthenticated ? (
+                          <ShieldCheck className="h-2.5 w-2.5 text-white" />
+                        ) : (
+                          <Shield className="h-2.5 w-2.5 text-white" />
+                        )}
+                      </div>
+                      <span className="text-xs font-medium text-black">
+                        {isAuthenticated ? 'גישה מלאה' : 'גישה מוגבלת'}
                       </span>
                     </div>
                   </div>
