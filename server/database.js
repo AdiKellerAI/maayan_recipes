@@ -7,18 +7,11 @@ const pool = new Pool({
   database: 'recipes',
   user: 'postgres',
   password: 'MaayanRecipes2025',
-  // Connection settings - increased timeouts for high latency connection
+  // Connection settings
   ssl: { rejectUnauthorized: false }, // Enable SSL with self-signed certificates
-  connectionTimeoutMillis: 30000, // Increased from 10s to 30s
-  idleTimeoutMillis: 60000, // Increased from 30s to 60s
-  query_timeout: 30000, // Add query timeout
-  max: 5, // Reduced pool size to avoid overwhelming the connection
-  min: 1, // Keep at least 1 connection alive
-  acquireTimeoutMillis: 30000, // Time to wait for connection from pool
-  createTimeoutMillis: 30000, // Time to wait for new connection creation
-  destroyTimeoutMillis: 5000,
-  reapIntervalMillis: 1000,
-  createRetryIntervalMillis: 200
+  connectionTimeoutMillis: 10000,
+  idleTimeoutMillis: 30000,
+  max: 10
 });
 
 // Test PostgreSQL connection
@@ -50,9 +43,6 @@ async function testConnection() {
         console.log('📋 Recipes table found');
         const countResult = await client.query('SELECT COUNT(*) as count FROM recipes');
         console.log(`📊 Recipes in database: ${countResult.rows[0].count}`);
-        
-        // Check if additional_sections column exists and add it if needed
-        await ensureAdditionalSectionsColumn(client);
       } else {
         console.log('⚠️ Recipes table not found - will create it');
         await createRecipesTable(client);
@@ -91,31 +81,6 @@ async function testConnection() {
   }
 }
 
-// Ensure additional_sections column exists
-async function ensureAdditionalSectionsColumn(client) {
-  try {
-    // Check if additional_sections column exists
-    const columnCheck = await client.query(`
-      SELECT column_name 
-      FROM information_schema.columns 
-      WHERE table_name = 'recipes' AND column_name = 'additional_sections'
-    `);
-    
-    if (columnCheck.rows.length === 0) {
-      console.log('🔧 Adding additional_sections column...');
-      await client.query(`
-        ALTER TABLE recipes 
-        ADD COLUMN additional_sections JSONB DEFAULT '{}'
-      `);
-      console.log('✅ Additional_sections column added successfully');
-    } else {
-      console.log('📋 Additional_sections column already exists');
-    }
-  } catch (error) {
-    console.error('❌ Error ensuring additional_sections column:', error.message);
-  }
-}
-
 // Create recipes table if it doesn't exist
 async function createRecipesTable(client) {
   try {
@@ -128,7 +93,6 @@ async function createRecipesTable(client) {
         ingredients JSONB,
         directions JSONB,
         additional_instructions JSONB DEFAULT '{}',
-        additional_sections JSONB DEFAULT '{}',
         prep_time VARCHAR(50),
         difficulty VARCHAR(50),
         is_favorite BOOLEAN DEFAULT false,
