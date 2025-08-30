@@ -469,11 +469,11 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
             )}
           </div>
         ) : (
-          <div className={`relative h-56 sm:h-64 md:h-72 flex items-center justify-center rounded-t-2xl ${getCategoryColor(recipe.category)} bg-gradient-to-br from-white/50 to-transparent`}>
-            <div className="absolute inset-0 bg-gradient-to-br from-amber-400/10 via-transparent to-purple-600/10 rounded-t-2xl"></div>
-            <div className="text-9xl opacity-80 filter drop-shadow-lg relative z-10">
-              {getCategoryIllustration(recipe.category)}
-            </div>
+                  <div className={`relative h-56 sm:h-64 md:h-72 flex items-center justify-center rounded-t-2xl ${getCategoryColor(recipe.category)} bg-gradient-to-br from-white/50 to-transparent`}>
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-400/10 via-transparent to-purple-600/10 rounded-t-2xl"></div>
+          <div className="text-9xl opacity-80 filter drop-shadow-lg relative z-10 -translate-y-4">
+            {getCategoryIllustration(recipe.category)}
+          </div>
             
             {/* Category badge - bottom left */}
             <div className={`absolute bottom-4 left-4 rtl:left-4 rtl:right-auto px-3 py-2 rounded-full text-xs font-medium text-black shadow-lg z-20 backdrop-blur-md border border-white/30 ${getCategoryColor(recipe.category)} bg-opacity-90`}>
@@ -741,7 +741,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
       ) : (
         <div className={`relative h-32 sm:h-36 md:h-40 flex items-center justify-center rounded-t-xl ${getCategoryColor(recipe.category)} bg-gradient-to-br from-white/40 to-transparent`}>
           <div className="absolute inset-0 bg-gradient-to-br from-amber-400/10 via-transparent to-purple-600/10 rounded-t-xl"></div>
-          <div className="text-6xl opacity-75 filter drop-shadow-md relative z-10">
+          <div className="text-6xl opacity-75 filter drop-shadow-md relative z-10 -translate-y-3">
             {getCategoryIllustration(recipe.category)}
           </div>
           
