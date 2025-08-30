@@ -43,6 +43,9 @@ async function testConnection() {
         console.log('📋 Recipes table found');
         const countResult = await client.query('SELECT COUNT(*) as count FROM recipes');
         console.log(`📊 Recipes in database: ${countResult.rows[0].count}`);
+        
+        // Check if additional_sections column exists and add it if needed
+        await ensureAdditionalSectionsColumn(client);
       } else {
         console.log('⚠️ Recipes table not found - will create it');
         await createRecipesTable(client);
@@ -81,6 +84,31 @@ async function testConnection() {
   }
 }
 
+// Ensure additional_sections column exists
+async function ensureAdditionalSectionsColumn(client) {
+  try {
+    // Check if additional_sections column exists
+    const columnCheck = await client.query(`
+      SELECT column_name 
+      FROM information_schema.columns 
+      WHERE table_name = 'recipes' AND column_name = 'additional_sections'
+    `);
+    
+    if (columnCheck.rows.length === 0) {
+      console.log('🔧 Adding additional_sections column...');
+      await client.query(`
+        ALTER TABLE recipes 
+        ADD COLUMN additional_sections JSONB DEFAULT '{}'
+      `);
+      console.log('✅ Additional_sections column added successfully');
+    } else {
+      console.log('📋 Additional_sections column already exists');
+    }
+  } catch (error) {
+    console.error('❌ Error ensuring additional_sections column:', error.message);
+  }
+}
+
 // Create recipes table if it doesn't exist
 async function createRecipesTable(client) {
   try {
@@ -93,6 +121,7 @@ async function createRecipesTable(client) {
         ingredients JSONB,
         directions JSONB,
         additional_instructions JSONB DEFAULT '{}',
+        additional_sections JSONB DEFAULT '{}',
         prep_time VARCHAR(50),
         difficulty VARCHAR(50),
         is_favorite BOOLEAN DEFAULT false,

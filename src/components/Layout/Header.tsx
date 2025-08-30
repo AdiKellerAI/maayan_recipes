@@ -19,11 +19,13 @@ const Header: React.FC = () => {
     setFlourFilter,
     postgresqlStatus,
     resetFilters,
-    recipes
+    recipes,
+    refreshRecipes
   } = useRecipes();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState('');
+  const [isConnecting, setIsConnecting] = useState(false);
   const navigate = useNavigate();
   const { executeProtectedAction } = useProtectedAction();
   const { isAuthenticated } = useAuth();
@@ -80,6 +82,69 @@ const Header: React.FC = () => {
   };
 
   const hasActiveFilters = difficultyFilter || imageFilter || flourFilter;
+
+  // Function to attempt database connection with multiple strategies
+  const handleDatabaseConnect = async () => {
+    if (isConnecting) return;
+    
+    setIsConnecting(true);
+    console.log('🔄 Attempting to connect to database...');
+    
+    try {
+      // Strategy 1: Direct API connection test
+      console.log('🔄 Strategy 1: Testing API connection...');
+      const response = await fetch('/api/test-connection', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(8000)
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        if (result.connected) {
+          console.log('✅ Database connection successful!');
+          await refreshRecipes(true);
+          // Success - the status should update automatically
+          return;
+        }
+      }
+      
+      // Strategy 2: Retry with longer timeout
+      console.log('🔄 Strategy 2: Extended timeout retry...');
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      const retryResponse = await fetch('/api/test-connection', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(15000)
+      });
+      
+      if (retryResponse.ok) {
+        const result = await retryResponse.json();
+        if (result.connected) {
+          console.log('✅ Database connection successful via retry!');
+          await refreshRecipes(true);
+          return;
+        }
+      }
+      
+      // Strategy 3: Force refresh recipes even if connection test fails
+      console.log('🔄 Strategy 3: Force refresh recipes...');
+      await refreshRecipes(true);
+      
+      console.log('🔄 Connection attempts completed');
+    } catch (error) {
+      console.error('❌ Connection attempts failed:', error);
+      // Even if there's an error, try to refresh recipes
+      try {
+        await refreshRecipes(true);
+      } catch (refreshError) {
+        console.error('❌ Recipe refresh also failed:', refreshError);
+      }
+    } finally {
+      setIsConnecting(false);
+    }
+  };
 
   return (
     <>
@@ -320,20 +385,44 @@ const Header: React.FC = () => {
                     <h5 className="text-xs font-semibold text-black uppercase tracking-wide">מאגר מידע והרשאות</h5>
                     
                     {/* Database Connection Status */}
-                    <div className="w-full flex items-center space-x-2 rtl:space-x-reverse py-1.5 px-2.5">
-                      <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
-                        postgresqlStatus === 'connected' 
-                          ? 'bg-gradient-to-br from-green-500 to-emerald-600' 
-                          : postgresqlStatus === 'disconnected'
-                          ? 'bg-gradient-to-br from-red-500 to-red-600'
-                          : 'bg-gradient-to-br from-yellow-500 to-orange-600'
-                      }`}>
-                        <Database className="h-2.5 w-2.5 text-white" />
+                    <div className="w-full flex items-center justify-between py-1.5 px-2.5">
+                      <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                          postgresqlStatus === 'connected' 
+                            ? 'bg-gradient-to-br from-green-500 to-emerald-600' 
+                            : postgresqlStatus === 'disconnected'
+                            ? 'bg-gradient-to-br from-red-500 to-red-600'
+                            : 'bg-gradient-to-br from-yellow-500 to-orange-600'
+                        }`}>
+                          <Database className="h-2.5 w-2.5 text-white" />
+                        </div>
+                        <span className="text-xs font-medium text-black">
+                          {postgresqlStatus === 'connected' ? 'מאגר מידע מחובר' : 
+                           postgresqlStatus === 'disconnected' ? 'מאגר מידע מנותק' : 'בודק...'}
+                        </span>
                       </div>
-                      <span className="text-xs font-medium text-black">
-                        {postgresqlStatus === 'connected' ? 'מאגר מידע מחובר' : 
-                         postgresqlStatus === 'disconnected' ? 'מאגר מידע מנותק' : 'בודק...'}
-                      </span>
+                      
+                      {/* Connect Button - only show when disconnected */}
+                      {postgresqlStatus === 'disconnected' && (
+                        <button
+                          onClick={handleDatabaseConnect}
+                          disabled={isConnecting}
+                          className={`${
+                            isConnecting
+                              ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                              : 'bg-gradient-to-br from-orange-500/80 to-yellow-600/80 border border-orange-400/80 text-white hover:from-orange-600/80 hover:to-yellow-700/80 transition-all duration-300 shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95'
+                          } px-3 py-0 rounded-md font-medium flex items-center justify-center`}
+                          style={{
+                            height: '24px',
+                            fontSize: '0.75rem',
+                            lineHeight: '1.2',
+                            minHeight: '24px'
+                          }}
+                          title="נסה להתחבר למאגר המידע"
+                        >
+                          {isConnecting ? 'מתחבר...' : 'התחבר'}
+                        </button>
+                      )}
                     </div>
                     
                     {/* Access Level Status */}

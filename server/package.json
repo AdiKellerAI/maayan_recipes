@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Backend server for Maayan Recipes application",
   "main": "server.js",
-  "type": "module",
+
   "scripts": {
     "start": "node server.js",
     "dev": "node server.js"

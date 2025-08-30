@@ -38,6 +38,8 @@ const AddRecipePage: React.FC = () => {
   // Refs for auto-focusing new input fields
   const ingredientRefs = useRef<(HTMLInputElement | null)[]>([]);
   const directionRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
+  const sectionIngredientRefs = useRef<{ [key: string]: (HTMLInputElement | null)[] }>({});
+  const sectionDirectionRefs = useRef<{ [key: string]: (HTMLTextAreaElement | null)[] }>({});
 
   // Check authentication when page loads
   useEffect(() => {
@@ -63,9 +65,14 @@ const AddRecipePage: React.FC = () => {
   };
 
   const removeIngredient = (index: number) => {
-    if (ingredients.length > 1) {
-      setIngredients(ingredients.filter((_, i) => i !== index));
+    if (ingredients.length <= 1) return;
+    
+    const currentIngredient = ingredients[index] || '';
+    if (currentIngredient.trim() && !window.confirm('האם אתה בטוח שברצונך למחוק את הרכיב הזה?')) {
+      return;
     }
+    
+    setIngredients(ingredients.filter((_, i) => i !== index));
   };
 
   const updateIngredient = (index: number, value: string) => {
@@ -87,9 +94,14 @@ const AddRecipePage: React.FC = () => {
   };
 
   const removeDirection = (index: number) => {
-    if (directions.length > 1) {
-      setDirections(directions.filter((_, i) => i !== index));
+    if (directions.length <= 1) return;
+    
+    const currentDirection = directions[index] || '';
+    if (currentDirection.trim() && !window.confirm('האם אתה בטוח שברצונך למחוק את השלב הזה?')) {
+      return;
     }
+    
+    setDirections(directions.filter((_, i) => i !== index));
   };
 
   const updateDirection = (index: number, value: string) => {
@@ -281,16 +293,34 @@ const AddRecipePage: React.FC = () => {
   };
 
   const addSectionIngredient = (sectionName: string) => {
-    setAdditionalSections(prev => ({
-      ...prev,
-      [sectionName]: {
-        ...prev[sectionName],
-        ingredients: [...prev[sectionName].ingredients, '']
-      }
-    }));
+    setAdditionalSections(prev => {
+      const currentIngredients = prev[sectionName]?.ingredients || [''];
+      const newIndex = currentIngredients.length;
+      
+      // Focus the new input field after render
+      setTimeout(() => {
+        if (sectionIngredientRefs.current[sectionName]?.[newIndex]) {
+          sectionIngredientRefs.current[sectionName][newIndex]?.focus();
+        }
+      }, 10);
+      
+      return {
+        ...prev,
+        [sectionName]: {
+          ...prev[sectionName],
+          ingredients: [...currentIngredients, '']
+        }
+      };
+    });
   };
 
   const removeSectionIngredient = (sectionName: string, index: number) => {
+    const currentIngredient = additionalSections[sectionName]?.ingredients[index] || '';
+    
+    if (currentIngredient.trim() && !window.confirm('האם אתה בטוח שברצונך למחוק את הרכיב הזה?')) {
+      return;
+    }
+    
     setAdditionalSections(prev => ({
       ...prev,
       [sectionName]: {
@@ -311,16 +341,34 @@ const AddRecipePage: React.FC = () => {
   };
 
   const addSectionDirection = (sectionName: string) => {
-    setAdditionalSections(prev => ({
-      ...prev,
-      [sectionName]: {
-        ...prev[sectionName],
-        directions: [...prev[sectionName].directions, '']
-      }
-    }));
+    setAdditionalSections(prev => {
+      const currentDirections = prev[sectionName]?.directions || [''];
+      const newIndex = currentDirections.length;
+      
+      // Focus the new textarea field after render
+      setTimeout(() => {
+        if (sectionDirectionRefs.current[sectionName]?.[newIndex]) {
+          sectionDirectionRefs.current[sectionName][newIndex]?.focus();
+        }
+      }, 10);
+      
+      return {
+        ...prev,
+        [sectionName]: {
+          ...prev[sectionName],
+          directions: [...currentDirections, '']
+        }
+      };
+    });
   };
 
   const removeSectionDirection = (sectionName: string, index: number) => {
+    const currentDirection = additionalSections[sectionName]?.directions[index] || '';
+    
+    if (currentDirection.trim() && !window.confirm('האם אתה בטוח שברצונך למחוק את השלב הזה?')) {
+      return;
+    }
+    
     setAdditionalSections(prev => ({
       ...prev,
       [sectionName]: {
@@ -954,32 +1002,47 @@ const AddRecipePage: React.FC = () => {
                             מרכיבים ל{sectionName}
                           </h4>
                           <div className="space-y-2">
-                            {section.ingredients.map((ingredient, index) => (
-                              <div key={index} className="flex gap-2 items-center group">
-                                <div className="flex-shrink-0 w-4 h-4 bg-green-400 text-white rounded-full flex items-center justify-center text-xs font-medium">
-                                  {index + 1}
+                            {section.ingredients.map((ingredient, index) => {
+                              // Initialize refs for this section if not exists
+                              if (!sectionIngredientRefs.current[sectionName]) {
+                                sectionIngredientRefs.current[sectionName] = [];
+                              }
+                              
+                              return (
+                                <div key={index} className="flex gap-2 items-center group">
+                                  <div className="flex-shrink-0 w-4 h-4 bg-green-400 text-white rounded-full flex items-center justify-center text-xs font-medium">
+                                    {index + 1}
+                                  </div>
+                                  <input
+                                    ref={(el) => {
+                                      if (sectionIngredientRefs.current[sectionName]) {
+                                        sectionIngredientRefs.current[sectionName][index] = el;
+                                      }
+                                    }}
+                                    type="text"
+                                    value={ingredient}
+                                    onChange={(e) => updateSectionIngredient(sectionName, index, e.target.value)}
+                                    className="flex-1 p-1.5 bg-gray-50 border border-gray-200 rounded-md focus:ring-1 focus:ring-purple-300 focus:border-purple-400 transition-all duration-150 text-sm"
+                                    placeholder={`רכיב ${index + 1}`}
+                                  />
+                                  {section.ingredients.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => removeSectionIngredient(sectionName, index)}
+                                      className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100"
+                                      title="הסר רכיב"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  )}
                                 </div>
-                                <input
-                                  type="text"
-                                  value={ingredient}
-                                  onChange={(e) => updateSectionIngredient(sectionName, index, e.target.value)}
-                                  className="flex-1 p-1.5 bg-gray-50 border border-gray-200 rounded-md focus:ring-1 focus:ring-purple-300 focus:border-purple-400 transition-all duration-150 text-sm"
-                                  placeholder={`רכיב ${index + 1}`}
-                                />
-                                {section.ingredients.length > 1 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => removeSectionIngredient(sectionName, index)}
-                                    className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100"
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </button>
-                                )}
-                              </div>
-                            ))}
+                              );
+                            })}
                             <button
                               type="button"
                               onClick={() => addSectionIngredient(sectionName)}
+                              onMouseDown={(e) => e.preventDefault()}
+                              onTouchStart={(e) => e.preventDefault()}
                               className="flex items-center gap-1 text-green-600 hover:text-green-700 font-medium text-xs bg-green-50 hover:bg-green-100 px-2 py-1 rounded-md transition-all duration-200 border border-green-200"
                             >
                               <Plus className="w-3 h-3" />
@@ -995,32 +1058,47 @@ const AddRecipePage: React.FC = () => {
                             שלבי הכנה ל{sectionName}
                           </h4>
                           <div className="space-y-2">
-                            {section.directions.map((direction, index) => (
-                              <div key={index} className="flex gap-2 group">
-                                <div className="bg-blue-400 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-1">
-                                  {index + 1}
+                            {section.directions.map((direction, index) => {
+                              // Initialize refs for this section if not exists
+                              if (!sectionDirectionRefs.current[sectionName]) {
+                                sectionDirectionRefs.current[sectionName] = [];
+                              }
+                              
+                              return (
+                                <div key={index} className="flex gap-2 group">
+                                  <div className="bg-blue-400 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-1">
+                                    {index + 1}
+                                  </div>
+                                  <textarea
+                                    ref={(el) => {
+                                      if (sectionDirectionRefs.current[sectionName]) {
+                                        sectionDirectionRefs.current[sectionName][index] = el;
+                                      }
+                                    }}
+                                    value={direction}
+                                    onChange={(e) => updateSectionDirection(sectionName, index, e.target.value)}
+                                    rows={2}
+                                    className="flex-1 p-1.5 bg-gray-50 border border-gray-200 rounded-md focus:ring-1 focus:ring-purple-300 focus:border-purple-400 transition-all duration-150 text-sm resize-none"
+                                    placeholder={`שלב ${index + 1}`}
+                                  />
+                                  {section.directions.length > 1 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => removeSectionDirection(sectionName, index)}
+                                      className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100 self-start"
+                                      title="הסר שלב"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  )}
                                 </div>
-                                <textarea
-                                  value={direction}
-                                  onChange={(e) => updateSectionDirection(sectionName, index, e.target.value)}
-                                  rows={2}
-                                  className="flex-1 p-1.5 bg-gray-50 border border-gray-200 rounded-md focus:ring-1 focus:ring-purple-300 focus:border-purple-400 transition-all duration-150 text-sm resize-none"
-                                  placeholder={`שלב ${index + 1}`}
-                                />
-                                {section.directions.length > 1 && (
-                                  <button
-                                    type="button"
-                                    onClick={() => removeSectionDirection(sectionName, index)}
-                                    className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100 self-start"
-                                  >
-                                    <X className="w-3 h-3" />
-                                  </button>
-                                )}
-                              </div>
-                            ))}
+                              );
+                            })}
                             <button
                               type="button"
                               onClick={() => addSectionDirection(sectionName)}
+                              onMouseDown={(e) => e.preventDefault()}
+                              onTouchStart={(e) => e.preventDefault()}
                               className="flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium text-xs bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-md transition-all duration-200 border border-blue-200"
                             >
                               <Plus className="w-3 h-3" />

@@ -19,6 +19,7 @@ const mapRowToRecipe = (row) => ({
   ingredients: row.ingredients,
   directions: row.directions,
   additional_instructions: row.additional_instructions || {},
+  additional_sections: row.additional_sections || {},
   prep_time: row.prep_time || '',
   difficulty: row.difficulty,
   is_favorite: row.is_favorite,
@@ -98,20 +99,47 @@ app.get('/api/recipes', async (req, res) => {
         }
       });
     } else {
-      // Optimized mode: use materialized view for better performance
-      const result = await client.query(
-        `SELECT * FROM get_recipes_paginated($1, $2, $3, $4, $5, $6, $7, $8)`,
-        [
-          parseInt(limit),
-          offset,
-          category || null,
-          favorites === 'true',
-          search || null,
-          difficulty || null,
-          hasImages ? hasImages === 'true' : null,
-          sortBy
-        ]
-      );
+      // Try optimized mode first, fallback to simple mode if function doesn't exist
+      let result;
+      try {
+        result = await client.query(
+          `SELECT * FROM get_recipes_paginated($1, $2, $3, $4, $5, $6, $7, $8)`,
+          [
+            parseInt(limit),
+            offset,
+            category || null,
+            favorites === 'true',
+            search || null,
+            difficulty || null,
+            hasImages ? hasImages === 'true' : null,
+            sortBy
+          ]
+        );
+      } catch (error) {
+        console.log('⚠️ Optimized function not available, using simple query');
+        // Fallback to simple query
+        result = await client.query('SELECT * FROM recipes ORDER BY created_at DESC LIMIT $1 OFFSET $2', [parseInt(limit), offset]);
+        const countResult = await client.query('SELECT COUNT(*) FROM recipes');
+        
+        client.release();
+        
+        const recipes = result.rows.map(mapRowToRecipe);
+        const totalCount = parseInt(countResult.rows[0].count);
+        
+        console.log(`✅ API: Retrieved ${recipes.length} recipes via fallback (${totalCount} total)`);
+        
+        return res.json({
+          recipes,
+          pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: totalCount,
+            totalPages: Math.ceil(totalCount / parseInt(limit)),
+            hasNext: offset + recipes.length < totalCount,
+            hasPrev: parseInt(page) > 1
+          }
+        });
+      }
       client.release();
       
       const recipes = result.rows.map(row => ({
@@ -222,6 +250,7 @@ app.post('/api/recipes', async (req, res) => {
       ingredients,
       directions,
       additional_instructions = {},
+      additional_sections = {},
       prep_time = '',
       difficulty = '',
       is_favorite = false,
@@ -234,8 +263,8 @@ app.post('/api/recipes', async (req, res) => {
     const result = await client.query(
       `INSERT INTO recipes (
         title, description, category, ingredients, directions, 
-        additional_instructions, prep_time, difficulty, is_favorite, images
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
+        additional_instructions, additional_sections, prep_time, difficulty, is_favorite, images
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
       RETURNING *`,
       [
         title,
@@ -244,6 +273,7 @@ app.post('/api/recipes', async (req, res) => {
         JSON.stringify(ingredients),
         JSON.stringify(directions),
         JSON.stringify(additional_instructions),
+        JSON.stringify(additional_sections),
         prep_time,
         difficulty,
         is_favorite,
@@ -298,6 +328,10 @@ app.put('/api/recipes/:id', async (req, res) => {
     if (updates.additional_instructions !== undefined) {
       updateFields.push(`additional_instructions = $${paramCount++}`);
       values.push(JSON.stringify(updates.additional_instructions));
+    }
+    if (updates.additional_sections !== undefined) {
+      updateFields.push(`additional_sections = $${paramCount++}`);
+      values.push(JSON.stringify(updates.additional_sections));
     }
     if (updates.prep_time !== undefined) {
       updateFields.push(`prep_time = $${paramCount++}`);
