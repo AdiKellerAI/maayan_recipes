@@ -106,11 +106,22 @@ const RecipeDetailPage: React.FC = () => {
 
   // Initialize additional steps from recipe data
   React.useEffect(() => {
+    // Initialize additional steps for both legacy additional_instructions and new additional_sections
+    const initialSteps: { [key: string]: number } = {};
+    
     if (recipe?.additional_instructions) {
-      const initialSteps: { [key: string]: number } = {};
       Object.keys(recipe.additional_instructions).forEach(sectionName => {
         initialSteps[sectionName] = 0;
       });
+    }
+    
+    if (recipe?.additional_sections) {
+      Object.keys(recipe.additional_sections).forEach(sectionName => {
+        initialSteps[sectionName] = 0;
+      });
+    }
+    
+    if (Object.keys(initialSteps).length > 0) {
       setAdditionalCurrentSteps(initialSteps);
     }
   }, [recipe]);
@@ -370,6 +381,7 @@ const RecipeDetailPage: React.FC = () => {
                   currentStep={recipe.current_step || 0}
                   onStepClick={handleStepClick}
                   additionalInstructions={recipe.additional_instructions}
+                  additionalSections={recipe.additional_sections}
                   onAdditionalStepClick={handleAdditionalStepClick}
                   additionalCurrentSteps={additionalCurrentSteps}
                 />

@@ -1,3 +1,9 @@
+// Interface for additional recipe sections (like sauce, dough, filling, etc.)
+export interface RecipeSection {
+  ingredients: string[];
+  directions: string[];
+}
+
 export interface Recipe {
   id: string;
   title: string;
@@ -5,7 +11,8 @@ export interface Recipe {
   category: string;
   ingredients: string[];
   directions: string[];
-  additional_instructions?: { [key: string]: string[] };
+  additional_instructions?: { [key: string]: string[] }; // Legacy - keeping for backward compatibility
+  additional_sections?: { [key: string]: RecipeSection }; // New sections with both ingredients and directions
   prep_time?: string;
   difficulty?: 'קל' | 'בינוני' | 'קשה';
   is_favorite: boolean;
@@ -20,7 +27,8 @@ export interface RecipeInsert {
   category: string;
   ingredients: string[];
   directions: string[];
-  additional_instructions?: { [key: string]: string[] };
+  additional_instructions?: { [key: string]: string[] }; // Legacy - keeping for backward compatibility
+  additional_sections?: { [key: string]: RecipeSection }; // New sections with both ingredients and directions
   prep_time?: string;
   difficulty?: 'קל' | 'בינוני' | 'קשה';
   is_favorite?: boolean;
@@ -33,7 +41,8 @@ export interface RecipeUpdate {
   category?: string;
   ingredients?: string[];
   directions?: string[];
-  additional_instructions?: { [key: string]: string[] };
+  additional_instructions?: { [key: string]: string[] }; // Legacy - keeping for backward compatibility
+  additional_sections?: { [key: string]: RecipeSection }; // New sections with both ingredients and directions
   prep_time?: string;
   difficulty?: 'קל' | 'בינוני' | 'קשה';
   is_favorite?: boolean;

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useRecipes } from '../contexts/RecipeContext';
 import { useProtectedAction } from '../hooks/useProtectedAction';
-import type { RecipeInsert, Recipe } from '../types/recipe';
+import type { RecipeInsert, Recipe, RecipeSection } from '../types/recipe';
 import { categories } from '../data/categories';
 import { Plus, X, Upload, Camera, Sparkles, Link, Eye, Edit, Trash2 } from 'lucide-react';
 import { compressImages } from '../utils/imageCompression';
@@ -21,6 +21,7 @@ const AddRecipePage: React.FC = () => {
   const [directions, setDirections] = useState(['']);
   const [images, setImages] = useState<string[]>([]);
   const [additionalInstructions, setAdditionalInstructions] = useState<{ [key: string]: string[] }>({});
+  const [additionalSections, setAdditionalSections] = useState<{ [key: string]: RecipeSection }>({});
 
   const [showSmartImport, setShowSmartImport] = useState(false);
   const [smartImportText, setSmartImportText] = useState('');
@@ -30,6 +31,8 @@ const AddRecipePage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showSectionNameModal, setShowSectionNameModal] = useState(false);
   const [newSectionName, setNewSectionName] = useState('');
+  const [showNewSectionModal, setShowNewSectionModal] = useState(false);
+  const [newSectionNameWithIngredients, setNewSectionNameWithIngredients] = useState('');
   const [showSmartImageSearch, setShowSmartImageSearch] = useState(false);
   
   // Refs for auto-focusing new input fields
@@ -188,8 +191,10 @@ const AddRecipePage: React.FC = () => {
     console.log('✨ Smart image added:', imageUrl);
   };
 
-  const addAdditionalInstructionSection = () => {
-    setShowSectionNameModal(true);
+
+
+  const addNewSection = () => {
+    setShowNewSectionModal(true);
   };
 
   const handleAddSection = () => {
@@ -206,6 +211,25 @@ const AddRecipePage: React.FC = () => {
   const handleCancelSection = () => {
     setNewSectionName('');
     setShowSectionNameModal(false);
+  };
+
+  const handleAddNewSection = () => {
+    if (newSectionNameWithIngredients.trim()) {
+      setAdditionalSections(prev => ({
+        ...prev,
+        [newSectionNameWithIngredients.trim()]: {
+          ingredients: [''],
+          directions: ['']
+        }
+      }));
+      setNewSectionNameWithIngredients('');
+      setShowNewSectionModal(false);
+    }
+  };
+
+  const handleCancelNewSection = () => {
+    setNewSectionNameWithIngredients('');
+    setShowNewSectionModal(false);
   };
 
   const removeAdditionalInstructionSection = (sectionName: string) => {
@@ -237,6 +261,75 @@ const AddRecipePage: React.FC = () => {
     }));
   };
 
+  // Functions for managing new sections with ingredients and directions
+  const removeNewSection = (sectionName: string) => {
+    setAdditionalSections(prev => {
+      const newSections = { ...prev };
+      delete newSections[sectionName];
+      return newSections;
+    });
+  };
+
+  const updateSectionIngredient = (sectionName: string, index: number, value: string) => {
+    setAdditionalSections(prev => ({
+      ...prev,
+      [sectionName]: {
+        ...prev[sectionName],
+        ingredients: prev[sectionName].ingredients.map((item, i) => i === index ? value : item)
+      }
+    }));
+  };
+
+  const addSectionIngredient = (sectionName: string) => {
+    setAdditionalSections(prev => ({
+      ...prev,
+      [sectionName]: {
+        ...prev[sectionName],
+        ingredients: [...prev[sectionName].ingredients, '']
+      }
+    }));
+  };
+
+  const removeSectionIngredient = (sectionName: string, index: number) => {
+    setAdditionalSections(prev => ({
+      ...prev,
+      [sectionName]: {
+        ...prev[sectionName],
+        ingredients: prev[sectionName].ingredients.filter((_, i) => i !== index)
+      }
+    }));
+  };
+
+  const updateSectionDirection = (sectionName: string, index: number, value: string) => {
+    setAdditionalSections(prev => ({
+      ...prev,
+      [sectionName]: {
+        ...prev[sectionName],
+        directions: prev[sectionName].directions.map((item, i) => i === index ? value : item)
+      }
+    }));
+  };
+
+  const addSectionDirection = (sectionName: string) => {
+    setAdditionalSections(prev => ({
+      ...prev,
+      [sectionName]: {
+        ...prev[sectionName],
+        directions: [...prev[sectionName].directions, '']
+      }
+    }));
+  };
+
+  const removeSectionDirection = (sectionName: string, index: number) => {
+    setAdditionalSections(prev => ({
+      ...prev,
+      [sectionName]: {
+        ...prev[sectionName],
+        directions: prev[sectionName].directions.filter((_, i) => i !== index)
+      }
+    }));
+  };
+
   const parseSmartImport = (text: string) => {
     const lines = text.split('\n').filter(line => line.trim());
     
@@ -246,6 +339,7 @@ const AddRecipePage: React.FC = () => {
     let parsedIngredients: string[] = [];
     let parsedDirections: string[] = [];
     let parsedAdditionalInstructions: { [key: string]: string[] } = {};
+    let parsedAdditionalSections: { [key: string]: RecipeSection } = {};
 
     let currentSection = '';
     let currentAdditionalSection = '';
@@ -349,6 +443,7 @@ const AddRecipePage: React.FC = () => {
     setIngredients(parsedIngredients);
     setDirections(parsedDirections);
     setAdditionalInstructions(parsedAdditionalInstructions);
+    setAdditionalSections(parsedAdditionalSections);
     setShowSmartImport(false);
     setSmartImportText('');
   };
@@ -469,6 +564,19 @@ const AddRecipePage: React.FC = () => {
       setIsSaving(true);
       
       try {
+        // Filter additional sections to only include non-empty ones
+        const filteredAdditionalSections: { [key: string]: RecipeSection } = {};
+        Object.entries(additionalSections).forEach(([sectionName, section]) => {
+          const filteredIngredients = section.ingredients.filter(ing => ing.trim());
+          const filteredDirections = section.directions.filter(dir => dir.trim());
+          if (filteredIngredients.length > 0 || filteredDirections.length > 0) {
+            filteredAdditionalSections[sectionName] = {
+              ingredients: filteredIngredients,
+              directions: filteredDirections
+            };
+          }
+        });
+
         const newRecipe: RecipeInsert = {
           title: title.trim(),
           category,
@@ -477,6 +585,7 @@ const AddRecipePage: React.FC = () => {
           directions: filteredDirections,
           images,
           additional_instructions: Object.keys(additionalInstructions).length > 0 ? additionalInstructions : undefined,
+          additional_sections: Object.keys(filteredAdditionalSections).length > 0 ? filteredAdditionalSections : undefined,
           is_favorite: false
         };
 
@@ -541,6 +650,7 @@ const AddRecipePage: React.FC = () => {
           setDirections(['']);
           setImages([]);
           setAdditionalInstructions({});
+          setAdditionalSections({});
         });
         break;
     }
@@ -637,94 +747,116 @@ const AddRecipePage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <div className="flex justify-between items-center mb-6">
-            <h1 className="text-2xl font-bold text-gray-800">הוספת מתכון חדש</h1>
-            <button
-              onClick={() => setShowSmartImport(true)}
-              className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all"
-            >
-              <Sparkles className="w-5 h-5" />
-              יבוא חכם
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-rose-50 py-8">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-orange-100/50 overflow-hidden">
+          {/* Header Section */}
+          <div className="bg-gradient-to-r from-orange-500 to-rose-500 px-8 py-6 relative overflow-hidden">
+            <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
+            <div className="relative flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  שם המתכון *
-                </label>
-                <input
-                  type="text"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  placeholder="הכנס שם המתכון..."
-                  required
-                />
+                <h1 className="text-3xl font-bold text-white mb-2">הוספת מתכון חדש</h1>
+                <p className="text-orange-100 text-sm">צרו מתכון חדש בקלות ובאלגנטיות</p>
+              </div>
+              <button
+                onClick={() => setShowSmartImport(true)}
+                className="flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-6 py-3 rounded-xl hover:bg-white/30 transition-all duration-300 border border-white/30 shadow-lg"
+              >
+                <Sparkles className="w-5 h-5" />
+                יבוא חכם
+              </button>
+            </div>
+          </div>
+          
+          <div className="p-6">
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Basic Information Section */}
+            <div className="bg-gradient-to-r from-orange-50 to-rose-50 p-4 rounded-lg border border-orange-200">
+              <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                מידע בסיסי
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium text-gray-600">
+                    שם המתכון
+                  </label>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className="w-full p-2 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-orange-300 focus:border-orange-400 transition-all duration-150 text-sm"
+                    placeholder="הכנס שם המתכון..."
+                    required
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-medium text-gray-600">
+                    קטגוריה
+                  </label>
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="w-full p-2 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-orange-300 focus:border-orange-400 transition-all duration-150 text-sm"
+                    required
+                  >
+                    <option value="">בחר קטגוריה</option>
+                    {categories.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  קטגוריה *
+              <div className="mt-4 space-y-1.5">
+                <label className="block text-xs font-medium text-gray-600">
+                  רמת קושי
                 </label>
                 <select
-                  value={category}
-                  onChange={(e) => setCategory(e.target.value)}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  required
+                  value={difficulty}
+                  onChange={(e) => setDifficulty(e.target.value as "קל" | "בינוני" | "קשה" | "")}
+                  className="w-full md:w-1/2 p-2 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-orange-300 focus:border-orange-400 transition-all duration-150 text-sm"
                 >
-                  <option value="">בחר קטגוריה</option>
-                  {categories.map((cat) => (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </option>
-                  ))}
+                  <option value="">בחר רמת קושי</option>
+                  <option value="קל">קל</option>
+                  <option value="בינוני">בינוני</option>
+                  <option value="קשה">קשה</option>
                 </select>
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                רמת קושי
-              </label>
-              <select
-                value={difficulty}
-                onChange={(e) => setDifficulty(e.target.value as "קל" | "בינוני" | "קשה" | "")}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-              >
-                <option value="">בחר רמת קושי</option>
-                <option value="קל">קל</option>
-                <option value="בינוני">בינוני</option>
-                <option value="קשה">קשה</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                רכיבים *
-              </label>
+            {/* Ingredients Section */}
+            <div className="bg-gradient-to-r from-orange-50 to-rose-50 p-4 rounded-lg border border-orange-200">
+              <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                רכיבים
+              </h2>
               <div className="space-y-2">
                 {ingredients.map((ingredient, index) => (
-                  <div key={index} className="flex gap-2">
+                  <div key={index} className="flex gap-2 items-center group">
+                    <div className="flex-shrink-0 w-5 h-5 bg-orange-500 text-white rounded-full flex items-center justify-center text-xs font-medium">
+                      {index + 1}
+                    </div>
                     <input
                       ref={(el) => ingredientRefs.current[index] = el}
                       type="text"
                       value={ingredient}
                       onChange={(e) => updateIngredient(index, e.target.value)}
-                      className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                      className="flex-1 p-2 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-orange-300 focus:border-orange-400 transition-all duration-150 text-sm"
                       placeholder={`רכיב ${index + 1}`}
                     />
                     {ingredients.length > 1 && (
                       <button
                         type="button"
                         onClick={() => removeIngredient(index)}
-                        className="p-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100"
+                        title="הסר רכיב"
                       >
-                        <X className="w-5 h-5" />
+                        <X className="w-4 h-4" />
                       </button>
                     )}
                   </div>
@@ -732,41 +864,46 @@ const AddRecipePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={addIngredient}
-                  onMouseDown={(e) => e.preventDefault()} // Prevent focus on button click
-                  onTouchStart={(e) => e.preventDefault()} // Prevent focus on touch
-                  className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onTouchStart={(e) => e.preventDefault()}
+                  className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm"
                 >
-                  <Plus className="w-5 h-5" />
-                  הוסף רכיב
+                  <Plus className="w-4 h-4" />
+                  הוסף רכיב נוסף
                 </button>
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                הוראות הכנה *
-              </label>
+            {/* Directions Section */}
+            <div className="bg-gradient-to-r from-orange-50 to-rose-50 p-4 rounded-lg border border-orange-200">
+              <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                הוראות הכנה
+              </h2>
               <div className="space-y-2">
                 {directions.map((direction, index) => (
-                  <div key={index} className="flex gap-2">
-                    <div className="bg-orange-500 text-white rounded-full w-8 h-8 flex items-center justify-center text-sm font-semibold flex-shrink-0 mt-2">
+                  <div key={index} className="flex gap-2 group">
+                    <div className="bg-orange-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-1">
                       {index + 1}
                     </div>
-                    <textarea
-                      ref={(el) => directionRefs.current[index] = el}
-                      value={direction}
-                      onChange={(e) => updateDirection(index, e.target.value)}
-                      rows={2}
-                      className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                      placeholder={`שלב ${index + 1}`}
-                    />
+                    <div className="flex-1">
+                      <textarea
+                        ref={(el) => directionRefs.current[index] = el}
+                        value={direction}
+                        onChange={(e) => updateDirection(index, e.target.value)}
+                        rows={2}
+                        className="w-full p-2 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-orange-300 focus:border-orange-400 transition-all duration-150 resize-none text-sm"
+                        placeholder={`שלב ${index + 1}...`}
+                      />
+                    </div>
                     {directions.length > 1 && (
                       <button
                         type="button"
                         onClick={() => removeDirection(index)}
-                        className="p-3 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                        className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100 self-start mt-1"
+                        title="הסר שלב"
                       >
-                        <X className="w-5 h-5" />
+                        <X className="w-4 h-4" />
                       </button>
                     )}
                   </div>
@@ -774,92 +911,216 @@ const AddRecipePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={addDirection}
-                  onMouseDown={(e) => e.preventDefault()} // Prevent focus on button click
-                  onTouchStart={(e) => e.preventDefault()} // Prevent focus on touch
-                  className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onTouchStart={(e) => e.preventDefault()}
+                  className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm"
                 >
-                  <Plus className="w-5 h-5" />
-                  הוסף שלב
+                  <Plus className="w-4 h-4" />
+                  הוסף שלב נוסף
                 </button>
               </div>
+            </div>
+
+            {/* Additional Sections */}
+            {Object.keys(additionalSections).length > 0 && (
+              <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
+                <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
+                  חלקים נוספים
+                </h2>
+                <div className="space-y-3">
+                  {Object.entries(additionalSections).map(([sectionName, section]) => (
+                    <div key={sectionName} className="bg-white p-3 rounded-lg border border-purple-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-medium text-purple-900 text-sm flex items-center gap-2">
+                          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                          {sectionName}
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={() => removeNewSection(sectionName)}
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50 p-1 rounded-md transition-all duration-200"
+                          title={`הסר חלק ${sectionName}`}
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    
+                      <div className="grid md:grid-cols-2 gap-3">
+                        {/* Section Ingredients */}
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-purple-800 flex items-center gap-1 text-xs">
+                            <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
+                            מרכיבים ל{sectionName}
+                          </h4>
+                          <div className="space-y-2">
+                            {section.ingredients.map((ingredient, index) => (
+                              <div key={index} className="flex gap-2 items-center group">
+                                <div className="flex-shrink-0 w-4 h-4 bg-green-400 text-white rounded-full flex items-center justify-center text-xs font-medium">
+                                  {index + 1}
+                                </div>
+                                <input
+                                  type="text"
+                                  value={ingredient}
+                                  onChange={(e) => updateSectionIngredient(sectionName, index, e.target.value)}
+                                  className="flex-1 p-1.5 bg-gray-50 border border-gray-200 rounded-md focus:ring-1 focus:ring-purple-300 focus:border-purple-400 transition-all duration-150 text-sm"
+                                  placeholder={`רכיב ${index + 1}`}
+                                />
+                                {section.ingredients.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => removeSectionIngredient(sectionName, index)}
+                                    className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => addSectionIngredient(sectionName)}
+                              className="flex items-center gap-1 text-green-600 hover:text-green-700 font-medium text-xs bg-green-50 hover:bg-green-100 px-2 py-1 rounded-md transition-all duration-200 border border-green-200"
+                            >
+                              <Plus className="w-3 h-3" />
+                              הוסף רכיב
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Section Directions */}
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-purple-800 flex items-center gap-1 text-xs">
+                            <div className="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
+                            שלבי הכנה ל{sectionName}
+                          </h4>
+                          <div className="space-y-2">
+                            {section.directions.map((direction, index) => (
+                              <div key={index} className="flex gap-2 group">
+                                <div className="bg-blue-400 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-1">
+                                  {index + 1}
+                                </div>
+                                <textarea
+                                  value={direction}
+                                  onChange={(e) => updateSectionDirection(sectionName, index, e.target.value)}
+                                  rows={2}
+                                  className="flex-1 p-1.5 bg-gray-50 border border-gray-200 rounded-md focus:ring-1 focus:ring-purple-300 focus:border-purple-400 transition-all duration-150 text-sm resize-none"
+                                  placeholder={`שלב ${index + 1}`}
+                                />
+                                {section.directions.length > 1 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => removeSectionDirection(sectionName, index)}
+                                    className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100 self-start"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                            <button
+                              type="button"
+                              onClick={() => addSectionDirection(sectionName)}
+                              className="flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium text-xs bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-md transition-all duration-200 border border-blue-200"
+                            >
+                              <Plus className="w-3 h-3" />
+                              הוסף שלב
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {/* Add New Section Button */}
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={addNewSection}
+                className="flex items-center gap-2 text-green-600 hover:text-green-700 font-medium bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 px-4 py-3 rounded-lg transition-all duration-200 border border-dashed border-green-300 hover:border-green-400 mx-auto text-sm"
+              >
+                <Plus className="w-4 h-4" />
+                הוסף חלק חדש (עם מרכיבים ושלבים)
+              </button>
             </div>
 
             {/* Additional Instructions */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                הוראות נוספות (אופציונלי)
-              </label>
-              <p className="text-xs text-gray-500 mb-3">
-                הוסף חלקים נוספים כמו רוטב, בצק, מילוי וכו'
-              </p>
-              <div className="space-y-4">
-                {Object.entries(additionalInstructions).map(([sectionName, instructions]) => (
-                  <div key={sectionName} className="bg-gray-50 p-4 rounded-lg">
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-medium text-gray-900">{sectionName}</h4>
-                      <button
-                        type="button"
-                        onClick={() => removeAdditionalInstructionSection(sectionName)}
-                        className="text-red-600 hover:text-red-700"
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                    <div className="space-y-2">
-                      {instructions.map((instruction, index) => (
-                        <div key={index} className="flex gap-2">
-                          <div className="bg-orange-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-semibold flex-shrink-0 mt-2">
-                            {index + 1}
+            {Object.keys(additionalInstructions).length > 0 && (
+              <div className="bg-gradient-to-r from-yellow-50 to-amber-50 p-6 rounded-xl border border-yellow-100">
+                <h2 className="text-xl font-semibold text-gray-800 mb-6 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
+                  הוראות נוספות
+                </h2>
+                <div className="space-y-4">
+                  {Object.entries(additionalInstructions).map(([sectionName, instructions]) => (
+                    <div key={sectionName} className="bg-white p-5 rounded-xl border-2 border-yellow-200 shadow-sm">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="font-bold text-yellow-900 flex items-center gap-2">
+                          <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                          {sectionName}
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={() => removeAdditionalInstructionSection(sectionName)}
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50 p-2 rounded-xl transition-all duration-300"
+                          title={`הסר ${sectionName}`}
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="space-y-3">
+                        {instructions.map((instruction, index) => (
+                          <div key={index} className="flex gap-3 group">
+                            <div className="bg-yellow-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-1">
+                              {index + 1}
+                            </div>
+                            <textarea
+                              value={instruction}
+                              onChange={(e) => updateAdditionalInstruction(sectionName, index, e.target.value)}
+                              rows={2}
+                              className="flex-1 p-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-yellow-200 focus:border-yellow-300 transition-all duration-200 text-sm resize-none"
+                              placeholder={`שלב ${index + 1} ב${sectionName}`}
+                            />
+                            {instructions.length > 1 && (
+                              <button
+                                type="button"
+                                onClick={() => removeAdditionalInstructionStep(sectionName, index)}
+                                className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all duration-300 opacity-0 group-hover:opacity-100 self-start"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
-                          <textarea
-                            value={instruction}
-                            onChange={(e) => updateAdditionalInstruction(sectionName, index, e.target.value)}
-                            rows={2}
-                            className="flex-1 p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm"
-                            placeholder={`שלב ${index + 1} ב${sectionName}`}
-                          />
-                          {instructions.length > 1 && (
-                            <button
-                              type="button"
-                              onClick={() => removeAdditionalInstructionStep(sectionName, index)}
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      ))}
-                      <button
-                        type="button"
-                        onClick={() => addAdditionalInstructionStep(sectionName)}
-                        className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium text-sm"
-                      >
-                        <Plus className="w-4 h-4" />
-                        הוסף שלב ל{sectionName}
-                      </button>
+                        ))}
+                        <button
+                          type="button"
+                          onClick={() => addAdditionalInstructionStep(sectionName)}
+                          className="flex items-center gap-2 text-yellow-600 hover:text-yellow-700 font-medium text-sm bg-yellow-50 hover:bg-yellow-100 px-3 py-2 rounded-lg transition-all duration-300 border border-yellow-200"
+                        >
+                          <Plus className="w-4 h-4" />
+                          הוסף שלב ל{sectionName}
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-                
-                <button
-                  type="button"
-                  onClick={addAdditionalInstructionSection}
-                  className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium"
-                >
-                  <Plus className="w-5 h-5" />
-                  הוסף חלק הוראות חדש
-                </button>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
-            <div>
-              <label className="block text-sm font-bold text-gray-900 mb-2">
+
+            {/* Images Section */}
+            <div className="bg-gradient-to-r from-pink-50 to-purple-50 p-4 rounded-lg border border-pink-200">
+              <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-pink-500 rounded-full"></div>
                 תמונות (עד 6)
-              </label>
-              <div className="space-y-4">
-                <div className="flex gap-2 flex-wrap">
-                  <label className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 px-4 py-3 rounded-lg cursor-pointer transition-colors touch-manipulation text-sm font-medium min-h-[44px]">
-                    <Upload className="w-5 h-5 flex-shrink-0" />
+              </h2>
+              <div className="space-y-3">
+                <div className="flex gap-2 flex-wrap justify-center">
+                  <label className="flex items-center gap-2 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg cursor-pointer transition-all duration-200 border border-gray-200 hover:border-pink-300 font-medium text-gray-700 hover:text-pink-600 text-sm">
+                    <Upload className="w-4 h-4 flex-shrink-0" />
                     <span className="whitespace-nowrap">העלה</span>
                     <input
                       type="file"
@@ -870,8 +1131,8 @@ const AddRecipePage: React.FC = () => {
                       title="העלה"
                     />
                   </label>
-                  <label className="flex items-center gap-2 bg-gray-100 hover:bg-gray-200 active:bg-gray-300 px-4 py-3 rounded-lg cursor-pointer transition-colors touch-manipulation text-sm font-medium min-h-[44px]">
-                    <Camera className="w-5 h-5 flex-shrink-0" />
+                  <label className="flex items-center gap-2 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg cursor-pointer transition-all duration-200 border border-gray-200 hover:border-pink-300 font-medium text-gray-700 hover:text-pink-600 text-sm">
+                    <Camera className="w-4 h-4 flex-shrink-0" />
                     <span className="whitespace-nowrap">צלם</span>
                     <input
                       type="file"
@@ -885,61 +1146,77 @@ const AddRecipePage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowSmartImageSearch(true)}
-                    className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-3 rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all touch-manipulation text-sm font-medium min-h-[44px]"
+                    className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-2 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200 font-medium text-sm"
                     title="חיפוש חכם לתמונות"
                   >
-                    <Sparkles className="w-5 h-5 flex-shrink-0" />
+                    <Sparkles className="w-4 h-4 flex-shrink-0" />
                     <span className="whitespace-nowrap">חיפוש חכם</span>
                   </button>
                 </div>
 
                 {images.length > 0 && (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
                     {images.map((image, index) => (
-                      <div key={index} className="relative">
+                      <div key={index} className="relative group">
                         <img
                           src={image}
                           alt={`תמונה ${index + 1}`}
-                          className="w-full h-32 object-cover rounded-lg"
+                          className="w-full h-24 object-cover rounded-lg transition-all duration-200"
                         />
                         <button
                           type="button"
                           onClick={() => removeImage(index)}
-                          className="absolute top-2 right-2 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-700 transition-colors"
+                          className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center transition-all duration-200 opacity-0 group-hover:opacity-100"
+                          title="הסר תמונה"
                         >
-                          <X className="w-4 h-4" />
+                          <X className="w-3 h-3" />
                         </button>
                       </div>
                     ))}
                   </div>
                 )}
+
+                {images.length === 0 && (
+                  <div className="text-center py-4 text-gray-500">
+                    <Camera className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                    <p className="text-sm font-medium">לא נבחרו תמונות עדיין</p>
+                    <p className="text-xs">הוסף תמונות כדי להפוך את המתכון למושך יותר</p>
+                  </div>
+                )}
               </div>
             </div>
 
-            <div className="flex gap-4 pt-6">
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="flex-1 bg-orange-600 text-white py-3 px-6 rounded-lg hover:bg-orange-700 transition-colors font-medium disabled:bg-orange-300 disabled:cursor-not-allowed flex items-center justify-center space-x-2 rtl:space-x-reverse"
-              >
-                {isSaving ? (
-                  <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    <span>שומר...</span>
-                  </>
-                ) : (
-                  <span>שמור מתכון</span>
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate('/recipes')}
-                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                ביטול
-              </button>
+            {/* Submit Section */}
+            <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-lg border border-gray-200">
+              <div className="flex flex-col sm:flex-row gap-3">
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="flex-1 bg-gradient-to-r from-orange-500 to-rose-500 text-white py-3 px-6 rounded-lg hover:from-orange-600 hover:to-rose-600 transition-all duration-200 font-semibold disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+                >
+                  {isSaving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+                      <span>שומר מתכון...</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-1.5 h-1.5 bg-white rounded-full animate-pulse"></div>
+                      <span>שמור מתכון</span>
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/recipes')}
+                  className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-white hover:border-gray-400 transition-all duration-200 font-medium"
+                >
+                  ביטול
+                </button>
+              </div>
             </div>
           </form>
+          </div>
         </div>
       </div>
 
@@ -1111,6 +1388,49 @@ const AddRecipePage: React.FC = () => {
               </button>
               <button
                 onClick={handleCancelSection}
+                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base"
+              >
+                ביטול
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* New Section Modal (with ingredients and directions) */}
+      {showNewSectionModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
+          <div className="bg-white rounded-lg max-w-md w-full p-4 sm:p-6 mx-2 sm:mx-0">
+            <h3 className="text-lg font-semibold mb-4 text-blue-900">הוסף חלק חדש עם מרכיבים</h3>
+            <p className="text-gray-600 mb-4 text-sm sm:text-base">הכנס שם לחלק החדש (למשל: רוטב, בצק, מילוי, קרם):</p>
+            <input
+              type="text"
+              value={newSectionNameWithIngredients}
+              onChange={(e) => setNewSectionNameWithIngredients(e.target.value)}
+              className="w-full p-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4 text-base"
+              placeholder="שם החלק..."
+              autoFocus
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  handleAddNewSection();
+                }
+              }}
+            />
+            <div className="bg-blue-50 p-3 rounded-lg mb-4">
+              <p className="text-xs text-blue-700">
+                חלק זה יכלול גם מרכיבים וגם שלבי הכנה נפרדים
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={handleAddNewSection}
+                disabled={!newSectionNameWithIngredients.trim()}
+                className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed text-sm sm:text-base"
+              >
+                הוסף חלק
+              </button>
+              <button
+                onClick={handleCancelNewSection}
                 className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base"
               >
                 ביטול
