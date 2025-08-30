@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Heart, Images, Edit, Trash2, Share2, Eye } from 'lucide-react';
+import { Heart, Images, Edit, Trash2, Share2 } from 'lucide-react';
 import { Recipe, ViewMode } from '../../types/recipe';
 import { useRecipes } from '../../contexts/RecipeContext';
 import { useProtectedAction } from '../../hooks/useProtectedAction';
@@ -43,6 +43,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
   const [showMobileOptions, setShowMobileOptions] = useState(false);
   const [showDesktopOptions, setShowDesktopOptions] = useState(false);
   const [isLongPress, setIsLongPress] = useState(false);
+  const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   // Better mobile detection - check for touch support instead of screen width
   const [isMobile, setIsMobile] = useState(() => {
@@ -64,9 +65,16 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
   const handleTouchStart = () => {
     if (!isMobile) return;
     
+    // Hide options for other recipes when starting a new long press
+    if (selectedRecipeId && selectedRecipeId !== recipe.id) {
+      setShowMobileOptions(false);
+      setSelectedRecipeId(null);
+    }
+    
     longPressTimer.current = setTimeout(() => {
       setIsLongPress(true);
       setShowMobileOptions(true);
+      setSelectedRecipeId(recipe.id);
     }, 500); // 500ms for long press
   };
 
@@ -98,9 +106,17 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
   };
 
   const handleCardClick = () => {
-    if (showMobileOptions) {
+    // If this is a different recipe and another recipe has options showing, hide them
+    if (selectedRecipeId && selectedRecipeId !== recipe.id) {
+      setShowMobileOptions(false);
+      setShowDesktopOptions(false);
+      setSelectedRecipeId(null);
+    }
+    
+    if (showMobileOptions && selectedRecipeId === recipe.id) {
       setShowMobileOptions(false);
       setIsLongPress(false);
+      setSelectedRecipeId(null);
       return;
     }
     
@@ -117,6 +133,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
     setShowMobileOptions(false);
     setShowDesktopOptions(false);
     setIsLongPress(false);
+    setSelectedRecipeId(null);
     
     switch (action) {
       case 'edit':
@@ -162,14 +179,42 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
     }
   };
 
-  // Cleanup timer on unmount
+  // Cleanup timer on unmount and handle outside clicks
   useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      // If clicking outside and this recipe has options showing, hide them
+      if (showMobileOptions && selectedRecipeId === recipe.id) {
+        const target = event.target as HTMLElement;
+        const cardElement = target.closest('[data-recipe-id]');
+        const clickedRecipeId = cardElement?.getAttribute('data-recipe-id');
+        
+        if (clickedRecipeId !== recipe.id) {
+          setShowMobileOptions(false);
+          setShowDesktopOptions(false);
+          setSelectedRecipeId(null);
+        }
+      }
+    };
+
+    const handleScroll = () => {
+      if (showMobileOptions || showDesktopOptions) {
+        setShowMobileOptions(false);
+        setShowDesktopOptions(false);
+        setSelectedRecipeId(null);
+      }
+    };
+
+    document.addEventListener('click', handleClickOutside);
+    window.addEventListener('scroll', handleScroll, true);
+    
     return () => {
       if (longPressTimer.current) {
         clearTimeout(longPressTimer.current);
       }
+      document.removeEventListener('click', handleClickOutside);
+      window.removeEventListener('scroll', handleScroll, true);
     };
-  }, []);
+  }, [showMobileOptions, showDesktopOptions, selectedRecipeId, recipe.id]);
 
   const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -209,6 +254,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
     return (
       <div 
         className="block"
+        data-recipe-id={recipe.id}
         onClick={handleCardClick}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
@@ -225,6 +271,45 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
             </div>
             
             <div className="flex items-center space-x-2 rtl:space-x-reverse ml-3 rtl:mr-3 rtl:ml-0">
+              {/* Action buttons - shown to the right of category on hover/long press */}
+              {(showMobileOptions || showDesktopOptions) && (
+                <div className="flex items-center space-x-1 rtl:space-x-reverse">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOptionClick('edit');
+                    }}
+                    className="w-7 h-7 min-w-[28px] min-h-[28px] flex items-center justify-center rounded-full bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all duration-200 flex-shrink-0"
+                    style={{ width: '28px', height: '28px', minWidth: '28px', minHeight: '28px' }}
+                    title="ערוך מתכון"
+                  >
+                    <Edit className="h-3.5 w-3.5 flex-shrink-0" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOptionClick('share');
+                    }}
+                    className="w-7 h-7 min-w-[28px] min-h-[28px] flex items-center justify-center rounded-full bg-green-50 text-green-600 hover:bg-green-100 transition-all duration-200 flex-shrink-0"
+                    style={{ width: '28px', height: '28px', minWidth: '28px', minHeight: '28px' }}
+                    title="שתף מתכון"
+                  >
+                    <Share2 className="h-3.5 w-3.5 flex-shrink-0" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOptionClick('delete');
+                    }}
+                    className="w-7 h-7 min-w-[28px] min-h-[28px] flex items-center justify-center rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-all duration-200 flex-shrink-0"
+                    style={{ width: '28px', height: '28px', minWidth: '28px', minHeight: '28px' }}
+                    title="מחק מתכון"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 flex-shrink-0" />
+                  </button>
+                </div>
+              )}
+              
               <span className={`text-xs px-1.5 py-0.5 rounded ${getCategoryColor(recipe.category)}`}>
                 <div className="flex items-center space-x-1 rtl:space-x-reverse">
                   <span className="text-xs">{getCategoryIllustration(recipe.category)}</span>
@@ -232,132 +317,25 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                 </div>
               </span>
               
-              {/* Desktop hover options (right side) */}
-              {!isMobile && showDesktopOptions && (
-                <div className="flex items-center space-x-1 rtl:space-x-reverse">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOptionClick('edit');
-                    }}
-                    className="p-1.5 rounded-full bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all duration-200"
-                    title="ערוך מתכון"
-                  >
-                    <Edit className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOptionClick('share');
-                    }}
-                    className="p-1.5 rounded-full bg-green-50 text-green-600 hover:bg-green-100 transition-all duration-200"
-                    title="שתף מתכון"
-                  >
-                    <Share2 className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOptionClick('delete');
-                    }}
-                    className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-all duration-200"
-                    title="מחק מתכון"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              )}
-              
-              {/* Heart icon or Mobile options */}
-              {!(isMobile && showMobileOptions) ? (
-                <button
-                  onClick={handleFavoriteClick}
-                  className="p-1.5 rounded-full hover:bg-gray-100 transition-all duration-200 heart-button transform hover:scale-110 active:scale-95"
-                >
-                  <Heart
-                    className={`h-4 w-4 transition-all duration-200 ${
-                      recipe.is_favorite 
-                        ? 'fill-red-500 text-red-500 scale-110' 
-                        : 'text-gray-600 hover:text-red-400'
-                    }`}
-                  />
-                </button>
-              ) : (
-                <div className="flex items-center space-x-1 rtl:space-x-reverse">
-                  <button
-                    onClick={() => handleOptionClick('edit')}
-                    className="p-1.5 rounded-full bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all duration-200"
-                    title="ערוך מתכון"
-                  >
-                    <Edit className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    onClick={() => handleOptionClick('share')}
-                    className="p-1.5 rounded-full bg-green-50 text-green-600 hover:bg-green-100 transition-all duration-200"
-                    title="שתף מתכון"
-                  >
-                    <Share2 className="h-3.5 w-3.5" />
-                  </button>
-                  <button
-                    onClick={() => handleOptionClick('delete')}
-                    className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-all duration-200"
-                    title="מחק מתכון"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              )}
+              {/* Heart icon - always visible, in the rightmost position */}
+              <button
+                onClick={handleFavoriteClick}
+                className="w-7 h-7 min-w-[28px] min-h-[28px] flex items-center justify-center rounded-full hover:bg-gray-100 transition-all duration-200 heart-button transform hover:scale-110 active:scale-95 flex-shrink-0"
+                style={{ width: '28px', height: '28px', minWidth: '28px', minHeight: '28px' }}
+              >
+                <Heart
+                  className={`h-4 w-4 flex-shrink-0 transition-all duration-200 ${
+                    recipe.is_favorite 
+                      ? 'fill-red-500 text-red-500 scale-110' 
+                      : 'text-gray-600 hover:text-red-400'
+                  }`}
+                />
+              </button>
             </div>
           </div>
         </div>
         
-        {/* Mobile Options Overlay */}
-        {showMobileOptions && isMobile && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 mx-4 max-w-sm w-full">
-              <h3 className="text-lg font-semibold text-center mb-4">{recipe.title}</h3>
-              <div className="space-y-3">
-                <button
-                  onClick={() => navigate(`/recipe/${recipe.id}`)}
-                  className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse p-3 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"
-                >
-                  <Eye className="h-5 w-5" />
-                  <span>פתח מתכון</span>
-                </button>
-                <button
-                  onClick={() => executeProtectedAction(() => navigate(`/edit/${recipe.id}`))}
-                  className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse p-3 bg-yellow-50 text-yellow-600 rounded-lg hover:bg-yellow-100"
-                >
-                  <Edit className="h-5 w-5" />
-                  <span>ערוך מתכון</span>
-                </button>
-                <button
-                  onClick={handleShare}
-                  className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse p-3 bg-green-50 text-green-600 rounded-lg hover:bg-green-100"
-                >
-                  <Share2 className="h-5 w-5" />
-                  <span>שתף מתכון</span>
-                </button>
-                <button
-                  onClick={handleDelete}
-                  className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse p-3 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
-                >
-                  <Trash2 className="h-5 w-5" />
-                  <span>מחק מתכון</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setShowMobileOptions(false);
-                    setIsLongPress(false);
-                  }}
-                  className="w-full p-3 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200"
-                >
-                  ביטול
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+
       </div>
     );
   }
@@ -365,6 +343,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
     return (
       <div 
         className="block h-full select-none touch-manipulation"
+        data-recipe-id={recipe.id}
         onClick={handleCardClick}
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
@@ -449,11 +428,14 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
               />
             </button>
 
-            {/* Mobile options - 3 buttons like medium view */}
-            {isMobile && showMobileOptions && (
+            {/* Mobile/Desktop options - 3 buttons like medium view */}
+            {(showMobileOptions || showDesktopOptions) && (
               <div className="absolute top-3 right-3 rtl:left-3 rtl:right-auto flex items-center space-x-2 rtl:space-x-reverse z-20">
                 <button
-                  onClick={() => handleOptionClick('edit')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOptionClick('edit');
+                  }}
                   className="bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
                   style={{ width: '40px', height: '40px', minWidth: '40px', minHeight: '40px' }}
                   title="ערוך מתכון"
@@ -461,7 +443,10 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                   <Edit className="h-5 w-5" />
                 </button>
                 <button
-                  onClick={() => handleOptionClick('share')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOptionClick('share');
+                  }}
                   className="bg-green-50 text-green-600 hover:bg-green-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
                   style={{ width: '40px', height: '40px', minWidth: '40px', minHeight: '40px' }}
                   title="שתף מתכון"
@@ -469,7 +454,10 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                   <Share2 className="h-5 w-5" />
                 </button>
                 <button
-                  onClick={() => handleOptionClick('delete')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOptionClick('delete');
+                  }}
                   className="bg-red-50 text-red-600 hover:bg-red-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
                   style={{ width: '40px', height: '40px', minWidth: '40px', minHeight: '40px' }}
                   title="מחק מתכון"
@@ -532,24 +520,28 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
               </div>
             )}
             
-            {/* Heart icon (top left) or Mobile options */}
-            {!(isMobile && showMobileOptions) ? (
-              <button
-                onClick={handleFavoriteClick}
-                className="absolute top-3 left-3 rtl:right-3 rtl:left-auto w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full shadow-md hover:bg-white transition-all duration-200 flex items-center justify-center heart-button transform hover:scale-110 active:scale-95"
-              >
-                <Heart
-                  className={`h-5 w-5 transition-all duration-200 ${
-                    recipe.is_favorite 
-                      ? 'fill-red-500 text-red-500 scale-110' 
-                      : 'text-gray-600 hover:text-red-400'
-                  }`}
-                />
-              </button>
-            ) : (
-              <div className="absolute top-3 right-3 rtl:left-3 rtl:right-auto flex items-center space-x-2 rtl:space-x-reverse">
+            {/* Heart icon (top left) */}
+            <button
+              onClick={handleFavoriteClick}
+              className="absolute top-3 left-3 rtl:right-3 rtl:left-auto w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full shadow-md hover:bg-white transition-all duration-200 flex items-center justify-center heart-button transform hover:scale-110 active:scale-95 z-20"
+            >
+              <Heart
+                className={`h-5 w-5 transition-all duration-200 ${
+                  recipe.is_favorite 
+                    ? 'fill-red-500 text-red-500 scale-110' 
+                    : 'text-gray-600 hover:text-red-400'
+                }`}
+              />
+            </button>
+            
+            {/* Mobile/Desktop options - 3 buttons like medium view */}
+            {(showMobileOptions || showDesktopOptions) && (
+              <div className="absolute top-3 right-3 rtl:left-3 rtl:right-auto flex items-center space-x-2 rtl:space-x-reverse z-20">
                 <button
-                  onClick={() => handleOptionClick('edit')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOptionClick('edit');
+                  }}
                   className="bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
                   style={{ width: '40px', height: '40px', minWidth: '40px', minHeight: '40px' }}
                   title="ערוך מתכון"
@@ -557,7 +549,10 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                   <Edit className="h-5 w-5" />
                 </button>
                 <button
-                  onClick={() => handleOptionClick('share')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOptionClick('share');
+                  }}
                   className="bg-green-50 text-green-600 hover:bg-green-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
                   style={{ width: '40px', height: '40px', minWidth: '40px', minHeight: '40px' }}
                   title="שתף מתכון"
@@ -565,7 +560,10 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                   <Share2 className="h-5 w-5" />
                 </button>
                 <button
-                  onClick={() => handleOptionClick('delete')}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleOptionClick('delete');
+                  }}
                   className="bg-red-50 text-red-600 hover:bg-red-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
                   style={{ width: '40px', height: '40px', minWidth: '40px', minHeight: '40px' }}
                   title="מחק מתכון"
@@ -600,6 +598,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
   return (
     <div 
       className="block h-full select-none touch-manipulation"
+      data-recipe-id={recipe.id}
       onClick={handleCardClick}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
@@ -670,8 +669,8 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
             </div>
           )}
           
-          {/* Heart icon (top left) or Mobile options */}
-          {!(isMobile && showMobileOptions) ? (
+          {/* Heart icon (top left) or Mobile/Desktop options */}
+          {!(showMobileOptions || showDesktopOptions) ? (
             <button
               onClick={handleFavoriteClick}
               className="absolute top-2 left-2 rtl:right-2 rtl:left-auto w-9 h-9 bg-white/90 backdrop-blur-md rounded-full shadow-md hover:shadow-lg hover:bg-white transition-all duration-300 flex items-center justify-center heart-button transform hover:scale-110 active:scale-95 border border-white/30 z-20"
@@ -685,9 +684,12 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
               />
             </button>
           ) : (
-            <div className="absolute top-2 right-2 rtl:left-2 rtl:right-auto flex items-center space-x-1 rtl:space-x-reverse">
+            <div className="absolute top-2 right-2 rtl:left-2 rtl:right-auto flex items-center space-x-1 rtl:space-x-reverse z-20">
               <button
-                onClick={() => handleOptionClick('edit')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOptionClick('edit');
+                }}
                 className="bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
                 style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }}
                 title="ערוך מתכון"
@@ -695,7 +697,10 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                 <Edit className="h-3 w-3" />
               </button>
               <button
-                onClick={() => handleOptionClick('share')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOptionClick('share');
+                }}
                 className="bg-green-50 text-green-600 hover:bg-green-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
                 style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }}
                 title="שתף מתכון"
@@ -703,7 +708,10 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                 <Share2 className="h-3 w-3" />
               </button>
               <button
-                onClick={() => handleOptionClick('delete')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOptionClick('delete');
+                }}
                 className="bg-red-50 text-red-600 hover:bg-red-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
                 style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }}
                 title="מחק מתכון"
@@ -766,11 +774,11 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
             </div>
           )}
           
-          {/* Heart icon (top left) or Mobile options */}
-          {!(isMobile && showMobileOptions) ? (
+          {/* Heart icon (top left) or Mobile/Desktop options */}
+          {!(showMobileOptions || showDesktopOptions) ? (
             <button
               onClick={handleFavoriteClick}
-              className="absolute top-2 left-2 rtl:right-2 rtl:left-auto w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full shadow-md hover:bg-white transition-all duration-200 flex items-center justify-center heart-button transform hover:scale-110 active:scale-95"
+              className="absolute top-2 left-2 rtl:right-2 rtl:left-auto w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full shadow-md hover:bg-white transition-all duration-200 flex items-center justify-center heart-button transform hover:scale-110 active:scale-95 z-20"
             >
               <Heart
                 className={`h-4 w-4 transition-all duration-200 ${
@@ -781,9 +789,12 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
               />
             </button>
           ) : (
-            <div className="absolute top-2 right-2 rtl:left-2 rtl:right-auto flex items-center space-x-1 rtl:space-x-reverse">
+            <div className="absolute top-2 right-2 rtl:left-2 rtl:right-auto flex items-center space-x-1 rtl:space-x-reverse z-20">
               <button
-                onClick={() => handleOptionClick('edit')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOptionClick('edit');
+                }}
                 className="bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
                 style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }}
                 title="ערוך מתכון"
@@ -791,7 +802,10 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                 <Edit className="h-3 w-3" />
               </button>
               <button
-                onClick={() => handleOptionClick('share')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOptionClick('share');
+                }}
                 className="bg-green-50 text-green-600 hover:bg-green-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
                 style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }}
                 title="שתף מתכון"
@@ -799,7 +813,10 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                 <Share2 className="h-3 w-3" />
               </button>
               <button
-                onClick={() => handleOptionClick('delete')}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleOptionClick('delete');
+                }}
                 className="bg-red-50 text-red-600 hover:bg-red-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
                 style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }}
                 title="מחק מתכון"
