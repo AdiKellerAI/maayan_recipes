@@ -14,7 +14,7 @@ interface CircleConfig {
   opacity: number;
   animation: string;
   delay: string;
-  fadeInDelay: string;
+  fadeInDelay: number;
 }
 
 const LandingPage: React.FC = () => {
@@ -24,6 +24,7 @@ const LandingPage: React.FC = () => {
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [hasPreloaded, setHasPreloaded] = useState(false);
+  const [visibleCircles, setVisibleCircles] = useState<Set<string>>(new Set());
 
   // Circle properties arrays to maintain existing visual variety
   const circleColors = [
@@ -57,13 +58,10 @@ const LandingPage: React.FC = () => {
     'delay-800', 'delay-900', 'delay-1000', 'delay-1100', 'delay-1200', 'delay-1350', 'delay-1450'
   ];
 
-  // Fade-in animation delays (random timing up to 2 seconds)
+  // Fade-in animation delays (random timing up to 2 seconds in milliseconds)
   const fadeInDelays = [
-    'animate-fade-in-0', 'animate-fade-in-100', 'animate-fade-in-200', 'animate-fade-in-300', 
-    'animate-fade-in-400', 'animate-fade-in-500', 'animate-fade-in-600', 'animate-fade-in-700',
-    'animate-fade-in-800', 'animate-fade-in-900', 'animate-fade-in-1000', 'animate-fade-in-1100',
-    'animate-fade-in-1200', 'animate-fade-in-1300', 'animate-fade-in-1400', 'animate-fade-in-1500',
-    'animate-fade-in-1600', 'animate-fade-in-1700', 'animate-fade-in-1800', 'animate-fade-in-1900', 'animate-fade-in-2000'
+    0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100,
+    1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000
   ];
 
   // Generate uniformly distributed circles using useMemo to prevent regeneration on re-renders
@@ -255,6 +253,22 @@ const LandingPage: React.FC = () => {
     };
   }, []);
 
+  // Handle fade-in animation for circles
+  useEffect(() => {
+    const timeouts: NodeJS.Timeout[] = [];
+    
+    backgroundCircles.forEach((circle) => {
+      const timeout = setTimeout(() => {
+        setVisibleCircles(prev => new Set([...prev, circle.id]));
+      }, circle.fadeInDelay);
+      timeouts.push(timeout);
+    });
+    
+    return () => {
+      timeouts.forEach(timeout => clearTimeout(timeout));
+    };
+  }, [backgroundCircles]);
+
   // Preload recipes from all categories for faster navigation
   useEffect(() => {
     if (!hasPreloaded) {
@@ -283,12 +297,12 @@ const LandingPage: React.FC = () => {
         {backgroundCircles.map((circle) => (
           <div
             key={circle.id}
-            className={`absolute rounded-full shadow-lg animate-pulse ${circle.size} ${circle.color} ${circle.animation} ${circle.delay} ${circle.fadeInDelay}`}
+            className={`absolute rounded-full shadow-lg animate-pulse ${circle.size} ${circle.color} ${circle.animation} ${circle.delay} circle-fade-in ${visibleCircles.has(circle.id) ? 'visible' : ''}`}
             style={{
               left: `${circle.x}px`,
               top: `${circle.y}px`,
-              opacity: circle.opacity,
-            }}
+              '--circle-opacity': circle.opacity,
+            } as React.CSSProperties & { '--circle-opacity': number }}
           />
         ))}
       </div>

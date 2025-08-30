@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Heart, ChefHat, Images, Edit, Trash2, Share2, Eye } from 'lucide-react';
+import { Heart, Images, Edit, Trash2, Share2, Eye } from 'lucide-react';
 import { Recipe, ViewMode } from '../../types/recipe';
 import { useRecipes } from '../../contexts/RecipeContext';
 import { useProtectedAction } from '../../hooks/useProtectedAction';
@@ -368,30 +368,39 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-        <div className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden h-full flex flex-col">
+        <div className="group bg-white/80 backdrop-blur-sm border border-white/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-amber-500/10 transition-all duration-500 cursor-pointer overflow-hidden h-full flex flex-col transform hover:scale-[1.02] hover:-translate-y-2 before:absolute before:inset-0 before:rounded-2xl before:bg-gradient-to-br before:from-white/10 before:to-transparent before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-500 relative">
         {primaryImage ? (
-          <div className="relative h-48 sm:h-56 md:h-64 overflow-hidden">
+          <div className="relative h-56 sm:h-64 md:h-72 overflow-hidden rounded-t-2xl">
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-400/20 via-transparent to-purple-600/20 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
             <img
               src={primaryImage}
               alt={recipe.title}
-              className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+              className="w-full h-full object-cover transition-all duration-500 group-hover:scale-110 group-hover:brightness-110"
             />
+            {/* Category badge - bottom left */}
+            <div className={`absolute bottom-4 left-4 rtl:left-4 rtl:right-auto px-3 py-2 rounded-full text-xs font-medium text-black shadow-lg z-20 backdrop-blur-md border border-white/30 ${getCategoryColor(recipe.category)} bg-opacity-80`}>
+              <div className="flex items-center space-x-1 rtl:space-x-reverse">
+                <span className="text-sm">{getCategoryIllustration(recipe.category)}</span>
+                <span>{categories.find(c => c.id === recipe.category)?.name || recipe.category}</span>
+              </div>
+            </div>
+
             {recipe.images && recipe.images.length > 1 && (
-              <div className="absolute bottom-3 left-3 rtl:right-3 rtl:left-auto bg-black/60 backdrop-blur-sm text-white px-2 py-1 rounded-full text-xs flex items-center space-x-1 rtl:space-x-reverse">
-                <Images className="h-3 w-3" />
-                <span>{imageCount}</span>
+              <div className="absolute bottom-4 right-4 rtl:left-4 rtl:right-auto bg-black/40 backdrop-blur-md text-white px-3 py-2 rounded-full text-xs flex items-center space-x-1 rtl:space-x-reverse border border-white/20 shadow-lg z-20">
+                <Images className="h-3.5 w-3.5" />
+                <span className="font-medium">{imageCount}</span>
               </div>
             )}
             
             {/* Desktop hover options (top right) */}
             {!isMobile && showDesktopOptions && (
-              <div className="absolute top-3 right-3 rtl:left-3 rtl:right-auto flex items-center space-x-2 rtl:space-x-reverse">
+              <div className="absolute top-4 right-4 rtl:left-4 rtl:right-auto flex items-center space-x-2 rtl:space-x-reverse z-20">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     handleOptionClick('edit');
                   }}
-                  className="w-10 h-10 bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center"
+                  className="w-11 h-11 bg-gradient-to-br from-amber-400 to-amber-500 text-white hover:from-amber-500 hover:to-amber-600 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center backdrop-blur-sm border border-white/20 transform hover:scale-110"
                   title="ערוך מתכון"
                 >
                   <Edit className="h-5 w-5" />
@@ -401,7 +410,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                     e.stopPropagation();
                     handleOptionClick('share');
                   }}
-                  className="w-10 h-10 bg-green-50 text-green-600 hover:bg-green-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center"
+                  className="w-11 h-11 bg-gradient-to-br from-emerald-400 to-emerald-500 text-white hover:from-emerald-500 hover:to-emerald-600 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center backdrop-blur-sm border border-white/20 transform hover:scale-110"
                   title="שתף מתכון"
                 >
                   <Share2 className="h-5 w-5" />
@@ -411,7 +420,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                     e.stopPropagation();
                     handleOptionClick('delete');
                   }}
-                  className="w-10 h-10 bg-red-50 text-red-600 hover:bg-red-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center"
+                  className="w-11 h-11 bg-gradient-to-br from-rose-400 to-rose-500 text-white hover:from-rose-500 hover:to-rose-600 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center backdrop-blur-sm border border-white/20 transform hover:scale-110"
                   title="מחק מתכון"
                 >
                   <Trash2 className="h-5 w-5" />
@@ -423,13 +432,13 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
             {!(isMobile && showMobileOptions) ? (
               <button
                 onClick={handleFavoriteClick}
-                className="absolute top-3 left-3 rtl:right-3 rtl:left-auto w-10 h-10 bg-white/90 backdrop-blur-sm rounded-full shadow-md hover:bg-white transition-all duration-200 flex items-center justify-center heart-button transform hover:scale-110 active:scale-95"
+                className="absolute top-4 left-4 rtl:right-4 rtl:left-auto w-12 h-12 bg-white/90 backdrop-blur-md rounded-full shadow-lg hover:shadow-xl hover:bg-white transition-all duration-300 flex items-center justify-center heart-button transform hover:scale-110 active:scale-95 border border-white/30 z-20"
               >
                 <Heart
-                  className={`h-5 w-5 transition-all duration-200 ${
+                  className={`h-6 w-6 transition-all duration-300 ${
                     recipe.is_favorite 
-                      ? 'fill-red-500 text-red-500 scale-110' 
-                      : 'text-gray-600 hover:text-red-400'
+                      ? 'fill-rose-500 text-rose-500 scale-110 drop-shadow-sm' 
+                      : 'text-gray-600 hover:text-rose-400 hover:scale-105'
                   }`}
                 />
               </button>
@@ -460,9 +469,18 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
             )}
           </div>
         ) : (
-          <div className={`relative h-48 sm:h-56 md:h-64 flex items-center justify-center ${getCategoryColor(recipe.category)}`}>
-            <div className="text-8xl opacity-70">
+          <div className={`relative h-56 sm:h-64 md:h-72 flex items-center justify-center rounded-t-2xl ${getCategoryColor(recipe.category)} bg-gradient-to-br from-white/50 to-transparent`}>
+            <div className="absolute inset-0 bg-gradient-to-br from-amber-400/10 via-transparent to-purple-600/10 rounded-t-2xl"></div>
+            <div className="text-9xl opacity-80 filter drop-shadow-lg relative z-10">
               {getCategoryIllustration(recipe.category)}
+            </div>
+            
+            {/* Category badge - bottom left */}
+            <div className={`absolute bottom-4 left-4 rtl:left-4 rtl:right-auto px-3 py-2 rounded-full text-xs font-medium text-black shadow-lg z-20 backdrop-blur-md border border-white/30 ${getCategoryColor(recipe.category)} bg-opacity-90`}>
+              <div className="flex items-center space-x-1 rtl:space-x-reverse">
+                <span className="text-sm">{getCategoryIllustration(recipe.category)}</span>
+                <span>{categories.find(c => c.id === recipe.category)?.name || recipe.category}</span>
+              </div>
             </div>
             {/* Desktop hover options (top right) */}
             {!isMobile && showDesktopOptions && (
@@ -542,24 +560,18 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
           </div>
         )}
         
-        <div className="p-4 sm:p-6 flex-1 flex flex-col">
-          <div className="flex-1 transform transition-transform duration-300 hover:scale-[1.02]">
-            <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 line-clamp-2">
+        {/* Elegant separator */}
+        <div className="relative">
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/40 to-transparent"></div>
+          <div className="absolute inset-x-0 top-0 h-2 bg-gradient-to-b from-amber-50/30 to-transparent"></div>
+        </div>
+        
+        <div className="p-6 flex-1 flex flex-col relative min-h-0">
+          <div className="absolute inset-0 bg-gradient-to-br from-gray-50/30 via-white/50 to-amber-50/20 rounded-b-2xl"></div>
+          <div className="flex-1 relative z-10 flex flex-col justify-center">
+            <h3 className="text-xl font-bold text-gray-900 line-clamp-3 leading-relaxed tracking-wide text-center">
               {recipe.title}
             </h3>
-          </div>
-          
-          <div className="flex items-center justify-between text-sm text-gray-500 mt-auto">
-            <div className="flex items-center space-x-4">
-              {/* Removed servings as it doesn't exist in Recipe type */}
-            </div>
-            
-            <div className="flex items-center">
-              <ChefHat className="h-4 w-4 mr-1" />
-              <span className={`text-xs px-2 py-1 rounded-full ${getCategoryColor(recipe.category)}`}>
-                {categories.find(c => c.id === recipe.category)?.name || recipe.category}
-              </span>
-            </div>
           </div>
         </div>
         </div>
@@ -626,53 +638,62 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-all duration-300 cursor-pointer overflow-hidden h-full flex flex-col transform hover:scale-[1.02] hover:-translate-y-1">
+      <div className="group bg-white/85 backdrop-blur-sm border border-white/30 rounded-xl shadow-md hover:shadow-xl hover:shadow-amber-500/10 transition-all duration-400 cursor-pointer overflow-hidden h-full flex flex-col transform hover:scale-[1.03] hover:-translate-y-2 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-br before:from-white/20 before:to-transparent before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-400 relative">
       {primaryImage ? (
-        <div className="relative h-24 sm:h-28 md:h-32 overflow-hidden">
+        <div className="relative h-32 sm:h-36 md:h-40 overflow-hidden rounded-t-xl">
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-400/15 via-transparent to-purple-600/15 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-400"></div>
           <img
             src={primaryImage}
             alt={recipe.title}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover transition-all duration-400 group-hover:scale-105 group-hover:brightness-105"
           />
+          {/* Category badge - bottom left */}
+          <div className={`absolute bottom-2 left-2 rtl:left-2 rtl:right-auto px-2 py-1 rounded-full text-xs font-medium text-black shadow-md z-20 backdrop-blur-md border border-white/30 ${getCategoryColor(recipe.category)} bg-opacity-80`}>
+            <div className="flex items-center space-x-1 rtl:space-x-reverse">
+              <span className="text-xs">{getCategoryIllustration(recipe.category)}</span>
+              <span className="text-xs">{categories.find(c => c.id === recipe.category)?.name || recipe.category}</span>
+            </div>
+          </div>
+
           {recipe.images && recipe.images.length > 1 && (
-            <div className="absolute bottom-1 left-1 rtl:right-1 rtl:left-auto bg-black/60 backdrop-blur-sm text-white px-1.5 py-0.5 rounded-full text-xs flex items-center space-x-1 rtl:space-x-reverse">
-              <Images className="h-2.5 w-2.5" />
-              <span>{imageCount}</span>
+            <div className="absolute bottom-2 right-2 rtl:left-2 rtl:right-auto bg-black/40 backdrop-blur-md text-white px-2 py-1 rounded-full text-xs flex items-center space-x-1 rtl:space-x-reverse border border-white/20 shadow-md z-20">
+              <Images className="h-3 w-3" />
+              <span className="font-medium">{imageCount}</span>
             </div>
           )}
           
           {/* Desktop hover options (top right) */}
           {!isMobile && showDesktopOptions && (
-            <div className="absolute top-2 right-2 rtl:left-2 rtl:right-auto flex items-center space-x-1 rtl:space-x-reverse">
+            <div className="absolute top-2 right-2 rtl:left-2 rtl:right-auto flex items-center space-x-1 rtl:space-x-reverse z-20">
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   handleOptionClick('edit');
                 }}
-                className="w-8 h-8 bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center"
+                className="w-8 h-8 bg-gradient-to-br from-amber-400 to-amber-500 text-white hover:from-amber-500 hover:to-amber-600 rounded-full shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center backdrop-blur-sm border border-white/20 transform hover:scale-110"
                 title="ערוך מתכון"
               >
-                <Edit className="h-3 w-3" />
+                <Edit className="h-3.5 w-3.5" />
               </button>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   handleOptionClick('share');
                 }}
-                className="w-8 h-8 bg-green-50 text-green-600 hover:bg-green-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center"
+                className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-500 text-white hover:from-emerald-500 hover:to-emerald-600 rounded-full shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center backdrop-blur-sm border border-white/20 transform hover:scale-110"
                 title="שתף מתכון"
               >
-                <Share2 className="h-3 w-3" />
+                <Share2 className="h-3.5 w-3.5" />
               </button>
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   handleOptionClick('delete');
                 }}
-                className="w-8 h-8 bg-red-50 text-red-600 hover:bg-red-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center"
+                className="w-8 h-8 bg-gradient-to-br from-rose-400 to-rose-500 text-white hover:from-rose-500 hover:to-rose-600 rounded-full shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center backdrop-blur-sm border border-white/20 transform hover:scale-110"
                 title="מחק מתכון"
               >
-                <Trash2 className="h-3 w-3" />
+                <Trash2 className="h-3.5 w-3.5" />
               </button>
             </div>
           )}
@@ -681,13 +702,13 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
           {!(isMobile && showMobileOptions) ? (
             <button
               onClick={handleFavoriteClick}
-              className="absolute top-2 left-2 rtl:right-2 rtl:left-auto w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full shadow-md hover:bg-white transition-all duration-200 flex items-center justify-center heart-button transform hover:scale-110 active:scale-95"
+              className="absolute top-2 left-2 rtl:right-2 rtl:left-auto w-9 h-9 bg-white/90 backdrop-blur-md rounded-full shadow-md hover:shadow-lg hover:bg-white transition-all duration-300 flex items-center justify-center heart-button transform hover:scale-110 active:scale-95 border border-white/30 z-20"
             >
               <Heart
-                className={`h-4 w-4 transition-all duration-200 ${
+                className={`h-4 w-4 transition-all duration-300 ${
                   recipe.is_favorite 
-                    ? 'fill-red-500 text-red-500 scale-110' 
-                    : 'text-gray-600 hover:text-red-400'
+                    ? 'fill-rose-500 text-rose-500 scale-110 drop-shadow-sm' 
+                    : 'text-gray-600 hover:text-rose-400 hover:scale-105'
                 }`}
               />
             </button>
@@ -718,9 +739,18 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
           )}
         </div>
       ) : (
-        <div className={`relative h-24 sm:h-28 md:h-32 flex items-center justify-center ${getCategoryColor(recipe.category)}`}>
-          <div className="text-5xl opacity-70">
+        <div className={`relative h-32 sm:h-36 md:h-40 flex items-center justify-center rounded-t-xl ${getCategoryColor(recipe.category)} bg-gradient-to-br from-white/40 to-transparent`}>
+          <div className="absolute inset-0 bg-gradient-to-br from-amber-400/10 via-transparent to-purple-600/10 rounded-t-xl"></div>
+          <div className="text-6xl opacity-75 filter drop-shadow-md relative z-10">
             {getCategoryIllustration(recipe.category)}
+          </div>
+          
+          {/* Category badge - bottom left */}
+          <div className={`absolute bottom-2 left-2 rtl:left-2 rtl:right-auto px-2 py-1 rounded-full text-xs font-medium text-black shadow-md z-20 backdrop-blur-md border border-white/30 ${getCategoryColor(recipe.category)} bg-opacity-90`}>
+            <div className="flex items-center space-x-1 rtl:space-x-reverse">
+              <span className="text-xs">{getCategoryIllustration(recipe.category)}</span>
+              <span className="text-xs">{categories.find(c => c.id === recipe.category)?.name || recipe.category}</span>
+            </div>
           </div>
           {/* Desktop hover options (top right) */}
           {!isMobile && showDesktopOptions && (
@@ -800,18 +830,18 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
         </div>
       )}
       
-      <div className="p-3 flex-1 flex flex-col">
-        <h3 className="text-sm font-semibold text-gray-900 mb-1 line-clamp-2 transform transition-transform duration-200 hover:scale-105">
-          {recipe.title}
-        </h3>
-        
-        <div className="flex items-center justify-between text-xs text-gray-500 mt-auto">
-          <div className="flex items-center space-x-2">
-          </div>
-          
-          <span className={`text-xs px-1.5 py-0.5 rounded ${getCategoryColor(recipe.category)}`}>
-            {categories.find(c => c.id === recipe.category)?.name || recipe.category}
-          </span>
+      {/* Elegant separator */}
+      <div className="relative">
+        <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-amber-300/30 to-transparent"></div>
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-b from-amber-50/20 to-transparent"></div>
+      </div>
+      
+      <div className="p-3 flex-1 flex flex-col relative min-h-0">
+        <div className="absolute inset-0 bg-gradient-to-br from-gray-50/20 via-white/30 to-amber-50/10 rounded-b-xl"></div>
+        <div className="flex-1 relative z-10 flex flex-col justify-center">
+          <h3 className="text-sm font-semibold text-gray-900 line-clamp-2 leading-relaxed text-center">
+            {recipe.title}
+          </h3>
         </div>
       </div>
       </div>

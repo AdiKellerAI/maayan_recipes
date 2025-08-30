@@ -2,11 +2,12 @@ import React, { useEffect, useRef, useLayoutEffect } from 'react';
 import { categories } from '../../data/categories';
 import { useRecipes } from '../../contexts/RecipeContext';
 import { getCategoryColor } from '../../data/categories';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const CategoryNav: React.FC = () => {
   const { selectedCategory, setSelectedCategory } = useRecipes();
   const location = useLocation();
+  const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Ensure category selection is synchronized with URL parameters
@@ -51,12 +52,27 @@ const CategoryNav: React.FC = () => {
     }
   }, []); // Only run once when component mounts
 
+  const handleCategoryClick = (categoryId: string) => {
+    if (categoryId === '') {
+      // Clear category filter - preserve other URL params but remove category
+      const urlParams = new URLSearchParams(location.search);
+      urlParams.delete('category');
+      const newSearch = urlParams.toString();
+      navigate(`/recipes${newSearch ? `?${newSearch}` : ''}`);
+    } else {
+      // Set category filter - preserve other URL params but set category
+      const urlParams = new URLSearchParams(location.search);
+      urlParams.set('category', categoryId);
+      navigate(`/recipes?${urlParams.toString()}`);
+    }
+  };
+
   return (
     <div className="bg-white border-b border-gray-200 py-3">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div ref={containerRef} className="flex space-x-2 rtl:space-x-reverse overflow-x-auto scrollbar-hide">
           <button
-            onClick={() => setSelectedCategory('')}
+            onClick={() => handleCategoryClick('')}
             data-category=""
             className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors ${
               selectedCategory === '' 
@@ -70,7 +86,7 @@ const CategoryNav: React.FC = () => {
             return (
             <button
               key={category.id}
-              onClick={() => setSelectedCategory(category.id)}
+              onClick={() => handleCategoryClick(category.id)}
               data-category={category.id}
               className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition-colors flex items-center space-x-1 rtl:space-x-reverse ${
                 selectedCategory === category.id 

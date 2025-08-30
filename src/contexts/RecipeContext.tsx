@@ -88,6 +88,9 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setShowFavoritesOnly(false);
       setShowRecentOnly(false);
       setSearchQuery('');
+    } else if (location.pathname === '/recipes' && !favoritesParam && !searchParam) {
+      // Clear category when on recipes page without category param and no other filters
+      setSelectedCategory('');
     }
     
     // Handle search parameter
