@@ -18,7 +18,7 @@ const RecipeGrid: React.FC<RecipeGridProps> = ({ recipes }) => {
       case 'medium':
         return 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4';
       case 'list':
-        return 'space-y-3';
+        return 'space-y-1.5';
       default:
         return 'grid grid-cols-1 gap-6';
     }

@@ -757,7 +757,7 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose, initialTime
 		<>
 			{/* Main Timer Setup Window */}
 			<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-				<div className="bg-white rounded-xl shadow-2xl max-w-md w-full max-h-[85vh] overflow-hidden border border-gray-100">
+				<div className="bg-white rounded-xl shadow-2xl max-w-sm w-full max-h-[85vh] overflow-hidden border border-gray-100">
 					{/* Sticky Header */}
 					<div className="sticky top-0 bg-gradient-to-r from-orange-50 to-red-50 border-b border-orange-100 p-3 z-10">
 						<div className="flex items-center justify-between">

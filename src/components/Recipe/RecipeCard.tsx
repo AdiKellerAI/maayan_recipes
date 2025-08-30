@@ -200,7 +200,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
 
 
 
-  // List view (no images)
+  // List view (no images) - Refined with smaller fonts and compact design
   if (viewMode === 'list') {
     return (
       <div 
@@ -212,54 +212,54 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-        <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer p-4 border border-gray-200">
+        <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer p-2.5 border border-gray-200">
           <div className="flex items-center justify-between">
             <div className="flex-1">
-              <h3 className="text-lg font-semibold text-gray-900 mb-1">
+              <h3 className="text-sm font-medium text-gray-900 leading-tight">
                 {recipe.title}
               </h3>
             </div>
             
-            <div className="flex items-center space-x-3 rtl:space-x-reverse mr-4 rtl:ml-4 rtl:mr-0">
-              <span className={`text-xs px-2 py-1 rounded ${getCategoryColor(recipe.category)}`}>
+            <div className="flex items-center space-x-2 rtl:space-x-reverse ml-3 rtl:mr-3 rtl:ml-0">
+              <span className={`text-xs px-1.5 py-0.5 rounded ${getCategoryColor(recipe.category)}`}>
                 <div className="flex items-center space-x-1 rtl:space-x-reverse">
-                  <span className="text-sm">{getCategoryIllustration(recipe.category)}</span>
-                  <span>{categories.find(c => c.id === recipe.category)?.name || recipe.category}</span>
+                  <span className="text-xs">{getCategoryIllustration(recipe.category)}</span>
+                  <span className="text-xs font-medium">{categories.find(c => c.id === recipe.category)?.name || recipe.category}</span>
                 </div>
               </span>
               
               {/* Desktop hover options (right side) */}
               {!isMobile && showDesktopOptions && (
-                <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                <div className="flex items-center space-x-1 rtl:space-x-reverse">
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleOptionClick('edit');
                     }}
-                    className="p-2 rounded-full bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all duration-200"
+                    className="p-1.5 rounded-full bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all duration-200"
                     title="ערוך מתכון"
                   >
-                    <Edit className="h-4 w-4" />
+                    <Edit className="h-3.5 w-3.5" />
                   </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleOptionClick('share');
                     }}
-                    className="p-2 rounded-full bg-green-50 text-green-600 hover:bg-green-100 transition-all duration-200"
+                    className="p-1.5 rounded-full bg-green-50 text-green-600 hover:bg-green-100 transition-all duration-200"
                     title="שתף מתכון"
                   >
-                    <Share2 className="h-4 w-4" />
+                    <Share2 className="h-3.5 w-3.5" />
                   </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleOptionClick('delete');
                     }}
-                    className="p-2 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-all duration-200"
+                    className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-all duration-200"
                     title="מחק מתכון"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
               )}
@@ -268,10 +268,10 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
               {!(isMobile && showMobileOptions) ? (
                 <button
                   onClick={handleFavoriteClick}
-                  className="p-2 rounded-full hover:bg-gray-100 transition-all duration-200 heart-button transform hover:scale-110 active:scale-95"
+                  className="p-1.5 rounded-full hover:bg-gray-100 transition-all duration-200 heart-button transform hover:scale-110 active:scale-95"
                 >
                   <Heart
-                    className={`h-5 w-5 transition-all duration-200 ${
+                    className={`h-4 w-4 transition-all duration-200 ${
                       recipe.is_favorite 
                         ? 'fill-red-500 text-red-500 scale-110' 
                         : 'text-gray-600 hover:text-red-400'
@@ -279,27 +279,27 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                   />
                 </button>
               ) : (
-                <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                <div className="flex items-center space-x-1 rtl:space-x-reverse">
                   <button
                     onClick={() => handleOptionClick('edit')}
-                    className="p-2 rounded-full bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all duration-200"
+                    className="p-1.5 rounded-full bg-yellow-50 text-yellow-600 hover:bg-yellow-100 transition-all duration-200"
                     title="ערוך מתכון"
                   >
-                    <Edit className="h-4 w-4" />
+                    <Edit className="h-3.5 w-3.5" />
                   </button>
                   <button
                     onClick={() => handleOptionClick('share')}
-                    className="p-2 rounded-full bg-green-50 text-green-600 hover:bg-green-100 transition-all duration-200"
+                    className="p-1.5 rounded-full bg-green-50 text-green-600 hover:bg-green-100 transition-all duration-200"
                     title="שתף מתכון"
                   >
-                    <Share2 className="h-4 w-4" />
+                    <Share2 className="h-3.5 w-3.5" />
                   </button>
                   <button
                     onClick={() => handleOptionClick('delete')}
-                    className="p-2 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-all duration-200"
+                    className="p-1.5 rounded-full bg-red-50 text-red-600 hover:bg-red-100 transition-all duration-200"
                     title="מחק מתכון"
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Trash2 className="h-3.5 w-3.5" />
                   </button>
                 </div>
               )}

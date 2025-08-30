@@ -368,7 +368,7 @@ const Header: React.FC = () => {
       {/* Filter Modal - Elegant and modern design */}
       {isFilterOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full max-h-[70vh] overflow-hidden border border-gray-100 transform transition-all duration-300">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-xs w-full max-h-[56vh] overflow-hidden border border-gray-100 transform transition-all duration-300">
             {/* Header with gradient background */}
             <div className="bg-gradient-to-r from-green-50 via-emerald-50 to-teal-50 border-b border-green-100 p-3">
               <div className="flex items-center justify-between">
@@ -396,7 +396,7 @@ const Header: React.FC = () => {
             </div>
 
             {/* Scrollable Content */}
-            <div className="overflow-y-auto max-h-[calc(70vh-80px)]">
+            <div className="overflow-y-auto max-h-[calc(56vh-64px)]">
               <div className="p-4">
                 {/* Filter Options */}
                 <div className="space-y-3">
