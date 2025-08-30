@@ -337,21 +337,42 @@ const Header: React.FC = () => {
                     </div>
                     
                     {/* Access Level Status */}
-                    <div className="w-full flex items-center space-x-2 rtl:space-x-reverse py-1.5 px-2.5">
-                      <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
-                        isAuthenticated 
-                          ? 'bg-gradient-to-br from-green-500 to-emerald-600' 
-                          : 'bg-gradient-to-br from-red-500 to-red-600'
-                      }`}>
-                        {isAuthenticated ? (
-                          <ShieldCheck className="h-2.5 w-2.5 text-white" />
-                        ) : (
-                          <Shield className="h-2.5 w-2.5 text-white" />
-                        )}
+                    <div className="w-full flex items-center justify-between py-1.5 px-2.5">
+                      <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                          isAuthenticated 
+                            ? 'bg-gradient-to-br from-green-500 to-emerald-600' 
+                            : 'bg-gradient-to-br from-red-500 to-red-600'
+                        }`}>
+                          {isAuthenticated ? (
+                            <ShieldCheck className="h-2.5 w-2.5 text-white" />
+                          ) : (
+                            <Shield className="h-2.5 w-2.5 text-white" />
+                          )}
+                        </div>
+                        <span className="text-xs font-medium text-black">
+                          {isAuthenticated ? 'גישה מלאה' : 'גישה מוגבלת'}
+                        </span>
                       </div>
-                      <span className="text-xs font-medium text-black">
-                        {isAuthenticated ? 'גישה מלאה' : 'גישה מוגבלת'}
-                      </span>
+                      
+                      {/* Login Button - only show when not authenticated */}
+                      {!isAuthenticated && (
+                        <button
+                          onClick={() => {
+                            executeProtectedAction(() => {});
+                            setIsMenuOpen(false);
+                          }}
+                          className="bg-gradient-to-br from-orange-500/80 to-yellow-600/80 border border-orange-400/80 text-white px-3 py-0 rounded-md hover:from-orange-600/80 hover:to-yellow-700/80 transition-all duration-300 font-medium shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95 flex items-center justify-center"
+                          style={{
+                            height: '20px',
+                            fontSize: '0.65rem',
+                            lineHeight: '1.0',
+                            minHeight: '20px'
+                          }}
+                        >
+                          כניסה
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>

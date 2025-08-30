@@ -72,13 +72,14 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
               <li key={index} className="flex space-x-3 rtl:space-x-reverse">
                 <button
                   onClick={() => handleStepClick(index)}
-                  className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-medium transition-all duration-200 hover:scale-110 ${
+                  className={`flex-shrink-0 rounded-full flex items-center justify-center font-medium transition-all duration-200 hover:scale-110 ${
                     isCompleted
                       ? 'bg-green-500 text-white shadow-md'
                       : isCurrent
                       ? 'bg-orange-500 text-white shadow-md ring-2 ring-orange-200'
                       : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                   }`}
+                  style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }}
                 >
                   {isCompleted ? (
                     <Check className="h-4 w-4" />
@@ -124,13 +125,14 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
                         <li key={index} className="flex space-x-3 rtl:space-x-reverse">
                           <button
                             onClick={() => handleAdditionalStepClick(sectionName, index)}
-                            className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-medium transition-all duration-200 hover:scale-110 touch-manipulation ${
+                            className={`flex-shrink-0 rounded-full flex items-center justify-center font-medium transition-all duration-200 hover:scale-110 touch-manipulation ${
                               isCompleted
                                 ? 'bg-green-500 text-white shadow-md'
                                 : isCurrent
                                 ? 'bg-orange-500 text-white shadow-md ring-2 ring-orange-200'
                                 : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                             }`}
+                            style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }}
                           >
                             {isCompleted ? (
                               <Check className="h-4 w-4" />

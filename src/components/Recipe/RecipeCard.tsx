@@ -44,19 +44,23 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
   const [showDesktopOptions, setShowDesktopOptions] = useState(false);
   const [isLongPress, setIsLongPress] = useState(false);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
-  // Simpler approach - just check screen size for now
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  // Better mobile detection - check for touch support instead of screen width
+  const [isMobile, setIsMobile] = useState(() => {
+    return 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  });
   
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth <= 768);
+    // Update mobile detection based on touch support
+    const checkTouch = () => {
+      setIsMobile('ontouchstart' in window || navigator.maxTouchPoints > 0);
     };
     
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    // Listen for resize events to recheck if needed
+    window.addEventListener('resize', checkTouch);
+    return () => window.removeEventListener('resize', checkTouch);
   }, []);
 
-  // Long press handler for mobile
+  // Long press handler for mobile (works for all view modes)
   const handleTouchStart = () => {
     if (!isMobile) return;
     
@@ -394,13 +398,14 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
             
             {/* Desktop hover options (top right) */}
             {!isMobile && showDesktopOptions && (
-              <div className="absolute top-4 right-4 rtl:left-4 rtl:right-auto flex items-center space-x-2 rtl:space-x-reverse z-20">
+              <div className="absolute top-3 right-3 rtl:left-3 rtl:right-auto flex items-center space-x-2 rtl:space-x-reverse z-20">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     handleOptionClick('edit');
                   }}
-                  className="w-11 h-11 bg-gradient-to-br from-amber-400 to-amber-500 text-white hover:from-amber-500 hover:to-amber-600 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center backdrop-blur-sm border border-white/20 transform hover:scale-110"
+                  className="bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
+                  style={{ width: '40px', height: '40px', minWidth: '40px', minHeight: '40px' }}
                   title="ערוך מתכון"
                 >
                   <Edit className="h-5 w-5" />
@@ -410,7 +415,8 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                     e.stopPropagation();
                     handleOptionClick('share');
                   }}
-                  className="w-11 h-11 bg-gradient-to-br from-emerald-400 to-emerald-500 text-white hover:from-emerald-500 hover:to-emerald-600 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center backdrop-blur-sm border border-white/20 transform hover:scale-110"
+                  className="bg-green-50 text-green-600 hover:bg-green-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
+                  style={{ width: '40px', height: '40px', minWidth: '40px', minHeight: '40px' }}
                   title="שתף מתכון"
                 >
                   <Share2 className="h-5 w-5" />
@@ -420,7 +426,8 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                     e.stopPropagation();
                     handleOptionClick('delete');
                   }}
-                  className="w-11 h-11 bg-gradient-to-br from-rose-400 to-rose-500 text-white hover:from-rose-500 hover:to-rose-600 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center backdrop-blur-sm border border-white/20 transform hover:scale-110"
+                  className="bg-red-50 text-red-600 hover:bg-red-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
+                  style={{ width: '40px', height: '40px', minWidth: '40px', minHeight: '40px' }}
                   title="מחק מתכון"
                 >
                   <Trash2 className="h-5 w-5" />
@@ -446,21 +453,24 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
               <div className="absolute top-3 right-3 rtl:left-3 rtl:right-auto flex items-center space-x-2 rtl:space-x-reverse">
                 <button
                   onClick={() => handleOptionClick('edit')}
-                  className="w-10 h-10 bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center"
+                  className="bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
+                  style={{ width: '40px', height: '40px', minWidth: '40px', minHeight: '40px' }}
                   title="ערוך מתכון"
                 >
                   <Edit className="h-5 w-5" />
                 </button>
                 <button
                   onClick={() => handleOptionClick('share')}
-                  className="w-10 h-10 bg-green-50 text-green-600 hover:bg-green-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center"
+                  className="bg-green-50 text-green-600 hover:bg-green-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
+                  style={{ width: '40px', height: '40px', minWidth: '40px', minHeight: '40px' }}
                   title="שתף מתכון"
                 >
                   <Share2 className="h-5 w-5" />
                 </button>
                 <button
                   onClick={() => handleOptionClick('delete')}
-                  className="w-10 h-10 bg-red-50 text-red-600 hover:bg-red-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center"
+                  className="bg-red-50 text-red-600 hover:bg-red-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
+                  style={{ width: '40px', height: '40px', minWidth: '40px', minHeight: '40px' }}
                   title="מחק מתכון"
                 >
                   <Trash2 className="h-5 w-5" />
@@ -484,13 +494,14 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
             </div>
             {/* Desktop hover options (top right) */}
             {!isMobile && showDesktopOptions && (
-              <div className="absolute top-3 right-3 rtl:left-3 rtl:right-auto flex items-center space-x-2 rtl:space-x-reverse">
+              <div className="absolute top-3 right-3 rtl:left-3 rtl:right-auto flex items-center space-x-2 rtl:space-x-reverse z-20">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     handleOptionClick('edit');
                   }}
-                  className="w-10 h-10 bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center"
+                  className="bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
+                  style={{ width: '40px', height: '40px', minWidth: '40px', minHeight: '40px' }}
                   title="ערוך מתכון"
                 >
                   <Edit className="h-5 w-5" />
@@ -500,7 +511,8 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                     e.stopPropagation();
                     handleOptionClick('share');
                   }}
-                  className="w-10 h-10 bg-green-50 text-green-600 hover:bg-green-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center"
+                  className="bg-green-50 text-green-600 hover:bg-green-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
+                  style={{ width: '40px', height: '40px', minWidth: '40px', minHeight: '40px' }}
                   title="שתף מתכון"
                 >
                   <Share2 className="h-5 w-5" />
@@ -510,7 +522,8 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                     e.stopPropagation();
                     handleOptionClick('delete');
                   }}
-                  className="w-10 h-10 bg-red-50 text-red-600 hover:bg-red-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center"
+                  className="bg-red-50 text-red-600 hover:bg-red-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
+                  style={{ width: '40px', height: '40px', minWidth: '40px', minHeight: '40px' }}
                   title="מחק מתכון"
                 >
                   <Trash2 className="h-5 w-5" />
@@ -536,21 +549,24 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
               <div className="absolute top-3 right-3 rtl:left-3 rtl:right-auto flex items-center space-x-2 rtl:space-x-reverse">
                 <button
                   onClick={() => handleOptionClick('edit')}
-                  className="w-10 h-10 bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center"
+                  className="bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
+                  style={{ width: '40px', height: '40px', minWidth: '40px', minHeight: '40px' }}
                   title="ערוך מתכון"
                 >
                   <Edit className="h-5 w-5" />
                 </button>
                 <button
                   onClick={() => handleOptionClick('share')}
-                  className="w-10 h-10 bg-green-50 text-green-600 hover:bg-green-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center"
+                  className="bg-green-50 text-green-600 hover:bg-green-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
+                  style={{ width: '40px', height: '40px', minWidth: '40px', minHeight: '40px' }}
                   title="שתף מתכון"
                 >
                   <Share2 className="h-5 w-5" />
                 </button>
                 <button
                   onClick={() => handleOptionClick('delete')}
-                  className="w-10 h-10 bg-red-50 text-red-600 hover:bg-red-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center"
+                  className="bg-red-50 text-red-600 hover:bg-red-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
+                  style={{ width: '40px', height: '40px', minWidth: '40px', minHeight: '40px' }}
                   title="מחק מתכון"
                 >
                   <Trash2 className="h-5 w-5" />
@@ -670,7 +686,8 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                   e.stopPropagation();
                   handleOptionClick('edit');
                 }}
-                className="w-8 h-8 bg-gradient-to-br from-amber-400 to-amber-500 text-white hover:from-amber-500 hover:to-amber-600 rounded-full shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center backdrop-blur-sm border border-white/20 transform hover:scale-110"
+                className="bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
+                style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }}
                 title="ערוך מתכון"
               >
                 <Edit className="h-3.5 w-3.5" />
@@ -680,7 +697,8 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                   e.stopPropagation();
                   handleOptionClick('share');
                 }}
-                className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-500 text-white hover:from-emerald-500 hover:to-emerald-600 rounded-full shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center backdrop-blur-sm border border-white/20 transform hover:scale-110"
+                className="bg-green-50 text-green-600 hover:bg-green-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
+                style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }}
                 title="שתף מתכון"
               >
                 <Share2 className="h-3.5 w-3.5" />
@@ -690,7 +708,8 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                   e.stopPropagation();
                   handleOptionClick('delete');
                 }}
-                className="w-8 h-8 bg-gradient-to-br from-rose-400 to-rose-500 text-white hover:from-rose-500 hover:to-rose-600 rounded-full shadow-md hover:shadow-lg transition-all duration-300 flex items-center justify-center backdrop-blur-sm border border-white/20 transform hover:scale-110"
+                className="bg-red-50 text-red-600 hover:bg-red-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
+                style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }}
                 title="מחק מתכון"
               >
                 <Trash2 className="h-3.5 w-3.5" />
@@ -716,21 +735,24 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
             <div className="absolute top-2 right-2 rtl:left-2 rtl:right-auto flex items-center space-x-1 rtl:space-x-reverse">
               <button
                 onClick={() => handleOptionClick('edit')}
-                className="w-8 h-8 bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center"
+                className="bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
+                style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }}
                 title="ערוך מתכון"
               >
                 <Edit className="h-3 w-3" />
               </button>
               <button
                 onClick={() => handleOptionClick('share')}
-                className="w-8 h-8 bg-green-50 text-green-600 hover:bg-green-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center"
+                className="bg-green-50 text-green-600 hover:bg-green-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
+                style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }}
                 title="שתף מתכון"
               >
                 <Share2 className="h-3 w-3" />
               </button>
               <button
                 onClick={() => handleOptionClick('delete')}
-                className="w-8 h-8 bg-red-50 text-red-600 hover:bg-red-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center"
+                className="bg-red-50 text-red-600 hover:bg-red-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
+                style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }}
                 title="מחק מתכון"
               >
                 <Trash2 className="h-3 w-3" />
@@ -760,7 +782,8 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                   e.stopPropagation();
                   handleOptionClick('edit');
                 }}
-                className="w-8 h-8 bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center"
+                className="bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
+                style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }}
                 title="ערוך מתכון"
               >
                 <Edit className="h-3 w-3" />
@@ -770,7 +793,8 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                   e.stopPropagation();
                   handleOptionClick('share');
                 }}
-                className="w-8 h-8 bg-green-50 text-green-600 hover:bg-green-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center"
+                className="bg-green-50 text-green-600 hover:bg-green-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
+                style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }}
                 title="שתף מתכון"
               >
                 <Share2 className="h-3 w-3" />
@@ -780,7 +804,8 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                   e.stopPropagation();
                   handleOptionClick('delete');
                 }}
-                className="w-8 h-8 bg-red-50 text-red-600 hover:bg-red-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center"
+                className="bg-red-50 text-red-600 hover:bg-red-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
+                style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }}
                 title="מחק מתכון"
               >
                 <Trash2 className="h-3 w-3" />
@@ -806,21 +831,24 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
             <div className="absolute top-2 right-2 rtl:left-2 rtl:right-auto flex items-center space-x-1 rtl:space-x-reverse">
               <button
                 onClick={() => handleOptionClick('edit')}
-                className="w-8 h-8 bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center"
+                className="bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
+                style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }}
                 title="ערוך מתכון"
               >
                 <Edit className="h-3 w-3" />
               </button>
               <button
                 onClick={() => handleOptionClick('share')}
-                className="w-8 h-8 bg-green-50 text-green-600 hover:bg-green-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center"
+                className="bg-green-50 text-green-600 hover:bg-green-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
+                style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }}
                 title="שתף מתכון"
               >
                 <Share2 className="h-3 w-3" />
               </button>
               <button
                 onClick={() => handleOptionClick('delete')}
-                className="w-8 h-8 bg-red-50 text-red-600 hover:bg-red-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center"
+                className="bg-red-50 text-red-600 hover:bg-red-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
+                style={{ width: '32px', height: '32px', minWidth: '32px', minHeight: '32px' }}
                 title="מחק מתכון"
               >
                 <Trash2 className="h-3 w-3" />
