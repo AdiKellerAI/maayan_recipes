@@ -378,10 +378,10 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
               className="w-full h-full object-cover transition-all duration-500 group-hover:scale-110 group-hover:brightness-110"
             />
             {/* Category badge - bottom left */}
-            <div className={`absolute bottom-4 left-4 rtl:left-4 rtl:right-auto px-3 py-2 rounded-full text-xs font-medium text-black shadow-lg z-20 backdrop-blur-md border border-white/30 ${getCategoryColor(recipe.category)} bg-opacity-80`}>
+            <div className={`absolute bottom-4 left-4 rtl:left-4 rtl:right-auto px-3 py-2 rounded-full text-xs font-medium shadow-lg z-20 backdrop-blur-md border border-white/30 ${getCategoryColor(recipe.category)} bg-opacity-80`}>
               <div className="flex items-center space-x-1 rtl:space-x-reverse">
                 <span className="text-sm">{getCategoryIllustration(recipe.category)}</span>
-                <span>{categories.find(c => c.id === recipe.category)?.name || recipe.category}</span>
+                <span className="text-black font-semibold">{categories.find(c => c.id === recipe.category)?.name || recipe.category}</span>
               </div>
             </div>
 
@@ -476,10 +476,10 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
           </div>
             
             {/* Category badge - bottom left */}
-            <div className={`absolute bottom-4 left-4 rtl:left-4 rtl:right-auto px-3 py-2 rounded-full text-xs font-medium text-black shadow-lg z-20 backdrop-blur-md border border-white/30 ${getCategoryColor(recipe.category)} bg-opacity-90`}>
+            <div className={`absolute bottom-4 left-4 rtl:left-4 rtl:right-auto px-3 py-2 rounded-full text-xs font-medium shadow-lg z-20 backdrop-blur-md border border-white/30 ${getCategoryColor(recipe.category)} bg-opacity-90`}>
               <div className="flex items-center space-x-1 rtl:space-x-reverse">
                 <span className="text-sm">{getCategoryIllustration(recipe.category)}</span>
-                <span>{categories.find(c => c.id === recipe.category)?.name || recipe.category}</span>
+                <span className="text-black font-semibold">{categories.find(c => c.id === recipe.category)?.name || recipe.category}</span>
               </div>
             </div>
             {/* Desktop hover options (top right) */}
@@ -648,10 +648,10 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
             className="w-full h-full object-cover transition-all duration-400 group-hover:scale-105 group-hover:brightness-105"
           />
           {/* Category badge - bottom left */}
-          <div className={`absolute bottom-2 left-2 rtl:left-2 rtl:right-auto px-2 py-1 rounded-full text-xs font-medium text-black shadow-md z-20 backdrop-blur-md border border-white/30 ${getCategoryColor(recipe.category)} bg-opacity-80`}>
+          <div className={`absolute bottom-2 left-2 rtl:left-2 rtl:right-auto px-2 py-1 rounded-full text-xs font-medium shadow-md z-20 backdrop-blur-md border border-white/30 ${getCategoryColor(recipe.category)} bg-opacity-80`}>
             <div className="flex items-center space-x-1 rtl:space-x-reverse">
               <span className="text-xs">{getCategoryIllustration(recipe.category)}</span>
-              <span className="text-xs">{categories.find(c => c.id === recipe.category)?.name || recipe.category}</span>
+              <span className="text-xs text-black font-semibold">{categories.find(c => c.id === recipe.category)?.name || recipe.category}</span>
             </div>
           </div>
 
@@ -746,10 +746,10 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
           </div>
           
           {/* Category badge - bottom left */}
-          <div className={`absolute bottom-2 left-2 rtl:left-2 rtl:right-auto px-2 py-1 rounded-full text-xs font-medium text-black shadow-md z-20 backdrop-blur-md border border-white/30 ${getCategoryColor(recipe.category)} bg-opacity-90`}>
+          <div className={`absolute bottom-2 left-2 rtl:left-2 rtl:right-auto px-2 py-1 rounded-full text-xs font-medium shadow-md z-20 backdrop-blur-md border border-white/30 ${getCategoryColor(recipe.category)} bg-opacity-90`}>
             <div className="flex items-center space-x-1 rtl:space-x-reverse">
               <span className="text-xs">{getCategoryIllustration(recipe.category)}</span>
-              <span className="text-xs">{categories.find(c => c.id === recipe.category)?.name || recipe.category}</span>
+              <span className="text-xs text-black font-semibold">{categories.find(c => c.id === recipe.category)?.name || recipe.category}</span>
             </div>
           </div>
           {/* Desktop hover options (top right) */}

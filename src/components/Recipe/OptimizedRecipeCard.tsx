@@ -207,10 +207,10 @@ const OptimizedRecipeCard: React.FC<OptimizedRecipeCardProps> = ({
         />
 
         {/* Category badge - bottom left */}
-        <div className={`absolute ${isLarge ? 'bottom-4 left-4' : 'bottom-2 left-2'} rtl:left-2 rtl:right-auto ${isLarge ? 'px-3 py-2' : 'px-2 py-1'} rounded-full text-xs font-medium text-black shadow-lg z-20 backdrop-blur-md border border-white/30 bg-amber-500/80`}>
+        <div className={`absolute ${isLarge ? 'bottom-4 left-4' : 'bottom-2 left-2'} rtl:left-2 rtl:right-auto ${isLarge ? 'px-3 py-2' : 'px-2 py-1'} rounded-full text-xs font-medium shadow-lg z-20 backdrop-blur-md border border-white/30 bg-amber-500/80`}>
           <div className="flex items-center space-x-1 rtl:space-x-reverse">
             <span className="text-xs">🍽️</span>
-            <span className="text-xs">{recipe.category}</span>
+            <span className="text-xs text-black font-semibold">{recipe.category}</span>
           </div>
         </div>
 
