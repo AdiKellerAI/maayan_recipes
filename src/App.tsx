@@ -19,6 +19,49 @@ function App() {
   const [showTimer, setShowTimer] = React.useState(false);
   const [showDatabaseStatus, setShowDatabaseStatus] = React.useState(false);
 
+  // Handle database status changes
+  const handleDatabaseStatusChange = React.useCallback((status: 'checking' | 'connected' | 'disconnected' | 'error') => {
+    // Show status window only if there's a problem
+    if (status === 'disconnected' || status === 'error') {
+      setShowDatabaseStatus(true);
+    } else if (status === 'connected') {
+      // Hide status window after a short delay when connection is restored
+      setTimeout(() => {
+        setShowDatabaseStatus(false);
+      }, 2000);
+    }
+  }, []);
+
+  // Check database status on app load
+  React.useEffect(() => {
+    // Create a hidden database status component to check connection
+    const checkInitialConnection = async () => {
+      try {
+        const response = await fetch('/api/test-connection', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(5000)
+        });
+        
+        if (!response.ok) {
+          handleDatabaseStatusChange('error');
+          return;
+        }
+        
+        const result = await response.json();
+        if (result.connected === true || result.success === true) {
+          handleDatabaseStatusChange('connected');
+        } else {
+          handleDatabaseStatusChange('disconnected');
+        }
+      } catch (error) {
+        handleDatabaseStatusChange('error');
+      }
+    };
+
+    checkInitialConnection();
+  }, [handleDatabaseStatusChange]);
+
   // Listen for global timer events
   const [initialTimerName, setInitialTimerName] = React.useState('');
   
@@ -102,7 +145,10 @@ function App() {
                 <AuthModal />
                 
                 {/* Database Status Diagnostic (Ctrl+Shift+D to toggle) */}
-                <DatabaseStatus isVisible={showDatabaseStatus} />
+                <DatabaseStatus 
+                  isVisible={showDatabaseStatus}
+                  onStatusChange={handleDatabaseStatusChange}
+                />
               </div>
             </NavigationProvider>
           </RecipeProvider>

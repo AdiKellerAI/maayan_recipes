@@ -94,6 +94,8 @@ const mapRowToRecipe = (row) => ({
   directions: Array.isArray(row.directions) ? row.directions : JSON.parse(row.directions || '[]'),
   additional_instructions: row.additional_instructions ? 
     (typeof row.additional_instructions === 'object' ? row.additional_instructions : JSON.parse(row.additional_instructions)) : {},
+  additional_sections: row.additional_sections ? 
+    (typeof row.additional_sections === 'object' ? row.additional_sections : JSON.parse(row.additional_sections)) : {},
   prep_time: row.prep_time || '',
   difficulty: row.difficulty || '',
   is_favorite: Boolean(row.is_favorite),

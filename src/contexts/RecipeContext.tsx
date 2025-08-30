@@ -113,7 +113,7 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       // Clear old cache on first load or when forcing refresh to ensure fresh data
       if (!isInitialized || forceRefresh) {
         console.log('🧹 Clearing old cache to ensure fresh data from PostgreSQL...');
-        recipeService.clearOldData();
+        recipeService.clearCache();
       }
 
       // Don't reload if we have recent data and not forcing refresh

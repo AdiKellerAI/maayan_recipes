@@ -19,6 +19,8 @@ const mapRowToRecipe = (row) => ({
   directions: Array.isArray(row.directions) ? row.directions : JSON.parse(row.directions || '[]'),
   additional_instructions: row.additional_instructions ? 
     (typeof row.additional_instructions === 'object' ? row.additional_instructions : JSON.parse(row.additional_instructions)) : {},
+  additional_sections: row.additional_sections ? 
+    (typeof row.additional_sections === 'object' ? row.additional_sections : JSON.parse(row.additional_sections)) : {},
   prep_time: row.prep_time || '',
   difficulty: row.difficulty || '',
   is_favorite: Boolean(row.is_favorite),
@@ -38,6 +40,7 @@ const ensureRecipesTable = async (client) => {
         ingredients JSONB NOT NULL DEFAULT '[]',
         directions JSONB NOT NULL DEFAULT '[]',
         additional_instructions JSONB DEFAULT '{}',
+        additional_sections JSONB DEFAULT '{}',
         prep_time VARCHAR(50) DEFAULT '',
         difficulty VARCHAR(50) DEFAULT '',
         is_favorite BOOLEAN DEFAULT false,
@@ -65,6 +68,17 @@ const ensureRecipesTable = async (client) => {
         FOR EACH ROW
         EXECUTE FUNCTION update_updated_at_column();
     `);
+    
+    // Ensure additional_sections column exists (in case migration hasn't run)
+    try {
+      await client.query(`
+        ALTER TABLE recipes 
+        ADD COLUMN IF NOT EXISTS additional_sections JSONB DEFAULT '{}';
+      `);
+      console.log('✅ additional_sections column ensured');
+    } catch (columnError) {
+      console.warn('⚠️ Could not ensure additional_sections column:', columnError.message);
+    }
     
     console.log('✅ Recipes table ensured');
   } catch (error) {
@@ -161,6 +175,7 @@ export const handlers = {
         ingredients,
         directions,
         additional_instructions = {},
+        additional_sections = {},
         prep_time = '',
         difficulty = '',
         is_favorite = false,
@@ -182,8 +197,8 @@ export const handlers = {
       const result = await client.query(
         `INSERT INTO recipes (
           title, description, category, ingredients, directions, 
-          additional_instructions, prep_time, difficulty, is_favorite, images
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) 
+          additional_instructions, additional_sections, prep_time, difficulty, is_favorite, images
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
         RETURNING *`,
         [
           title,
@@ -192,6 +207,7 @@ export const handlers = {
           JSON.stringify(ingredients),
           JSON.stringify(directions),
           JSON.stringify(additional_instructions),
+          JSON.stringify(additional_sections),
           prep_time,
           difficulty,
           is_favorite,
@@ -245,6 +261,10 @@ export const handlers = {
       if (updates.additional_instructions !== undefined) {
         updateFields.push(`additional_instructions = $${paramCount++}`);
         values.push(JSON.stringify(updates.additional_instructions));
+      }
+      if (updates.additional_sections !== undefined) {
+        updateFields.push(`additional_sections = $${paramCount++}`);
+        values.push(JSON.stringify(updates.additional_sections));
       }
       if (updates.prep_time !== undefined) {
         updateFields.push(`prep_time = $${paramCount++}`);

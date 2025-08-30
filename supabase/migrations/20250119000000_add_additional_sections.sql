@@ -10,3 +10,4 @@ CREATE INDEX IF NOT EXISTS idx_recipes_additional_sections ON recipes USING gin(
 
 -- Add comment to document the new column
 COMMENT ON COLUMN recipes.additional_sections IS 'JSON object containing additional recipe sections with ingredients and directions. Format: {"section_name": {"ingredients": ["..."], "directions": ["..."]}}';
+

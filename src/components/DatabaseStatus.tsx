@@ -3,9 +3,10 @@ import { Database, Wifi, WifiOff, AlertCircle, CheckCircle, RefreshCw } from 'lu
 
 interface DatabaseStatusProps {
   isVisible?: boolean;
+  onStatusChange?: (status: 'checking' | 'connected' | 'disconnected' | 'error') => void;
 }
 
-const DatabaseStatus: React.FC<DatabaseStatusProps> = ({ isVisible = false }) => {
+const DatabaseStatus: React.FC<DatabaseStatusProps> = ({ isVisible = false, onStatusChange }) => {
   const [status, setStatus] = useState<'checking' | 'connected' | 'disconnected' | 'error'>('checking');
   const [details, setDetails] = useState<any>(null);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -26,6 +27,7 @@ const DatabaseStatus: React.FC<DatabaseStatusProps> = ({ isVisible = false }) =>
       if (!response.ok) {
         console.warn('❌ DATABASE STATUS: API response not OK:', response.status);
         setStatus('error');
+        onStatusChange?.('error');
         setDetails({ error: `HTTP ${response.status}: ${response.statusText}` });
         return;
       }
@@ -36,12 +38,15 @@ const DatabaseStatus: React.FC<DatabaseStatusProps> = ({ isVisible = false }) =>
       
       if (result.connected === true || result.success === true) {
         setStatus('connected');
+        onStatusChange?.('connected');
       } else {
         setStatus('disconnected');
+        onStatusChange?.('disconnected');
       }
     } catch (error) {
       console.error('❌ DATABASE STATUS: Connection test failed:', error);
       setStatus('error');
+      onStatusChange?.('error');
       setDetails({ 
         error: error instanceof Error ? error.message : 'Unknown error',
         type: error instanceof Error ? error.name : 'Error'
@@ -90,6 +95,13 @@ const DatabaseStatus: React.FC<DatabaseStatusProps> = ({ isVisible = false }) =>
       checkConnection();
     }
   }, [isVisible]);
+
+  // Also check connection on component mount if visible
+  useEffect(() => {
+    if (isVisible) {
+      checkConnection();
+    }
+  }, []);
 
   if (!isVisible) return null;
 

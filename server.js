@@ -71,6 +71,16 @@ const mapRowToRecipe = (row) => ({
       return {};
     }
   })(),
+  additional_sections: (() => {
+    try {
+      if (!row.additional_sections) return {};
+      if (typeof row.additional_sections === 'object') return row.additional_sections;
+      return JSON.parse(row.additional_sections);
+    } catch (error) {
+      console.warn('Error parsing additional_sections:', error);
+      return {};
+    }
+  })(),
   prep_time: row.prep_time || '',
   difficulty: row.difficulty || '',
   is_favorite: Boolean(row.is_favorite),
