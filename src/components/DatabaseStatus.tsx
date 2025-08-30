@@ -49,6 +49,42 @@ const DatabaseStatus: React.FC<DatabaseStatusProps> = ({ isVisible = false }) =>
     }
   };
 
+  const clearAllStorageAndRefresh = () => {
+    console.log('🧹 מנקה את כל הקאש והאחסון המקומי...');
+    
+    // נקה localStorage
+    const keysToRemove = [
+      'cache_all_recipes',
+      'fallback_recipes', 
+      'hebrew-recipes',
+      'recipes-cache',
+      'recipes-cache-timestamp',
+      'recipe-favorites',
+      'recipe-view-mode'
+    ];
+    
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key);
+      console.log('🗑️ הוסר:', key);
+    });
+    
+    // נקה כל המפתחות שמתחילים ב-cache_
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('cache_') || key.startsWith('recipe_progress_')) {
+        localStorage.removeItem(key);
+        console.log('🗑️ הוסר:', key);
+      }
+    });
+    
+    // נקה sessionStorage
+    sessionStorage.clear();
+    
+    console.log('✅ קאש נוקה בהצלחה!');
+    
+    // רענן את הדף
+    window.location.reload();
+  };
+
   useEffect(() => {
     if (isVisible) {
       checkConnection();
@@ -154,8 +190,17 @@ const DatabaseStatus: React.FC<DatabaseStatusProps> = ({ isVisible = false }) =>
             )}
             
             <div className="mt-2 pt-1 border-t border-gray-300">
-              <div className="text-xs text-gray-500">
-                לחץ כדי לרענן • לחץ על 🔄 כדי לבדוק שוב
+              <div className="flex flex-col space-y-2">
+                <button
+                  onClick={clearAllStorageAndRefresh}
+                  className="px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 text-xs w-full"
+                  title="ניקוי קאש ורענון הדף - יטען נתונים טריים מהשרת"
+                >
+                  🧹 נקה קאש ורענן
+                </button>
+                <div className="text-xs text-gray-500">
+                  לחץ כדי לרענן • לחץ על 🔄 כדי לבדוק שוב
+                </div>
               </div>
             </div>
           </div>

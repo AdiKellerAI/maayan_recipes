@@ -110,6 +110,12 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Smart loading with caching and incremental updates
   const loadRecipes = async (forceRefresh = false) => {
     try {
+      // Clear old cache on first load or when forcing refresh to ensure fresh data
+      if (!isInitialized || forceRefresh) {
+        console.log('🧹 Clearing old cache to ensure fresh data from PostgreSQL...');
+        recipeService.clearOldData();
+      }
+
       // Don't reload if we have recent data and not forcing refresh
       if (!forceRefresh && isInitialized && lastSyncTime && 
           Date.now() - lastSyncTime.getTime() < 5 * 60 * 1000) { // 5 minutes cache

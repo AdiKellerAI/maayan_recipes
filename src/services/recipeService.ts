@@ -165,24 +165,25 @@ const saveFallbackRecipes = (recipes: Recipe[]) => {
 };
 
 export const recipeService = {
+  // Clear old cache and localStorage data to ensure fresh data
+  clearOldData(): void {
+    console.log('🧹 Clearing old cache and localStorage data...');
+    cacheManager.clear();
+    console.log('✅ Cleared all cached data - will fetch fresh from API');
+  },
+
   // Get all recipes
   async getAllRecipes(): Promise<Recipe[]> {
     console.log('🔄 Getting all recipes...');
     
-    // Check cache first for faster initial load
-    const cached = cacheManager.get(CACHE_KEYS.ALL_RECIPES);
-    if (cached && Array.isArray(cached) && cached.length > 0) {
-      console.log(`📦 Using cached recipes (${cached.length} recipes)`);
-      return cached;
-    }
-    
+    // Always try API first for fresh data
     const isAvailable = await isAPIAvailable();
     
     if (isAvailable) {
       try {
         console.log('📊 Fetching recipes from API...');
         
-        const recipes = await retryApiCall(async () => {
+        const apiResponse = await retryApiCall(async () => {
           const response = await fetch('/api/recipes', {
             signal: AbortSignal.timeout(10000) // 10 second timeout
           });
@@ -194,6 +195,8 @@ export const recipeService = {
           return await response.json();
         });
         
+        // Extract recipes from the API response structure
+        const recipes = apiResponse.recipes || apiResponse;
         console.log(`✅ Loaded ${recipes.length} recipes from API`);
         
         // Convert date strings back to Recipe type
@@ -222,13 +225,29 @@ export const recipeService = {
         return processedRecipes;
       } catch (error) {
         console.warn('❌ API request failed:', error);
-        console.log('📦 Falling back to localStorage...');
+        console.log('📦 Falling back to cached data or localStorage...');
+        
+        // Check cache as fallback
+        const cached = cacheManager.get(CACHE_KEYS.ALL_RECIPES);
+        if (cached && Array.isArray(cached) && cached.length > 0) {
+          console.log(`📦 Using cached recipes as fallback (${cached.length} recipes)`);
+          return cached;
+        }
+        
         const fallbackRecipes = getFallbackRecipes();
         console.log(`📦 Loaded ${fallbackRecipes.length} fallback recipes`);
         return fallbackRecipes;
       }
     } else {
-      console.log('📦 API not available, using localStorage fallback');
+      console.log('📦 API not available, checking cache first...');
+      
+      // Check cache before localStorage
+      const cached = cacheManager.get(CACHE_KEYS.ALL_RECIPES);
+      if (cached && Array.isArray(cached) && cached.length > 0) {
+        console.log(`📦 Using cached recipes (${cached.length} recipes)`);
+        return cached;
+      }
+      
       const fallbackRecipes = getFallbackRecipes();
       console.log(`📦 Loaded ${fallbackRecipes.length} fallback recipes`);
       return fallbackRecipes;
