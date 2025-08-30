@@ -20,6 +20,7 @@ interface RecipeContextType {
   sortBy: string;
   lastSyncTime: Date | null;
   isInitialized: boolean;
+  activeRecipeId: string | null; // ID of recipe showing action icons
   addRecipe: (recipe: RecipeInsert) => Promise<Recipe>;
   updateRecipe: (id: string, recipe: Partial<Recipe>) => void;
   deleteRecipe: (id: string) => void;
@@ -37,6 +38,9 @@ interface RecipeContextType {
   refreshRecipes: (forceRefresh?: boolean) => Promise<void>;
   resetFilters: () => void;
   getSyncStatus: () => { lastSync: string; isStale: boolean; cacheAge: number };
+  setActiveRecipeId: (id: string | null) => void;
+  handleRecipeClick: (recipeId: string, hasActiveIcons: boolean) => 'navigate' | 'hide' | 'ignore';
+  handleLongPress: (recipeId: string) => void;
 }
 
 const RecipeContext = createContext<RecipeContextType | undefined>(undefined);
@@ -65,6 +69,7 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [postgresqlStatus, setPostgresqlStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking');
   const [lastSyncTime, setLastSyncTime] = useState<Date | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [activeRecipeId, setActiveRecipeId] = useState<string | null>(null);
   const location = useLocation();
 
   // Handle URL parameters for navigation from landing page
@@ -495,6 +500,30 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   };
 
+  // Handle recipe click logic
+  const handleRecipeClick = (recipeId: string, hasActiveIcons: boolean): 'navigate' | 'hide' | 'ignore' => {
+    if (activeRecipeId === recipeId) {
+      // Clicking on the same recipe with active icons - hide them
+      if (hasActiveIcons) {
+        setActiveRecipeId(null);
+        return 'hide';
+      }
+      // Normal click on same recipe without active icons - navigate
+      return 'navigate';
+    } else if (activeRecipeId && activeRecipeId !== recipeId) {
+      // Clicking on different recipe while another has active icons - hide previous icons, don't navigate
+      setActiveRecipeId(null);
+      return 'ignore';
+    }
+    // No active icons anywhere - normal navigation
+    return 'navigate';
+  };
+
+  // Handle long press to show icons
+  const handleLongPress = (recipeId: string) => {
+    setActiveRecipeId(recipeId);
+  };
+
   return (
     <RecipeContext.Provider value={{
       recipes,
@@ -512,6 +541,7 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       sortBy,
       lastSyncTime,
       isInitialized,
+      activeRecipeId,
       addRecipe,
       updateRecipe,
       deleteRecipe,
@@ -528,7 +558,10 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       getFilteredRecipes,
       refreshRecipes,
       resetFilters,
-      getSyncStatus
+      getSyncStatus,
+      setActiveRecipeId,
+      handleRecipeClick,
+      handleLongPress
     }}>
       {children}
     </RecipeContext.Provider>

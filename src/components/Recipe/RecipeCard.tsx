@@ -37,13 +37,17 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
   recipe,
   viewMode
 }) => {
-  const { toggleFavorite, deleteRecipe } = useRecipes();
+  const { 
+    toggleFavorite, 
+    deleteRecipe, 
+    activeRecipeId, 
+    handleRecipeClick, 
+    handleLongPress 
+  } = useRecipes();
   const { executeProtectedAction } = useProtectedAction();
   const navigate = useNavigate();
-  const [showMobileOptions, setShowMobileOptions] = useState(false);
   const [showDesktopOptions, setShowDesktopOptions] = useState(false);
   const [isLongPress, setIsLongPress] = useState(false);
-  const [selectedRecipeId, setSelectedRecipeId] = useState<string | null>(null);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   // Better mobile detection - check for touch support instead of screen width
   const [isMobile, setIsMobile] = useState(() => {
@@ -62,19 +66,15 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
   }, []);
 
   // Long press handler for mobile (works for all view modes)
-  const handleTouchStart = () => {
+  const handleTouchStart = (e: React.TouchEvent) => {
     if (!isMobile) return;
     
-    // Hide options for other recipes when starting a new long press
-    if (selectedRecipeId && selectedRecipeId !== recipe.id) {
-      setShowMobileOptions(false);
-      setSelectedRecipeId(null);
-    }
+    // Prevent text selection and context menu
+    e.preventDefault();
     
     longPressTimer.current = setTimeout(() => {
       setIsLongPress(true);
-      setShowMobileOptions(true);
-      setSelectedRecipeId(recipe.id);
+      handleLongPress(recipe.id);
     }, 500); // 500ms for long press
   };
 
@@ -92,6 +92,13 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
     }
   };
 
+  // Prevent context menu on long press
+  const handleContextMenu = (e: React.MouseEvent) => {
+    if (isMobile) {
+      e.preventDefault();
+    }
+  };
+
   // Desktop hover handlers
   const handleMouseEnter = () => {
     if (!isMobile) {
@@ -106,34 +113,30 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
   };
 
   const handleCardClick = () => {
-    // If this is a different recipe and another recipe has options showing, hide them
-    if (selectedRecipeId && selectedRecipeId !== recipe.id) {
-      setShowMobileOptions(false);
-      setShowDesktopOptions(false);
-      setSelectedRecipeId(null);
-    }
-    
-    if (showMobileOptions && selectedRecipeId === recipe.id) {
-      setShowMobileOptions(false);
-      setIsLongPress(false);
-      setSelectedRecipeId(null);
-      return;
-    }
-    
     if (isLongPress) {
       setIsLongPress(false);
       return;
     }
     
-    // Normal click - navigate to recipe
-    navigate(`/recipe/${recipe.id}`);
+    const hasActiveIcons = activeRecipeId === recipe.id;
+    const clickResult = handleRecipeClick(recipe.id, hasActiveIcons);
+    
+    switch (clickResult) {
+      case 'navigate':
+        navigate(`/recipe/${recipe.id}`);
+        break;
+      case 'hide':
+        // Icons already hidden by context
+        break;
+      case 'ignore':
+        // Do nothing - just hide other recipe's icons
+        break;
+    }
   };
 
   const handleOptionClick = (action: 'edit' | 'share' | 'delete') => {
-    setShowMobileOptions(false);
     setShowDesktopOptions(false);
     setIsLongPress(false);
-    setSelectedRecipeId(null);
     
     switch (action) {
       case 'edit':
@@ -179,42 +182,14 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
     }
   };
 
-  // Cleanup timer on unmount and handle outside clicks
+  // Cleanup timer on unmount
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      // If clicking outside and this recipe has options showing, hide them
-      if (showMobileOptions && selectedRecipeId === recipe.id) {
-        const target = event.target as HTMLElement;
-        const cardElement = target.closest('[data-recipe-id]');
-        const clickedRecipeId = cardElement?.getAttribute('data-recipe-id');
-        
-        if (clickedRecipeId !== recipe.id) {
-          setShowMobileOptions(false);
-          setShowDesktopOptions(false);
-          setSelectedRecipeId(null);
-        }
-      }
-    };
-
-    const handleScroll = () => {
-      if (showMobileOptions || showDesktopOptions) {
-        setShowMobileOptions(false);
-        setShowDesktopOptions(false);
-        setSelectedRecipeId(null);
-      }
-    };
-
-    document.addEventListener('click', handleClickOutside);
-    window.addEventListener('scroll', handleScroll, true);
-    
     return () => {
       if (longPressTimer.current) {
         clearTimeout(longPressTimer.current);
       }
-      document.removeEventListener('click', handleClickOutside);
-      window.removeEventListener('scroll', handleScroll, true);
     };
-  }, [showMobileOptions, showDesktopOptions, selectedRecipeId, recipe.id]);
+  }, []);
 
   const handleFavoriteClick = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -253,7 +228,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
   if (viewMode === 'list') {
     return (
       <div 
-        className="block"
+        className="block select-none"
         data-recipe-id={recipe.id}
         onClick={handleCardClick}
         onTouchStart={handleTouchStart}
@@ -261,6 +236,8 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
         onTouchMove={handleTouchMove}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        onContextMenu={handleContextMenu}
+        style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}
       >
         <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer p-2.5 border border-gray-200">
           <div className="flex items-center justify-between">
@@ -272,7 +249,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
             
             <div className="flex items-center space-x-2 rtl:space-x-reverse ml-3 rtl:mr-3 rtl:ml-0">
               {/* Action buttons - shown to the right of category on hover/long press */}
-              {(showMobileOptions || showDesktopOptions) && (
+              {((isMobile && activeRecipeId === recipe.id) || (!isMobile && showDesktopOptions)) && (
                 <div className="flex items-center space-x-1 rtl:space-x-reverse">
                   <button
                     onClick={(e) => {
@@ -350,6 +327,8 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
         onTouchMove={handleTouchMove}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        onContextMenu={handleContextMenu}
+        style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}
       >
         <div className="group bg-white/80 backdrop-blur-sm border border-white/20 rounded-2xl shadow-lg hover:shadow-2xl hover:shadow-amber-500/10 transition-all duration-500 cursor-pointer overflow-hidden h-full flex flex-col transform hover:scale-[1.02] hover:-translate-y-2 before:absolute before:inset-0 before:rounded-2xl before:bg-gradient-to-br before:from-white/10 before:to-transparent before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-500 relative">
         {primaryImage ? (
@@ -429,7 +408,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
             </button>
 
             {/* Mobile/Desktop options - 3 buttons like medium view */}
-            {(showMobileOptions || showDesktopOptions) && (
+            {((isMobile && activeRecipeId === recipe.id) || (!isMobile && showDesktopOptions)) && (
               <div className="absolute top-3 right-3 rtl:left-3 rtl:right-auto flex items-center space-x-2 rtl:space-x-reverse z-20">
                 <button
                   onClick={(e) => {
@@ -535,7 +514,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
             </button>
             
             {/* Mobile/Desktop options - 3 buttons like medium view */}
-            {(showMobileOptions || showDesktopOptions) && (
+            {((isMobile && activeRecipeId === recipe.id) || (!isMobile && showDesktopOptions)) && (
               <div className="absolute top-3 right-3 rtl:left-3 rtl:right-auto flex items-center space-x-2 rtl:space-x-reverse z-20">
                 <button
                   onClick={(e) => {
@@ -605,6 +584,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
       onTouchMove={handleTouchMove}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      style={{ userSelect: 'none', WebkitUserSelect: 'none', MozUserSelect: 'none', msUserSelect: 'none' }}
     >
       <div className="group bg-white/85 backdrop-blur-sm border border-white/30 rounded-xl shadow-md hover:shadow-xl hover:shadow-amber-500/10 transition-all duration-400 cursor-pointer overflow-hidden h-full flex flex-col transform hover:scale-[1.03] hover:-translate-y-2 before:absolute before:inset-0 before:rounded-xl before:bg-gradient-to-br before:from-white/20 before:to-transparent before:opacity-0 hover:before:opacity-100 before:transition-opacity before:duration-400 relative">
       {primaryImage ? (
@@ -669,21 +649,22 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
             </div>
           )}
           
-          {/* Heart icon (top left) or Mobile/Desktop options */}
-          {!(showMobileOptions || showDesktopOptions) ? (
-            <button
-              onClick={handleFavoriteClick}
-              className="absolute top-2 left-2 rtl:right-2 rtl:left-auto w-9 h-9 bg-white/90 backdrop-blur-md rounded-full shadow-md hover:shadow-lg hover:bg-white transition-all duration-300 flex items-center justify-center heart-button transform hover:scale-110 active:scale-95 border border-white/30 z-20"
-            >
-              <Heart
-                className={`h-4 w-4 transition-all duration-300 ${
-                  recipe.is_favorite 
-                    ? 'fill-rose-500 text-rose-500 scale-110 drop-shadow-sm' 
-                    : 'text-gray-600 hover:text-rose-400 hover:scale-105'
-                }`}
-              />
-            </button>
-          ) : (
+          {/* Heart icon (top left) */}
+          <button
+            onClick={handleFavoriteClick}
+            className="absolute top-2 left-2 rtl:right-2 rtl:left-auto w-9 h-9 bg-white/90 backdrop-blur-md rounded-full shadow-md hover:shadow-lg hover:bg-white transition-all duration-300 flex items-center justify-center heart-button transform hover:scale-110 active:scale-95 border border-white/30 z-20"
+          >
+            <Heart
+              className={`h-4 w-4 transition-all duration-300 ${
+                recipe.is_favorite 
+                  ? 'fill-rose-500 text-rose-500 scale-110 drop-shadow-sm' 
+                  : 'text-gray-600 hover:text-rose-400 hover:scale-105'
+              }`}
+            />
+          </button>
+          
+          {/* Mobile/Desktop options */}
+          {((isMobile && activeRecipeId === recipe.id) || (!isMobile && showDesktopOptions)) && (
             <div className="absolute top-2 right-2 rtl:left-2 rtl:right-auto flex items-center space-x-1 rtl:space-x-reverse z-20">
               <button
                 onClick={(e) => {
@@ -774,21 +755,22 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
             </div>
           )}
           
-          {/* Heart icon (top left) or Mobile/Desktop options */}
-          {!(showMobileOptions || showDesktopOptions) ? (
-            <button
-              onClick={handleFavoriteClick}
-              className="absolute top-2 left-2 rtl:right-2 rtl:left-auto w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full shadow-md hover:bg-white transition-all duration-200 flex items-center justify-center heart-button transform hover:scale-110 active:scale-95 z-20"
-            >
-              <Heart
-                className={`h-4 w-4 transition-all duration-200 ${
-                  recipe.is_favorite 
-                    ? 'fill-red-500 text-red-500 scale-110' 
-                    : 'text-gray-600 hover:text-red-400'
-                }`}
-              />
-            </button>
-          ) : (
+          {/* Heart icon (top left) */}
+          <button
+            onClick={handleFavoriteClick}
+            className="absolute top-2 left-2 rtl:right-2 rtl:left-auto w-8 h-8 bg-white/90 backdrop-blur-sm rounded-full shadow-md hover:bg-white transition-all duration-200 flex items-center justify-center heart-button transform hover:scale-110 active:scale-95 z-20"
+          >
+            <Heart
+              className={`h-4 w-4 transition-all duration-200 ${
+                recipe.is_favorite 
+                  ? 'fill-red-500 text-red-500 scale-110' 
+                  : 'text-gray-600 hover:text-red-400'
+              }`}
+            />
+          </button>
+          
+          {/* Mobile/Desktop options */}
+          {((isMobile && activeRecipeId === recipe.id) || (!isMobile && showDesktopOptions)) && (
             <div className="absolute top-2 right-2 rtl:left-2 rtl:right-auto flex items-center space-x-1 rtl:space-x-reverse z-20">
               <button
                 onClick={(e) => {

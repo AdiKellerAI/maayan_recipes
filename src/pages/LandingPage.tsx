@@ -51,7 +51,7 @@ const LandingPage: React.FC = () => {
     'animate-float-ultra-fast1', 'animate-float-ultra-fast2', 'animate-float-ultra-fast3'
   ];
 
-  const circleOpacities = [0.30, 0.35, 0.40, 0.45, 0.50, 0.55, 0.60];
+  const circleOpacities = [0.40, 0.45, 0.50, 0.55, 0.60, 0.65, 0.70];
 
   const circleDelays = [
     'delay-200', 'delay-300', 'delay-400', 'delay-500', 'delay-600', 'delay-700',
