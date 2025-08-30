@@ -7,11 +7,18 @@ const pool = new Pool({
   database: 'recipes',
   user: 'postgres',
   password: 'MaayanRecipes2025',
-  // Connection settings
+  // Connection settings - increased timeouts for high latency connection
   ssl: { rejectUnauthorized: false }, // Enable SSL with self-signed certificates
-  connectionTimeoutMillis: 10000,
-  idleTimeoutMillis: 30000,
-  max: 10
+  connectionTimeoutMillis: 30000, // Increased from 10s to 30s
+  idleTimeoutMillis: 60000, // Increased from 30s to 60s
+  query_timeout: 30000, // Add query timeout
+  max: 5, // Reduced pool size to avoid overwhelming the connection
+  min: 1, // Keep at least 1 connection alive
+  acquireTimeoutMillis: 30000, // Time to wait for connection from pool
+  createTimeoutMillis: 30000, // Time to wait for new connection creation
+  destroyTimeoutMillis: 5000,
+  reapIntervalMillis: 1000,
+  createRetryIntervalMillis: 200
 });
 
 // Test PostgreSQL connection

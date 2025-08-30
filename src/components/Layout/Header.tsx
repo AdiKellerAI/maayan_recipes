@@ -382,7 +382,7 @@ const Header: React.FC = () => {
                   
                   {/* Database Section */}
                   <div className="space-y-1.5">
-                    <h5 className="text-xs font-semibold text-black uppercase tracking-wide">מאגר מידע והרשאות</h5>
+                    <h5 className="text-xs font-semibold text-black uppercase tracking-wide">ניהול נתונים</h5>
                     
                     {/* Database Connection Status */}
                     <div className="w-full flex items-center justify-between py-1.5 px-2.5">

@@ -595,7 +595,100 @@ const EditRecipePage: React.FC = () => {
 
 
 
-          {/* Additional Sections */}
+
+          {/* Ingredients Section */}
+          <div className="bg-gradient-to-r from-orange-50 to-rose-50 p-4 rounded-lg border border-orange-200">
+            <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
+              <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+              רכיבים
+            </h2>
+            <div className="space-y-2">
+              {ingredients.map((ingredient, index) => (
+                <div key={index} className="flex gap-2 items-center group">
+                  <div className="flex-shrink-0 w-5 h-5 bg-orange-500 text-white rounded-full flex items-center justify-center text-xs font-medium">
+                    {index + 1}
+                  </div>
+                  <input
+                    ref={(el) => ingredientRefs.current[index] = el}
+                    type="text"
+                    value={ingredient}
+                    onChange={(e) => updateIngredient(index, e.target.value)}
+                    className="flex-1 p-2 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-orange-300 focus:border-orange-400 transition-all duration-150 text-sm"
+                    placeholder={`רכיב ${index + 1}`}
+                  />
+                  {ingredients.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeIngredient(index)}
+                      className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100"
+                      title="הסר רכיב"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addIngredient}
+                onMouseDown={(e) => e.preventDefault()}
+                onTouchStart={(e) => e.preventDefault()}
+                className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm"
+              >
+                <Plus className="w-4 h-4" />
+                הוסף רכיב נוסף
+              </button>
+            </div>
+          </div>
+
+          {/* Directions Section */}
+          <div className="bg-gradient-to-r from-orange-50 to-rose-50 p-4 rounded-lg border border-orange-200">
+            <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
+              <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+              הוראות הכנה
+            </h2>
+            <div className="space-y-2">
+              {directions.map((direction, index) => (
+                <div key={index} className="flex gap-2 group">
+                  <div className="bg-orange-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-1">
+                    {index + 1}
+                  </div>
+                  <div className="flex-1">
+                    <textarea
+                      ref={(el) => directionRefs.current[index] = el}
+                      value={direction}
+                      onChange={(e) => updateDirection(index, e.target.value)}
+                      rows={2}
+                      className="w-full p-2 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-orange-300 focus:border-orange-400 transition-all duration-150 resize-none text-sm"
+                      placeholder={`שלב ${index + 1}...`}
+                    />
+                  </div>
+                  {directions.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeDirection(index)}
+                      className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100 self-start mt-1"
+                      title="הסר שלב"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                type="button"
+                onClick={addDirection}
+                onMouseDown={(e) => e.preventDefault()}
+                onTouchStart={(e) => e.preventDefault()}
+                className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm"
+              >
+                <Plus className="w-4 h-4" />
+                הוסף שלב נוסף
+              </button>
+            </div>
+          </div>
+
+          {/* Additional Sections - moved to appear before add button */}
           {Object.keys(additionalSections).length > 0 && (
             <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
               <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
@@ -708,109 +801,13 @@ const EditRecipePage: React.FC = () => {
               </div>
             </div>
           )}
-          
 
-
-
-
-          {/* Ingredients Section */}
-          <div className="bg-gradient-to-r from-orange-50 to-rose-50 p-4 rounded-lg border border-orange-200">
-            <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
-              <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-              רכיבים
-            </h2>
-            <div className="space-y-2">
-              {ingredients.map((ingredient, index) => (
-                <div key={index} className="flex gap-2 items-center group">
-                  <div className="flex-shrink-0 w-5 h-5 bg-orange-500 text-white rounded-full flex items-center justify-center text-xs font-medium">
-                    {index + 1}
-                  </div>
-                  <input
-                    ref={(el) => ingredientRefs.current[index] = el}
-                    type="text"
-                    value={ingredient}
-                    onChange={(e) => updateIngredient(index, e.target.value)}
-                    className="flex-1 p-2 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-orange-300 focus:border-orange-400 transition-all duration-150 text-sm"
-                    placeholder={`רכיב ${index + 1}`}
-                  />
-                  {ingredients.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeIngredient(index)}
-                      className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100"
-                      title="הסר רכיב"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={addIngredient}
-                onMouseDown={(e) => e.preventDefault()}
-                onTouchStart={(e) => e.preventDefault()}
-                className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm"
-              >
-                <Plus className="w-4 h-4" />
-                הוסף רכיב נוסף
-              </button>
-            </div>
-          </div>
-
-          {/* Directions Section */}
-          <div className="bg-gradient-to-r from-orange-50 to-rose-50 p-4 rounded-lg border border-orange-200">
-            <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
-              <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-              הוראות הכנה
-            </h2>
-            <div className="space-y-2">
-              {directions.map((direction, index) => (
-                <div key={index} className="flex gap-2 group">
-                  <div className="bg-orange-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-1">
-                    {index + 1}
-                  </div>
-                  <div className="flex-1">
-                    <textarea
-                      ref={(el) => directionRefs.current[index] = el}
-                      value={direction}
-                      onChange={(e) => updateDirection(index, e.target.value)}
-                      rows={2}
-                      className="w-full p-2 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-orange-300 focus:border-orange-400 transition-all duration-150 resize-none text-sm"
-                      placeholder={`שלב ${index + 1}...`}
-                    />
-                  </div>
-                  {directions.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeDirection(index)}
-                      className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100 self-start mt-1"
-                      title="הסר שלב"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={addDirection}
-                onMouseDown={(e) => e.preventDefault()}
-                onTouchStart={(e) => e.preventDefault()}
-                className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm"
-              >
-                <Plus className="w-4 h-4" />
-                הוסף שלב נוסף
-              </button>
-            </div>
-          </div>
-
-          {/* Add New Section Button */}
+          {/* Add New Section Button - placed at the bottom before submit */}
           <div className="text-center">
             <button
               type="button"
               onClick={addNewSection}
-              className="flex items-center gap-2 text-green-600 hover:text-green-700 font-medium bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 px-4 py-3 rounded-lg transition-all duration-200 border border-dashed border-green-300 hover:border-green-400 mx-auto text-sm"
+              className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium bg-gradient-to-r from-blue-50 to-cyan-50 hover:from-blue-100 hover:to-cyan-100 px-4 py-3 rounded-lg transition-all duration-200 border border-dashed border-blue-300 hover:border-blue-400 mx-auto text-sm"
             >
               <Plus className="w-4 h-4" />
               הוסף חלק חדש (עם מרכיבים ושלבים)
@@ -883,7 +880,7 @@ const EditRecipePage: React.FC = () => {
 
         {/* New Section Modal (with ingredients and directions) */}
         {showNewSectionModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center pt-16 sm:pt-20 p-2 sm:p-4 z-50">
             <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md mx-2 sm:mx-4">
               <h3 className="text-base sm:text-lg font-semibold text-blue-900 mb-4">הוסף חלק חדש עם מרכיבים</h3>
               <p className="text-gray-600 mb-4 text-sm sm:text-base">הכנס שם לחלק החדש (למשל: רוטב, בצק, מילוי, קרם):</p>
