@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Lock, Mail, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -8,6 +8,26 @@ const AuthModal: React.FC = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Handle mobile back button
+  useEffect(() => {
+    if (!showAuthModal) return;
+
+    // Add a history entry when modal opens
+    const handlePopState = () => {
+      hideAuthModal();
+    };
+
+    // Push a new history state when modal opens
+    window.history.pushState({ modalOpen: true }, '', window.location.href);
+    
+    // Listen for back button
+    window.addEventListener('popstate', handlePopState);
+
+    return () => {
+      window.removeEventListener('popstate', handlePopState);
+    };
+  }, [showAuthModal, hideAuthModal]);
 
   if (!showAuthModal) return null;
 

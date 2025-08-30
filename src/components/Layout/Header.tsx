@@ -364,10 +364,10 @@ const Header: React.FC = () => {
                           }}
                           className="bg-gradient-to-br from-orange-500/80 to-yellow-600/80 border border-orange-400/80 text-white px-3 py-0 rounded-md hover:from-orange-600/80 hover:to-yellow-700/80 transition-all duration-300 font-medium shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95 flex items-center justify-center"
                           style={{
-                            height: '20px',
-                            fontSize: '0.65rem',
-                            lineHeight: '1.0',
-                            minHeight: '20px'
+                            height: '24px',
+                            fontSize: '0.75rem',
+                            lineHeight: '1.2',
+                            minHeight: '24px'
                           }}
                         >
                           כניסה

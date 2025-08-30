@@ -435,22 +435,23 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
               </div>
             )}
             
-            {/* Heart icon (top left) or Mobile options */}
-            {!(isMobile && showMobileOptions) ? (
-              <button
-                onClick={handleFavoriteClick}
-                className="absolute top-4 left-4 rtl:right-4 rtl:left-auto w-12 h-12 bg-white/90 backdrop-blur-md rounded-full shadow-lg hover:shadow-xl hover:bg-white transition-all duration-300 flex items-center justify-center heart-button transform hover:scale-110 active:scale-95 border border-white/30 z-20"
-              >
-                <Heart
-                  className={`h-6 w-6 transition-all duration-300 ${
-                    recipe.is_favorite 
-                      ? 'fill-rose-500 text-rose-500 scale-110 drop-shadow-sm' 
-                      : 'text-gray-600 hover:text-rose-400 hover:scale-105'
-                  }`}
-                />
-              </button>
-            ) : (
-              <div className="absolute top-3 right-3 rtl:left-3 rtl:right-auto flex items-center space-x-2 rtl:space-x-reverse">
+            {/* Heart icon (top left) */}
+            <button
+              onClick={handleFavoriteClick}
+              className="absolute top-4 left-4 rtl:right-4 rtl:left-auto w-12 h-12 bg-white/90 backdrop-blur-md rounded-full shadow-lg hover:shadow-xl hover:bg-white transition-all duration-300 flex items-center justify-center heart-button transform hover:scale-110 active:scale-95 border border-white/30 z-20"
+            >
+              <Heart
+                className={`h-6 w-6 transition-all duration-300 ${
+                  recipe.is_favorite 
+                    ? 'fill-rose-500 text-rose-500 scale-110 drop-shadow-sm' 
+                    : 'text-gray-600 hover:text-rose-400 hover:scale-105'
+                }`}
+              />
+            </button>
+
+            {/* Mobile options - 3 buttons like medium view */}
+            {isMobile && showMobileOptions && (
+              <div className="absolute top-3 right-3 rtl:left-3 rtl:right-auto flex items-center space-x-2 rtl:space-x-reverse z-20">
                 <button
                   onClick={() => handleOptionClick('edit')}
                   className="bg-yellow-50 text-yellow-600 hover:bg-yellow-100 rounded-full shadow-md transition-all duration-200 flex items-center justify-center flex-shrink-0"
@@ -591,54 +592,6 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
           </div>
         </div>
         </div>
-        
-        {/* Mobile Options Overlay */}
-        {showMobileOptions && isMobile && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 mx-4 max-w-sm w-full">
-              <h3 className="text-lg font-semibold text-center mb-4">{recipe.title}</h3>
-              <div className="space-y-3">
-                <button
-                  onClick={() => navigate(`/recipe/${recipe.id}`)}
-                  className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse p-3 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100"
-                >
-                  <Eye className="h-5 w-5" />
-                  <span>פתח מתכון</span>
-                </button>
-                <button
-                  onClick={() => executeProtectedAction(() => navigate(`/edit/${recipe.id}`))}
-                  className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse p-3 bg-yellow-50 text-yellow-600 rounded-lg hover:bg-yellow-100"
-                >
-                  <Edit className="h-5 w-5" />
-                  <span>ערוך מתכון</span>
-                </button>
-                <button
-                  onClick={handleShare}
-                  className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse p-3 bg-green-50 text-green-600 rounded-lg hover:bg-green-100"
-                >
-                  <Share2 className="h-5 w-5" />
-                  <span>שתף מתכון</span>
-                </button>
-                <button
-                  onClick={handleDelete}
-                  className="w-full flex items-center justify-center space-x-2 rtl:space-x-reverse p-3 bg-red-50 text-red-600 rounded-lg hover:bg-red-100"
-                >
-                  <Trash2 className="h-5 w-5" />
-                  <span>מחק מתכון</span>
-                </button>
-                <button
-                  onClick={() => {
-                    setShowMobileOptions(false);
-                    setIsLongPress(false);
-                  }}
-                  className="w-full p-3 bg-gray-100 text-gray-600 rounded-lg hover:bg-gray-200"
-                >
-                  ביטול
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   }
