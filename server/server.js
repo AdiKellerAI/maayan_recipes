@@ -191,6 +191,7 @@ app.post('/api/recipes', async (req, res) => {
       ingredients,
       directions,
       additional_instructions = {},
+      additional_sections = {},
       prep_time = '',
       difficulty = '',
       is_favorite = false,
@@ -215,8 +216,8 @@ app.post('/api/recipes', async (req, res) => {
     const queryResult = await client.query(
       `INSERT INTO recipes (
         title, description, category, ingredients, directions, 
-        additional_instructions, prep_time, difficulty, is_favorite, current_step, images
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
+        additional_instructions, additional_sections, prep_time, difficulty, is_favorite, current_step, images
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) 
       RETURNING *`,
       [
         title,
@@ -225,6 +226,7 @@ app.post('/api/recipes', async (req, res) => {
         JSON.stringify(ingredients),
         JSON.stringify(directions),
         JSON.stringify(additional_instructions),
+        JSON.stringify(additional_sections),
         prep_time,
         difficulty,
         is_favorite,
@@ -282,6 +284,10 @@ app.put('/api/recipes/:id', async (req, res) => {
     if (updates.additional_instructions !== undefined) {
       updateFields.push(`additional_instructions = $${paramCount++}`);
       values.push(JSON.stringify(updates.additional_instructions));
+    }
+    if (updates.additional_sections !== undefined) {
+      updateFields.push(`additional_sections = $${paramCount++}`);
+      values.push(JSON.stringify(updates.additional_sections));
     }
     if (updates.prep_time !== undefined) {
       updateFields.push(`prep_time = $${paramCount++}`);
