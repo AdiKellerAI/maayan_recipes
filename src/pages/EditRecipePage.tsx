@@ -281,6 +281,7 @@ const EditRecipePage: React.FC = () => {
       delete newSections[sectionName];
       return newSections;
     });
+    setHasUnsavedChanges(true);
   };
 
   const updateSectionIngredient = (sectionName: string, index: number, value: string) => {
@@ -380,7 +381,7 @@ const EditRecipePage: React.FC = () => {
         images: images,
         difficulty: formData.difficulty || undefined,
         additional_instructions: additionalInstructions,
-        additional_sections: Object.keys(filteredAdditionalSections).length > 0 ? filteredAdditionalSections : undefined
+        additional_sections: filteredAdditionalSections
       };
 
       try {

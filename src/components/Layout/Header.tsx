@@ -26,6 +26,7 @@ const Header: React.FC = () => {
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const navigate = useNavigate();
   const { executeProtectedAction } = useProtectedAction();
   const { isAuthenticated } = useAuth();
@@ -42,12 +43,31 @@ const Header: React.FC = () => {
     return '';
   };
 
+  // Check if we're on a recipe detail page
+  const isRecipeDetailPage = location.pathname.startsWith('/recipe/');
+
   useEffect(() => {
     if (location.pathname === '/') {
       setSearchQuery('');
       setLocalSearchQuery('');
     }
   }, [location.pathname, setSearchQuery]);
+
+  // Handle scroll to show/hide search bar on recipe detail pages
+  useEffect(() => {
+    if (!isRecipeDetailPage) {
+      setIsScrolled(false);
+      return;
+    }
+
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      setIsScrolled(scrollTop > 100);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [isRecipeDetailPage]);
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -213,7 +233,11 @@ const Header: React.FC = () => {
 
           {/* Fixed Search Bar - Desktop */}
           {location.pathname !== '/' && (
-            <div className="hidden sm:flex flex-1 max-w-md mx-8">
+            <div className={`hidden sm:flex mx-8 transition-all duration-300 ${
+              isRecipeDetailPage && isScrolled 
+                ? 'flex-none w-0 opacity-0 overflow-hidden' 
+                : 'flex-1 max-w-md opacity-100'
+            }`}>
               <form onSubmit={handleSearch} className="relative w-full">
                 <input
                   type="text"
@@ -480,9 +504,13 @@ const Header: React.FC = () => {
         )}
       </div>
 
-      {/* Fixed Mobile Search Bar */}
+      {/* Mobile Search Bar - Collapsible */}
       {location.pathname !== '/' && (
-        <div className="md:hidden bg-white border-b border-gray-200 px-4 py-1.5">
+        <div className={`md:hidden bg-white border-b border-gray-200 px-4 transition-all duration-300 overflow-hidden ${
+          isRecipeDetailPage && isScrolled 
+            ? 'h-0 py-0 opacity-0' 
+            : 'h-auto py-1.5 opacity-100'
+        }`}>
           <form onSubmit={handleSearch} className="relative">
             <input
               type="text"

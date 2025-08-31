@@ -632,7 +632,7 @@ const AddRecipePage: React.FC = () => {
           directions: filteredDirections,
           images,
           additional_instructions: Object.keys(additionalInstructions).length > 0 ? additionalInstructions : undefined,
-          additional_sections: Object.keys(filteredAdditionalSections).length > 0 ? filteredAdditionalSections : undefined,
+          additional_sections: filteredAdditionalSections,
           is_favorite: false
         };
 
