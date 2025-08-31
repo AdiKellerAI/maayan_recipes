@@ -17,7 +17,7 @@ const getCategoryIllustration = (categoryId: string) => {
     soups: '🍲',
     meat: '🥩',
     vegetarian: '🥬',
-    pastries: '🥐',
+    pastries: '🍞',
     cakes: '🎂',
     cookies: '🍪',
     desserts: '🍨',

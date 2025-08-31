@@ -100,7 +100,11 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
                   }`}
                   onClick={() => handleStepClick(index)}
                 >
-                  <div className="leading-relaxed text-base">
+                  <div className={`leading-relaxed text-base ${
+                    direction.length <= 50 
+                      ? 'min-h-[40px] flex items-center' // Single line height for short text
+                      : 'min-h-[60px]' // Multi-line height for long text
+                  }`}>
                     {direction}
                   </div>
                 </div>
@@ -225,7 +229,11 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
                                   }`}
                                   onClick={() => handleAdditionalStepClick(sectionName, index)}
                                 >
-                                  <div className="leading-relaxed text-base">
+                                  <div className={`leading-relaxed text-base ${
+                                    direction.length <= 50 
+                                      ? 'min-h-[36px] flex items-center' // Single line height for short text
+                                      : 'min-h-[56px]' // Multi-line height for long text
+                                  }`}>
                                     {direction}
                                   </div>
                                 </div>

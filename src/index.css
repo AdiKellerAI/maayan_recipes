@@ -339,7 +339,7 @@ body {
   animation: slideUp 0.4s ease-out both;
 }
 
-/* Floating animations */
+/* Floating animations - Slower movement (doubled durations for half speed) */
 .animate-float-slow {
   animation: floatSlow 6s ease-in-out infinite;
 }
@@ -364,7 +364,7 @@ body {
   animation: floatFastDelayed 4s ease-in-out infinite 0.8s;
 }
 
-/* Additional random speed animations */
+/* Additional random speed animations - Slower movement */
 .animate-float-random1 {
   animation: floatRandom1 4.5s ease-in-out infinite;
 }
@@ -389,7 +389,7 @@ body {
   animation: floatRandom6 5.8s ease-in-out infinite;
 }
 
-/* New ultra-fast animations for variety */
+/* New ultra-fast animations for variety - Slower movement */
 .animate-float-ultra-fast1 {
   animation: floatUltraFast1 2.5s ease-in-out infinite;
 }

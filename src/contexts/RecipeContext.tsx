@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { Recipe, ViewMode, RecipeInsert } from '../types/recipe';
 import { recipeService } from '../services/recipeService';
+import { optimizedRecipeService } from '../services/optimizedRecipeService';
 import { saveViewMode, loadViewMode } from '../utils/storage';
 import { useLocation } from 'react-router-dom';
 
@@ -107,21 +108,21 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [location.search]);
 
-  // Smart loading with caching and incremental updates
+  // Smart loading with optimized caching and incremental updates
   const loadRecipes = async (forceRefresh = false) => {
     try {
       // Clear old cache on first load or when forcing refresh to ensure fresh data
       if (!isInitialized || forceRefresh) {
         console.log('🧹 Clearing old cache to ensure fresh data from PostgreSQL...');
-        recipeService.clearCache();
+        optimizedRecipeService.clearCache();
       }
 
       // Don't reload if we have recent data and not forcing refresh
       if (!forceRefresh && isInitialized && lastSyncTime && 
-          Date.now() - lastSyncTime.getTime() < 5 * 60 * 1000) { // 5 minutes cache
+          Date.now() - lastSyncTime.getTime() < 2 * 60 * 1000) { // Reduced to 2 minutes for faster updates
         console.log('🔄 Using cached recipes (last sync:', lastSyncTime.toLocaleTimeString(), ')');
         // Still check database status even when using cache
-        const isUsingPostgreSQL = await recipeService.checkPostgreSQLConnection();
+        const isUsingPostgreSQL = await optimizedRecipeService.isAPIAvailable();
         setPostgresqlStatus(isUsingPostgreSQL ? 'connected' : 'disconnected');
         return;
       }
@@ -131,23 +132,47 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setPostgresqlStatus('checking');
       
       // Check database connection first
-      const isUsingPostgreSQL = await recipeService.checkPostgreSQLConnection();
+      const isUsingPostgreSQL = await optimizedRecipeService.isAPIAvailable();
       console.log('🔍 CONTEXT: Database connection status:', isUsingPostgreSQL ? 'connected' : 'disconnected');
       setPostgresqlStatus(isUsingPostgreSQL ? 'connected' : 'disconnected');
       
-      const data = await recipeService.getAllRecipes();
-      console.log(`🎯 CONTEXT: Setting ${data.length} recipes in state`);
-      setRecipes(data);
+      // Use optimized loading - get summaries first, then details as needed
+      const summariesResult = await optimizedRecipeService.getRecipeSummaries({
+        page: 1,
+        limit: 100, // Load first 100 recipes quickly
+        sortBy: 'created_at_desc'
+      });
+      
+      // Convert summaries to full recipes (for backward compatibility)
+      const recipes: Recipe[] = [];
+      for (const summary of summariesResult.recipes) {
+        const fullRecipe = await optimizedRecipeService.getRecipeDetails(summary.id);
+        if (fullRecipe) {
+          recipes.push(fullRecipe);
+        }
+      }
+      
+      console.log(`🎯 CONTEXT: Setting ${recipes.length} recipes in state`);
+      setRecipes(recipes);
       
       setLastSyncTime(new Date());
       setIsInitialized(true);
       
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'שגיאה בטעינת המתכונים';
-      setError(errorMessage);
-      console.error('Error loading recipes:', err);
-      setPostgresqlStatus('disconnected');
-      // Don't clear recipes on error, keep existing ones
+      console.warn('Optimized loading failed, falling back to legacy service:', err);
+      // Fallback to legacy service
+      try {
+        const data = await recipeService.getAllRecipes();
+        console.log(`🎯 CONTEXT: Fallback - Setting ${data.length} recipes in state`);
+        setRecipes(data);
+        setLastSyncTime(new Date());
+        setIsInitialized(true);
+      } catch (fallbackErr) {
+        const errorMessage = fallbackErr instanceof Error ? fallbackErr.message : 'שגיאה בטעינת המתכונים';
+        setError(errorMessage);
+        console.error('Error loading recipes (both optimized and fallback failed):', fallbackErr);
+        setPostgresqlStatus('disconnected');
+      }
     } finally {
       setLoading(false);
     }

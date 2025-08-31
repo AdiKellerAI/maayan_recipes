@@ -199,6 +199,7 @@ const EditRecipePage: React.FC = () => {
           setImages(prev => {
             const newImages = [...prev, ...compressedImages];
             console.log('📸 Total images after upload:', newImages.length);
+            setHasUnsavedChanges(true); // Mark as unsaved for mobile
             return newImages.slice(0, 6); // Ensure we never exceed 6 images
           });
           // Reset the input to allow selecting the same file again if needed
@@ -227,7 +228,13 @@ const EditRecipePage: React.FC = () => {
   };
 
   const removeImage = (index: number) => {
-    setImages(prev => prev.filter((_, i) => i !== index));
+    console.log('🗑️ Removing image at index:', index);
+    setImages(prev => {
+      const newImages = prev.filter((_, i) => i !== index);
+      console.log('📸 Images after removal:', newImages.length);
+      setHasUnsavedChanges(true);
+      return newImages;
+    });
   };
 
   const handleSmartImageSelect = (imageUrl: string) => {
@@ -236,7 +243,11 @@ const EditRecipePage: React.FC = () => {
       return;
     }
     
-    setImages(prev => [...prev, imageUrl]);
+    setImages(prev => {
+      const newImages = [...prev, imageUrl];
+      setHasUnsavedChanges(true); // Mark as unsaved for mobile
+      return newImages;
+    });
     console.log('✨ Smart image added:', imageUrl);
   };
 
@@ -542,10 +553,11 @@ const EditRecipePage: React.FC = () => {
                   <input
                     type="file"
                     multiple
-                    accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif,text/plain"
+                    accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif"
                     onChange={handleImageUpload}
                     className="hidden"
                     title="העלה"
+                    key={Math.random()} // Force re-render for mobile compatibility
                   />
                 </label>
                 <label className="flex items-center gap-2 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg cursor-pointer transition-all duration-200 border border-gray-200 hover:border-pink-300 font-medium text-gray-700 hover:text-pink-600 text-sm">
@@ -553,11 +565,12 @@ const EditRecipePage: React.FC = () => {
                   <span className="whitespace-nowrap">צלם</span>
                   <input
                     type="file"
-                    accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif,text/plain"
+                    accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif"
                     capture="environment"
                     onChange={handleImageUpload}
                     className="hidden"
                     title="צלם"
+                    key={Math.random()} // Force re-render for mobile compatibility
                   />
                 </label>
                 <button
@@ -645,14 +658,20 @@ const EditRecipePage: React.FC = () => {
               ))}
               <button
                 type="button"
-                onClick={addIngredient}
-                onTouchStart={(e) => {
-                  // Only prevent default if it's not a primary touch (to allow click events)
-                  if (e.touches.length > 1) {
-                    e.preventDefault();
-                  }
+                onClick={(e) => {
+                  e.preventDefault();
+                  addIngredient();
                 }}
-                className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm"
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  addIngredient();
+                }}
+                className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm touch-manipulation"
               >
                 <Plus className="w-4 h-4" />
                 הוסף רכיב נוסף
@@ -674,12 +693,28 @@ const EditRecipePage: React.FC = () => {
                   </div>
                   <div className="flex-1">
                     <textarea
-                      ref={(el) => directionRefs.current[index] = el}
+                      ref={(el) => {
+                        directionRefs.current[index] = el;
+                        // Auto-resize textarea to match content
+                        if (el) {
+                          el.style.height = 'auto';
+                          const minHeight = 40; // Match ingredient input height
+                          el.style.height = Math.max(minHeight, el.scrollHeight) + 'px';
+                        }
+                      }}
                       value={direction}
-                      onChange={(e) => updateDirection(index, e.target.value)}
-                      rows={2}
-                      className="w-full p-2 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-orange-300 focus:border-orange-400 transition-all duration-150 resize-none text-sm"
+                      onChange={(e) => {
+                        updateDirection(index, e.target.value);
+                        // Auto-resize on change
+                        const el = e.target as HTMLTextAreaElement;
+                        el.style.height = 'auto';
+                        const minHeight = 40; // Match ingredient input height
+                        el.style.height = Math.max(minHeight, el.scrollHeight) + 'px';
+                      }}
+                      rows={1}
+                      className="w-full p-2 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-orange-300 focus:border-orange-400 transition-all duration-150 resize-none text-sm min-h-[40px] overflow-hidden"
                       placeholder={`שלב ${index + 1}...`}
+                      style={{ minHeight: '40px' }}
                     />
                   </div>
                   {directions.length > 1 && (
@@ -696,14 +731,20 @@ const EditRecipePage: React.FC = () => {
               ))}
               <button
                 type="button"
-                onClick={addDirection}
-                onTouchStart={(e) => {
-                  // Only prevent default if it's not a primary touch (to allow click events)
-                  if (e.touches.length > 1) {
-                    e.preventDefault();
-                  }
+                onClick={(e) => {
+                  e.preventDefault();
+                  addDirection();
                 }}
-                className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm"
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  addDirection();
+                }}
+                className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm touch-manipulation"
               >
                 <Plus className="w-4 h-4" />
                 הוסף שלב נוסף

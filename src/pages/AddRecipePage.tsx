@@ -792,14 +792,20 @@ const AddRecipePage: React.FC = () => {
                 ))}
                 <button
                   type="button"
-                  onClick={addIngredient}
-                  onTouchStart={(e) => {
-                    // Only prevent default if it's not a primary touch (to allow click events)
-                    if (e.touches.length > 1) {
-                      e.preventDefault();
-                    }
+                  onClick={(e) => {
+                    e.preventDefault();
+                    addIngredient();
                   }}
-                  className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm"
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    addIngredient();
+                  }}
+                  className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm touch-manipulation"
                 >
                   <Plus className="w-4 h-4" />
                   הוסף רכיב נוסף
@@ -821,12 +827,28 @@ const AddRecipePage: React.FC = () => {
                     </div>
                     <div className="flex-1">
                       <textarea
-                        ref={(el) => directionRefs.current[index] = el}
+                        ref={(el) => {
+                          directionRefs.current[index] = el;
+                          // Auto-resize textarea to match content
+                          if (el) {
+                            el.style.height = 'auto';
+                            const minHeight = 40; // Match ingredient input height
+                            el.style.height = Math.max(minHeight, el.scrollHeight) + 'px';
+                          }
+                        }}
                         value={direction}
-                        onChange={(e) => updateDirection(index, e.target.value)}
-                        rows={2}
-                        className="w-full p-2 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-orange-300 focus:border-orange-400 transition-all duration-150 resize-none text-sm"
+                        onChange={(e) => {
+                          updateDirection(index, e.target.value);
+                          // Auto-resize on change
+                          const el = e.target as HTMLTextAreaElement;
+                          el.style.height = 'auto';
+                          const minHeight = 40; // Match ingredient input height
+                          el.style.height = Math.max(minHeight, el.scrollHeight) + 'px';
+                        }}
+                        rows={1}
+                        className="w-full p-2 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-orange-300 focus:border-orange-400 transition-all duration-150 resize-none text-sm min-h-[40px] overflow-hidden"
                         placeholder={`שלב ${index + 1}...`}
+                        style={{ minHeight: '40px' }}
                       />
                     </div>
                     {directions.length > 1 && (
@@ -843,14 +865,20 @@ const AddRecipePage: React.FC = () => {
                 ))}
                 <button
                   type="button"
-                  onClick={addDirection}
-                  onTouchStart={(e) => {
-                    // Only prevent default if it's not a primary touch (to allow click events)
-                    if (e.touches.length > 1) {
-                      e.preventDefault();
-                    }
+                  onClick={(e) => {
+                    e.preventDefault();
+                    addDirection();
                   }}
-                  className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm"
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    addDirection();
+                  }}
+                  className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm touch-manipulation"
                 >
                   <Plus className="w-4 h-4" />
                   הוסף שלב נוסף
