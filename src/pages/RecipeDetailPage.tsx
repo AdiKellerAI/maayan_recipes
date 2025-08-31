@@ -200,19 +200,21 @@ const RecipeDetailPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Navigation */}
         <div className="flex items-center justify-between mb-6">
           <button
             onClick={() => navigate(navigateToLastRecipesPage())}
-            className="flex items-center space-x-2 rtl:space-x-reverse text-gray-600 hover:text-gray-900"
+            className="group flex items-center space-x-2 rtl:space-x-reverse text-slate-600 hover:text-slate-900 transition-all duration-200"
           >
-            <ArrowRight className="h-5 w-5" />
-            <span>חזור</span>
+            <div className="p-2 rounded-xl bg-white/80 backdrop-blur-sm shadow-sm group-hover:shadow-md transition-all duration-200 border border-slate-200/50">
+              <ArrowRight className="h-5 w-5" />
+            </div>
+            <span className="font-medium">חזור</span>
           </button>
           
-          <div className="flex items-center space-x-2 rtl:space-x-reverse">
+          <div className="flex items-center space-x-3 rtl:space-x-reverse">
             <button
               onClick={() => {
                 const timerEvent = new CustomEvent('showTimer', {
@@ -220,33 +222,33 @@ const RecipeDetailPage: React.FC = () => {
                 });
                 window.dispatchEvent(timerEvent);
               }}
-              className="p-2 rounded-full bg-white text-gray-600 hover:text-orange-600 hover:bg-orange-50 shadow-sm transition-colors border border-gray-200"
+              className="p-3 rounded-xl bg-white/80 backdrop-blur-sm text-slate-600 hover:text-orange-600 hover:bg-orange-50/80 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50"
               title="טיימר בישול"
             >
               <span className="text-lg">⏰</span>
             </button>
             <button
               onClick={resetProgress}
-              className="p-2 rounded-full bg-white text-gray-600 hover:text-blue-600 hover:bg-blue-50 shadow-sm transition-colors border border-gray-200"
+              className="p-3 rounded-xl bg-white/80 backdrop-blur-sm text-slate-600 hover:text-blue-600 hover:bg-blue-50/80 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50"
               title="איפוס התקדמות"
             >
               <RotateCcw className="h-5 w-5" />
             </button>
             <button
               onClick={handleShare}
-              className="p-2 rounded-full bg-white text-gray-600 hover:text-gray-900 shadow-sm border border-gray-200"
+              className="p-3 rounded-xl bg-white/80 backdrop-blur-sm text-slate-600 hover:text-slate-900 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50"
             >
               <Share2 className="h-5 w-5" />
             </button>
             <button
               onClick={handleDelete}
-              className="p-2 rounded-full bg-white text-red-600 hover:text-red-700 hover:bg-red-50 shadow-sm transition-colors border border-gray-200"
+              className="p-3 rounded-xl bg-white/80 backdrop-blur-sm text-red-500 hover:text-red-600 hover:bg-red-50/80 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50"
             >
               <Trash2 className="h-5 w-5" />
             </button>
             <Link
               to={`/edit/${recipe.id}`}
-              className="p-2 rounded-full bg-white text-gray-600 hover:text-gray-900 shadow-sm border border-gray-200"
+              className="p-3 rounded-xl bg-white/80 backdrop-blur-sm text-slate-600 hover:text-slate-900 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50"
             >
               <Edit className="h-5 w-5" />
             </Link>
@@ -254,21 +256,24 @@ const RecipeDetailPage: React.FC = () => {
         </div>
 
         {/* Recipe Card */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden border border-slate-200/50">
           {/* Hero Image */}
           {currentImage ? (
           <div 
-            className="relative h-64 md:h-80 group"
+            className="relative h-64 md:h-80 group overflow-hidden"
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
           >
-            <img
-              src={currentImage}
-              alt={recipe.title}
-              className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition-opacity"
-              onClick={() => setShowImageModal(true)}
-            />
+            <div className="absolute inset-2 rounded-xl overflow-hidden shadow-inner">
+              <img
+                src={currentImage}
+                alt={recipe.title}
+                className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-all duration-300 rounded-xl"
+                onClick={() => setShowImageModal(true)}
+              />
+            </div>
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-200/20 via-transparent to-slate-200/20 pointer-events-none"></div>
             
             {/* Image Navigation */}
             {images.length > 1 && (
@@ -346,34 +351,37 @@ const RecipeDetailPage: React.FC = () => {
               <div className="flex items-center space-x-6 rtl:space-x-reverse">
                 {category && (
                   <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                     <span className="text-lg font-medium text-gray-900">{category.name}</span>
+                    <span className="text-lg">{getCategoryIllustration(recipe?.category || '')}</span>
+                    <span className="text-sm font-medium text-slate-700">{category.name}</span>
                   </div>
                 )}
                 {recipe.difficulty && (
-                  <div className="flex items-center space-x-2 rtl:space-x-reverse text-gray-600">
-                    <ChefHat className="h-5 w-5" />
-                    <span>{recipe.difficulty}</span>
+                  <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                    <ChefHat className="h-4 w-4 text-slate-500" />
+                    <span className="text-sm text-slate-600">{recipe.difficulty}</span>
                   </div>
                 )}
               </div>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-8">
+            <div className="grid lg:grid-cols-2 gap-8">
               {/* Ingredients */}
-              <div>
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">רכיבים</h2>
-                <ul className="space-y-2">
+              <div className="bg-gradient-to-br from-amber-50/50 to-orange-50/30 p-5 rounded-2xl border border-amber-200/30">
+                <h2 className="text-xl font-bold text-slate-900 mb-4">רכיבים</h2>
+                <ul className="space-y-3">
                   {recipe.ingredients.map((ingredient, index) => (
-                    <li key={index} className="flex items-center space-x-3 rtl:space-x-reverse">
-                      <div className="w-2 h-2 bg-amber-500 rounded-full flex-shrink-0" />
-                      <span className="text-gray-700">{ingredient}</span>
+                    <li key={index} className="flex items-start space-x-4 rtl:space-x-reverse group">
+                      <div className="flex-shrink-0 w-6 h-6 bg-gradient-to-br from-amber-400 to-orange-400 rounded-full flex items-center justify-center mt-0.5 shadow-sm">
+                        <span className="text-xs font-bold text-white">{index + 1}</span>
+                      </div>
+                      <span className="text-slate-700 leading-relaxed group-hover:text-slate-900 transition-colors">{ingredient}</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
               {/* Progress Tracker */}
-              <div>
+              <div className="bg-gradient-to-br from-amber-50/50 to-orange-50/30 p-5 rounded-2xl border border-amber-200/30">
                 <ProgressTracker
                   key={progressTrackerKey}
                   recipeId={recipe.id}

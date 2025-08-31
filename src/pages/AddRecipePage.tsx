@@ -850,19 +850,21 @@ const AddRecipePage: React.FC = () => {
               </div>
             </div>
 
+
+            
             {/* Additional Sections */}
             {Object.keys(additionalSections).length > 0 && (
-              <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
+              <div className="bg-gradient-to-r from-blue-50 to-sky-50 p-4 rounded-lg border border-blue-200">
                 <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
+                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
                   חלקים נוספים
                 </h2>
                 <div className="space-y-3">
                   {Object.entries(additionalSections).map(([sectionName, section]) => (
-                    <div key={sectionName} className="bg-white p-3 rounded-lg border border-purple-200">
+                    <div key={sectionName} className="bg-white p-3 rounded-lg border border-blue-200">
                       <div className="flex items-center justify-between mb-3">
-                        <h3 className="font-medium text-purple-900 text-sm flex items-center gap-2">
-                          <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                        <h3 className="font-medium text-blue-900 text-sm flex items-center gap-2">
+                          <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
                           {sectionName}
                         </h3>
                         <button
@@ -878,7 +880,7 @@ const AddRecipePage: React.FC = () => {
                       <div className="grid md:grid-cols-2 gap-3">
                         {/* Section Ingredients */}
                         <div className="space-y-2">
-                          <h4 className="font-medium text-purple-800 flex items-center gap-1 text-xs">
+                          <h4 className="font-medium text-blue-800 flex items-center gap-1 text-xs">
                             <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
                             מרכיבים ל{sectionName}
                           </h4>
@@ -903,7 +905,7 @@ const AddRecipePage: React.FC = () => {
                                     type="text"
                                     value={ingredient}
                                     onChange={(e) => updateSectionIngredient(sectionName, index, e.target.value)}
-                                    className="flex-1 p-1.5 bg-gray-50 border border-gray-200 rounded-md focus:ring-1 focus:ring-purple-300 focus:border-purple-400 transition-all duration-150 text-sm"
+                                    className="flex-1 p-1.5 bg-gray-50 border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-300 focus:border-blue-400 transition-all duration-150 text-sm"
                                     placeholder={`רכיב ${index + 1}`}
                                   />
                                   {section.ingredients.length > 1 && (
@@ -934,7 +936,7 @@ const AddRecipePage: React.FC = () => {
 
                         {/* Section Directions */}
                         <div className="space-y-2">
-                          <h4 className="font-medium text-purple-800 flex items-center gap-1 text-xs">
+                          <h4 className="font-medium text-blue-800 flex items-center gap-1 text-xs">
                             <div className="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
                             שלבי הכנה ל{sectionName}
                           </h4>
@@ -959,7 +961,7 @@ const AddRecipePage: React.FC = () => {
                                     value={direction}
                                     onChange={(e) => updateSectionDirection(sectionName, index, e.target.value)}
                                     rows={2}
-                                    className="flex-1 p-1.5 bg-gray-50 border border-gray-200 rounded-md focus:ring-1 focus:ring-purple-300 focus:border-purple-400 transition-all duration-150 text-sm resize-none"
+                                    className="flex-1 p-1.5 bg-gray-50 border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-300 focus:border-blue-400 transition-all duration-150 text-sm resize-none"
                                     placeholder={`שלב ${index + 1}`}
                                   />
                                   {section.directions.length > 1 && (
@@ -993,18 +995,6 @@ const AddRecipePage: React.FC = () => {
                 </div>
               </div>
             )}
-            
-            {/* Add New Section Button */}
-            <div className="text-center">
-              <button
-                type="button"
-                onClick={addNewSection}
-                className="flex items-center gap-2 text-green-600 hover:text-green-700 font-medium bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 px-4 py-3 rounded-lg transition-all duration-200 border border-dashed border-green-300 hover:border-green-400 mx-auto text-sm"
-              >
-                <Plus className="w-4 h-4" />
-                הוסף חלק חדש (עם מרכיבים ושלבים)
-              </button>
-            </div>
 
             {/* Additional Instructions */}
             {Object.keys(additionalInstructions).length > 0 && (
@@ -1143,6 +1133,18 @@ const AddRecipePage: React.FC = () => {
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Add New Section Button */}
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={addNewSection}
+                className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium bg-gradient-to-r from-blue-50 to-sky-50 hover:from-blue-100 hover:to-sky-100 px-4 py-3 rounded-lg transition-all duration-200 border border-dashed border-blue-300 hover:border-blue-400 mx-auto text-sm"
+              >
+                <Plus className="w-4 h-4" />
+                הוסף חלק חדש (עם מרכיבים ושלבים)
+              </button>
             </div>
 
             {/* Submit Section */}

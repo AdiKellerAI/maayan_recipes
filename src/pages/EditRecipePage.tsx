@@ -595,119 +595,7 @@ const EditRecipePage: React.FC = () => {
 
 
 
-          {/* Additional Sections */}
-          {Object.keys(additionalSections).length > 0 && (
-            <div className="bg-gradient-to-r from-purple-50 to-pink-50 p-4 rounded-lg border border-purple-200">
-              <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-purple-500 rounded-full"></div>
-                חלקים נוספים
-              </h2>
-              <div className="space-y-3">
-                {Object.entries(additionalSections).map(([sectionName, section]) => (
-                  <div key={sectionName} className="bg-white p-3 rounded-lg border border-purple-200">
-                    <div className="flex items-center justify-between mb-3">
-                      <h3 className="font-medium text-purple-900 text-sm flex items-center gap-2">
-                        <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
-                        {sectionName}
-                      </h3>
-                      <button
-                        type="button"
-                        onClick={() => removeNewSection(sectionName)}
-                        className="text-red-500 hover:text-red-600 hover:bg-red-50 p-1 rounded-md transition-all duration-200"
-                        title={`הסר חלק ${sectionName}`}
-                      >
-                        <X className="w-4 h-4" />
-                      </button>
-                    </div>
-                  
-                    <div className="grid md:grid-cols-2 gap-3">
-                      {/* Section Ingredients */}
-                      <div className="space-y-2">
-                        <h4 className="font-medium text-purple-800 flex items-center gap-1 text-xs">
-                          <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
-                          מרכיבים ל{sectionName}
-                        </h4>
-                        <div className="space-y-2">
-                          {section.ingredients.map((ingredient, index) => (
-                            <div key={index} className="flex gap-2 items-center group">
-                              <div className="flex-shrink-0 w-4 h-4 bg-green-400 text-white rounded-full flex items-center justify-center text-xs font-medium">
-                                {index + 1}
-                              </div>
-                              <input
-                                type="text"
-                                value={ingredient}
-                                onChange={(e) => updateSectionIngredient(sectionName, index, e.target.value)}
-                                className="flex-1 p-1.5 bg-gray-50 border border-gray-200 rounded-md focus:ring-1 focus:ring-purple-300 focus:border-purple-400 transition-all duration-150 text-sm"
-                                placeholder={`רכיב ${index + 1}`}
-                              />
-                              {section.ingredients.length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() => removeSectionIngredient(sectionName, index)}
-                                  className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              )}
-                            </div>
-                          ))}
-                          <button
-                            type="button"
-                            onClick={() => addSectionIngredient(sectionName)}
-                            className="flex items-center gap-1 text-green-600 hover:text-green-700 font-medium text-xs bg-green-50 hover:bg-green-100 px-2 py-1 rounded-md transition-all duration-200 border border-green-200"
-                          >
-                            <Plus className="w-3 h-3" />
-                            הוסף רכיב
-                          </button>
-                        </div>
-                      </div>
 
-                      {/* Section Directions */}
-                      <div className="space-y-2">
-                        <h4 className="font-medium text-purple-800 flex items-center gap-1 text-xs">
-                          <div className="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
-                          שלבי הכנה ל{sectionName}
-                        </h4>
-                        <div className="space-y-2">
-                          {section.directions.map((direction, index) => (
-                            <div key={index} className="flex gap-2 group">
-                              <div className="bg-blue-400 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-1">
-                                {index + 1}
-                              </div>
-                              <textarea
-                                value={direction}
-                                onChange={(e) => updateSectionDirection(sectionName, index, e.target.value)}
-                                rows={2}
-                                className="flex-1 p-1.5 bg-gray-50 border border-gray-200 rounded-md focus:ring-1 focus:ring-purple-300 focus:border-purple-400 transition-all duration-150 text-sm resize-none"
-                                placeholder={`שלב ${index + 1}`}
-                              />
-                              {section.directions.length > 1 && (
-                                <button
-                                  type="button"
-                                  onClick={() => removeSectionDirection(sectionName, index)}
-                                  className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100 self-start"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              )}
-                            </div>
-                          ))}
-                          <button
-                            type="button"
-                            onClick={() => addSectionDirection(sectionName)}
-                            className="flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium text-xs bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-md transition-all duration-200 border border-blue-200"
-                          >
-                            <Plus className="w-3 h-3" />
-                            הוסף שלב
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
           
 
 
@@ -805,12 +693,126 @@ const EditRecipePage: React.FC = () => {
             </div>
           </div>
 
+          {/* Additional Sections */}
+          {Object.keys(additionalSections).length > 0 && (
+            <div className="bg-gradient-to-r from-blue-50 to-sky-50 p-4 rounded-lg border border-blue-200">
+              <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                חלקים נוספים
+              </h2>
+              <div className="space-y-3">
+                {Object.entries(additionalSections).map(([sectionName, section]) => (
+                  <div key={sectionName} className="bg-white p-3 rounded-lg border border-blue-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-medium text-blue-900 text-sm flex items-center gap-2">
+                        <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                        {sectionName}
+                      </h3>
+                      <button
+                        type="button"
+                        onClick={() => removeNewSection(sectionName)}
+                        className="text-red-500 hover:text-red-600 hover:bg-red-50 p-1 rounded-md transition-all duration-200"
+                        title={`הסר חלק ${sectionName}`}
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  
+                    <div className="grid md:grid-cols-2 gap-3">
+                      {/* Section Ingredients */}
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-blue-800 flex items-center gap-1 text-xs">
+                          <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
+                          מרכיבים ל{sectionName}
+                        </h4>
+                        <div className="space-y-2">
+                          {section.ingredients.map((ingredient, index) => (
+                            <div key={index} className="flex gap-2 items-center group">
+                              <div className="flex-shrink-0 w-4 h-4 bg-green-400 text-white rounded-full flex items-center justify-center text-xs font-medium">
+                                {index + 1}
+                              </div>
+                              <input
+                                type="text"
+                                value={ingredient}
+                                onChange={(e) => updateSectionIngredient(sectionName, index, e.target.value)}
+                                className="flex-1 p-1.5 bg-gray-50 border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-300 focus:border-blue-400 transition-all duration-150 text-sm"
+                                placeholder={`רכיב ${index + 1}`}
+                              />
+                              {section.ingredients.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeSectionIngredient(sectionName, index)}
+                                  className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => addSectionIngredient(sectionName)}
+                            className="flex items-center gap-1 text-green-600 hover:text-green-700 font-medium text-xs bg-green-50 hover:bg-green-100 px-2 py-1 rounded-md transition-all duration-200 border border-green-200"
+                          >
+                            <Plus className="w-3 h-3" />
+                            הוסף רכיב
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Section Directions */}
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-blue-800 flex items-center gap-1 text-xs">
+                          <div className="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
+                          שלבי הכנה ל{sectionName}
+                        </h4>
+                        <div className="space-y-2">
+                          {section.directions.map((direction, index) => (
+                            <div key={index} className="flex gap-2 group">
+                              <div className="bg-blue-400 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-1">
+                                {index + 1}
+                              </div>
+                              <textarea
+                                value={direction}
+                                onChange={(e) => updateSectionDirection(sectionName, index, e.target.value)}
+                                rows={2}
+                                className="flex-1 p-1.5 bg-gray-50 border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-300 focus:border-blue-400 transition-all duration-150 text-sm resize-none"
+                                placeholder={`שלב ${index + 1}`}
+                              />
+                              {section.directions.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeSectionDirection(sectionName, index)}
+                                  className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100 self-start"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                          ))}
+                          <button
+                            type="button"
+                            onClick={() => addSectionDirection(sectionName)}
+                            className="flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium text-xs bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-md transition-all duration-200 border border-blue-200"
+                          >
+                            <Plus className="w-3 h-3" />
+                            הוסף שלב
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Add New Section Button */}
           <div className="text-center">
             <button
               type="button"
               onClick={addNewSection}
-              className="flex items-center gap-2 text-green-600 hover:text-green-700 font-medium bg-gradient-to-r from-green-50 to-emerald-50 hover:from-green-100 hover:to-emerald-100 px-4 py-3 rounded-lg transition-all duration-200 border border-dashed border-green-300 hover:border-green-400 mx-auto text-sm"
+              className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium bg-gradient-to-r from-blue-50 to-sky-50 hover:from-blue-100 hover:to-sky-100 px-4 py-3 rounded-lg transition-all duration-200 border border-dashed border-blue-300 hover:border-blue-400 mx-auto text-sm"
             >
               <Plus className="w-4 h-4" />
               הוסף חלק חדש (עם מרכיבים ושלבים)
