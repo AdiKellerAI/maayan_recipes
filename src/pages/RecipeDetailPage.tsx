@@ -364,9 +364,9 @@ const RecipeDetailPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid lg:grid-cols-2 gap-8">
+            <div className="grid lg:grid-cols-2 gap-6">
               {/* Ingredients */}
-              <div className="bg-gradient-to-br from-amber-50/50 to-orange-50/30 p-5 rounded-2xl border border-amber-200/30">
+              <div className="bg-gradient-to-br from-amber-50/50 to-orange-50/30 px-3 py-5 md:px-6 rounded-2xl border border-amber-200/30">
                 <h2 className="text-xl font-bold text-slate-900 mb-4">רכיבים</h2>
                 <ul className="space-y-3">
                   {recipe.ingredients.map((ingredient, index) => (
@@ -374,14 +374,14 @@ const RecipeDetailPage: React.FC = () => {
                       <div className="flex-shrink-0 w-6 h-6 bg-gradient-to-br from-amber-400 to-orange-400 rounded-full flex items-center justify-center mt-0.5 shadow-sm">
                         <span className="text-xs font-bold text-white">{index + 1}</span>
                       </div>
-                      <span className="text-slate-700 leading-relaxed group-hover:text-slate-900 transition-colors">{ingredient}</span>
+                      <span className="text-slate-700 leading-relaxed group-hover:text-slate-900 transition-colors text-base">{ingredient}</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
               {/* Progress Tracker */}
-              <div className="bg-gradient-to-br from-amber-50/50 to-orange-50/30 p-5 rounded-2xl border border-amber-200/30">
+              <div className="bg-gradient-to-br from-amber-50/50 to-orange-50/30 px-3 py-5 md:px-6 rounded-2xl border border-amber-200/30">
                 <ProgressTracker
                   key={progressTrackerKey}
                   recipeId={recipe.id}

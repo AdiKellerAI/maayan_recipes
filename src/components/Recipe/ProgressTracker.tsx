@@ -95,12 +95,14 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
                     isCompleted
                       ? 'text-slate-500 line-through opacity-70'
                       : isCurrent
-                      ? 'text-slate-900 font-medium bg-blue-50/50 p-3 rounded-xl border border-blue-200/30'
-                      : 'text-slate-700 hover:text-slate-900 p-3 hover:bg-slate-50/50 rounded-xl transition-colors'
+                      ? 'text-slate-900 font-medium bg-blue-50/50 px-6 py-4 rounded-xl border border-blue-200/30'
+                      : 'text-slate-700 hover:text-slate-900 px-6 py-4 hover:bg-slate-50/50 rounded-xl transition-colors'
                   }`}
                   onClick={() => handleStepClick(index)}
                 >
-                  {direction}
+                  <div className="leading-relaxed text-base">
+                    {direction}
+                  </div>
                 </div>
               </li>
             );
@@ -162,15 +164,15 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
               const colorScheme = colors[index % colors.length];
               
               return (
-                <div key={sectionName} className={`bg-gradient-to-br ${colorScheme.bg} p-6 rounded-2xl border ${colorScheme.border} shadow-lg backdrop-blur-sm`}>
+                <div key={sectionName} className={`bg-gradient-to-br ${colorScheme.bg} px-2 py-6 md:px-4 rounded-2xl border ${colorScheme.border} shadow-lg backdrop-blur-sm`}>
                   <div className="mb-6">
                     <h3 className="text-xl font-bold text-slate-900">{sectionName}</h3>
                   </div>
                   
-                  <div className="grid md:grid-cols-2 gap-6">
+                  <div className="grid md:grid-cols-2 gap-3 md:gap-4">
                     {/* Section Ingredients */}
                     {section.ingredients.length > 0 && (
-                      <div className={`bg-gradient-to-br ${colorScheme.ingredients.bg} p-4 rounded-xl border ${colorScheme.ingredients.border}`}>
+                      <div className={`bg-gradient-to-br ${colorScheme.ingredients.bg} px-2 py-4 md:px-3 rounded-xl border ${colorScheme.ingredients.border}`}>
                         <h4 className="text-lg font-bold text-slate-800 mb-4">מרכיבים ל{sectionName}</h4>
                         <ul className="space-y-2">
                           {section.ingredients.map((ingredient, index) => (
@@ -187,7 +189,7 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
 
                     {/* Section Directions */}
                     {section.directions.length > 0 && (
-                      <div className={`bg-gradient-to-br ${colorScheme.directions.bg} p-4 rounded-xl border ${colorScheme.directions.border}`}>
+                      <div className={`bg-gradient-to-br ${colorScheme.directions.bg} px-2 py-4 md:px-3 rounded-xl border ${colorScheme.directions.border}`}>
                         <h4 className="text-lg font-bold text-slate-800 mb-4">הוראות הכנה ל{sectionName}</h4>
                         <ol className="space-y-2">
                           {section.directions.map((direction, index) => {
@@ -218,12 +220,14 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
                                     isCompleted
                                       ? 'text-slate-500 line-through opacity-70'
                                       : isCurrent
-                                      ? `text-slate-900 font-medium bg-white/60 p-3 rounded-xl border ${colorScheme.directions.border}`
-                                      : 'text-slate-700 hover:text-slate-900 p-3 hover:bg-white/40 rounded-xl transition-colors'
+                                      ? `text-slate-900 font-medium bg-white/60 px-4 py-4 md:px-5 rounded-xl border ${colorScheme.directions.border}`
+                                      : 'text-slate-700 hover:text-slate-900 px-4 py-4 md:px-5 hover:bg-white/40 rounded-xl transition-colors'
                                   }`}
                                   onClick={() => handleAdditionalStepClick(sectionName, index)}
                                 >
-                                  {direction}
+                                  <div className="leading-relaxed text-base">
+                                    {direction}
+                                  </div>
                                 </div>
                               </li>
                             );

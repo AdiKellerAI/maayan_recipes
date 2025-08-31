@@ -502,6 +502,10 @@ app.put('/api/recipes/:id', async (req, res) => {
       updateFields.push(`additional_instructions = $${paramCount++}`);
       values.push(JSON.stringify(updates.additional_instructions));
     }
+    if (updates.additional_sections !== undefined) {
+      updateFields.push(`additional_sections = $${paramCount++}`);
+      values.push(JSON.stringify(updates.additional_sections));
+    }
     if (updates.prep_time !== undefined) {
       updateFields.push(`prep_time = $${paramCount++}`);
       values.push(updates.prep_time);
