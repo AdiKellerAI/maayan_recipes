@@ -793,9 +793,12 @@ const AddRecipePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={addIngredient}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onTouchStart={(e) => e.preventDefault()}
-                  onTouchEnd={(e) => e.preventDefault()}
+                  onTouchStart={(e) => {
+                    // Only prevent default if it's not a primary touch (to allow click events)
+                    if (e.touches.length > 1) {
+                      e.preventDefault();
+                    }
+                  }}
                   className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm"
                 >
                   <Plus className="w-4 h-4" />
@@ -841,9 +844,12 @@ const AddRecipePage: React.FC = () => {
                 <button
                   type="button"
                   onClick={addDirection}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onTouchStart={(e) => e.preventDefault()}
-                  onTouchEnd={(e) => e.preventDefault()}
+                  onTouchStart={(e) => {
+                    // Only prevent default if it's not a primary touch (to allow click events)
+                    if (e.touches.length > 1) {
+                      e.preventDefault();
+                    }
+                  }}
                   className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm"
                 >
                   <Plus className="w-4 h-4" />
@@ -926,9 +932,12 @@ const AddRecipePage: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => addSectionIngredient(sectionName)}
-                              onMouseDown={(e) => e.preventDefault()}
-                              onTouchStart={(e) => e.preventDefault()}
-                              onTouchEnd={(e) => e.preventDefault()}
+                              onTouchStart={(e) => {
+                                // Only prevent default if it's not a primary touch (to allow click events)
+                                if (e.touches.length > 1) {
+                                  e.preventDefault();
+                                }
+                              }}
                               className="flex items-center gap-1 text-green-600 hover:text-green-700 font-medium text-xs bg-green-50 hover:bg-green-100 px-2 py-1 rounded-md transition-all duration-200 border border-green-200"
                             >
                               <Plus className="w-3 h-3" />
@@ -983,9 +992,12 @@ const AddRecipePage: React.FC = () => {
                             <button
                               type="button"
                               onClick={() => addSectionDirection(sectionName)}
-                              onMouseDown={(e) => e.preventDefault()}
-                              onTouchStart={(e) => e.preventDefault()}
-                              onTouchEnd={(e) => e.preventDefault()}
+                              onTouchStart={(e) => {
+                                // Only prevent default if it's not a primary touch (to allow click events)
+                                if (e.touches.length > 1) {
+                                  e.preventDefault();
+                                }
+                              }}
                               className="flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium text-xs bg-blue-50 hover:bg-blue-100 px-2 py-1 rounded-md transition-all duration-200 border border-blue-200"
                             >
                               <Plus className="w-3 h-3" />
@@ -1409,7 +1421,7 @@ const AddRecipePage: React.FC = () => {
       {showSmartImageSearch && (
         <SmartImageSearch
           recipeName={title}
-          ingredients={ingredients}
+          category={category}
           onImageSelect={handleSmartImageSelect}
           onClose={() => setShowSmartImageSearch(false)}
         />

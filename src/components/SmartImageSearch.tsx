@@ -3,6 +3,7 @@ import { Sparkles, X, Download, Search } from 'lucide-react';
 import { translationService } from '../services/translationService';
 import intelligentImageSearch from '../services/intelligentImageSearch';
 import enhancedImageAPI from '../services/enhancedImageAPI';
+import { categories } from '../data/categories';
 
 /**
  * SmartImageSearch - Intelligent recipe-aware image search with Hebrew translation
@@ -30,7 +31,7 @@ import enhancedImageAPI from '../services/enhancedImageAPI';
 
 interface SmartImageSearchProps {
   recipeName: string;
-  ingredients: string[];
+  category?: string;
   onImageSelect: (imageUrl: string) => void;
   onClose: () => void;
 }
@@ -51,10 +52,15 @@ interface RecipeImage {
 
 const SmartImageSearch: React.FC<SmartImageSearchProps> = ({
   recipeName,
-  ingredients,
+  category,
   onImageSelect,
   onClose
 }) => {
+  // Helper function to get Hebrew category name
+  const getHebrewCategoryName = (categoryId: string): string => {
+    const categoryData = categories.find(cat => cat.id === categoryId);
+    return categoryData ? categoryData.name : categoryId;
+  };
   const [images, setImages] = useState<RecipeImage[]>([]);
   const [isLoading, setIsLoading] = useState(true); // Start loading immediately
   const [hasSearched, setHasSearched] = useState(true); // Skip the initial search button
@@ -63,10 +69,10 @@ const SmartImageSearch: React.FC<SmartImageSearchProps> = ({
   
   // Enhanced debug information state
   const [debugInfo, setDebugInfo] = useState<{
-    originalHebrew: { recipeName: string; ingredients: string[] };
-    translations: { recipeName: string; ingredients: string[] };
+    originalHebrew: { recipeName: string; category: string };
+    translations: { recipeName: string; category: string };
     categoryDetection: { detectedCategory: string; method: string };
-    dynamicAnalysis: { mainIngredients: string[]; cookingMethods: string[] };
+    dynamicAnalysis: { searchTerms: string[]; cookingMethods: string[] };
     searchQueries: string[];
     queryValidation: { passed: string[]; failed: string[] };
     apiResults: { [api: string]: number };
@@ -74,10 +80,10 @@ const SmartImageSearch: React.FC<SmartImageSearchProps> = ({
     hardcodedDetection: { found: boolean; details: string[] };
     showDebug: boolean;
   }>({
-    originalHebrew: { recipeName: '', ingredients: [] },
-    translations: { recipeName: '', ingredients: [] },
+    originalHebrew: { recipeName: '', category: '' },
+    translations: { recipeName: '', category: '' },
     categoryDetection: { detectedCategory: '', method: '' },
-    dynamicAnalysis: { mainIngredients: [], cookingMethods: [] },
+    dynamicAnalysis: { searchTerms: [], cookingMethods: [] },
     searchQueries: [],
     queryValidation: { passed: [], failed: [] },
     apiResults: {},
@@ -94,8 +100,8 @@ const SmartImageSearch: React.FC<SmartImageSearchProps> = ({
 
   // REDESIGNED: Intelligent 5-phase image search system
   const searchImages = async () => {
-    if (!recipeName.trim() && ingredients.filter(i => i.trim()).length === 0) {
-      alert('אנא הוסף שם מתכון או מרכיבים לפני החיפוש');
+    if (!recipeName.trim()) {
+      alert('אנא הוסף שם מתכון לפני החיפוש');
       return;
     }
 
@@ -110,18 +116,18 @@ const SmartImageSearch: React.FC<SmartImageSearchProps> = ({
     try {
       console.log('🚀 Starting intelligent image search...');
       console.log('📝 Recipe:', recipeName || 'No recipe name');
-      console.log('🥕 Ingredients:', ingredients.filter(i => i.trim()).join(', ') || 'No ingredients');
+      console.log('🏷️ Category:', category || 'No category');
       console.log('🔄 Search attempt:', currentSearchCount);
 
       // Initialize enhanced debug info
       const newDebugInfo = {
         originalHebrew: {
           recipeName: recipeName || '',
-          ingredients: ingredients.filter(i => i.trim())
+          category: category || ''
         },
-        translations: { recipeName: '', ingredients: [] as string[] },
-        categoryDetection: { detectedCategory: '', method: '' },
-        dynamicAnalysis: { mainIngredients: [] as string[], cookingMethods: [] as string[] },
+        translations: { recipeName: '', category: '' },
+        categoryDetection: { detectedCategory: category || '', method: 'provided' },
+        dynamicAnalysis: { searchTerms: [] as string[], cookingMethods: [] as string[] },
         searchQueries: [] as string[],
         queryValidation: { passed: [] as string[], failed: [] as string[] },
         apiResults: {} as { [api: string]: number },
@@ -133,48 +139,65 @@ const SmartImageSearch: React.FC<SmartImageSearchProps> = ({
       // PHASE 1: Translation - Convert Hebrew content to English
       console.log('🔄 Phase 1: Translation');
       const translatedRecipeName = await translationService.translate(recipeName.trim());
-      const translatedIngredients = await Promise.all(
-        ingredients.filter(i => i.trim()).map(ingredient => 
-          translationService.translate(ingredient.trim())
-        )
-      );
+      
+      const hebrewCategory = category ? getHebrewCategoryName(category) : '';
 
       console.log('✅ Translation complete:');
       console.log('   Recipe name:', translatedRecipeName.translatedText);
-      console.log('   Ingredients:', translatedIngredients.map(t => t.translatedText).join(', '));
+      console.log('   Category:', hebrewCategory);
       
       // Update debug info with translations
       newDebugInfo.translations = {
         recipeName: translatedRecipeName.translatedText,
-        ingredients: translatedIngredients.map(t => t.translatedText)
+        category: hebrewCategory
       };
 
-      // PHASE 2: Recipe Analysis - Understand recipe context
+      // PHASE 2: Recipe Analysis - Create search terms
       console.log('🔄 Phase 2: Recipe Analysis');
       const recipe = {
         title: translatedRecipeName.translatedText || recipeName,
-        ingredients: translatedIngredients.map(t => t.translatedText).filter(t => t.trim()),
-        category: undefined, // Could be enhanced with category detection from context
+        category: hebrewCategory,
         difficulty: undefined,
         prep_time: undefined
       };
 
-      const analysis = await intelligentImageSearch.analyzeRecipe(recipe);
-      console.log('✅ Recipe analysis complete:', analysis);
+      // Generate search terms based on recipe name and category
+      const searchTerms: string[] = [];
+      
+      // Always include the recipe name
+      if (translatedRecipeName.translatedText) {
+        searchTerms.push(translatedRecipeName.translatedText);
+      }
+      
+      // Add category-based terms if category is provided (using Hebrew)
+      if (hebrewCategory) {
+        searchTerms.push(hebrewCategory);
+        // Add combined search term
+        searchTerms.push(`${translatedRecipeName.translatedText} ${hebrewCategory}`);
+      }
+
+      console.log('✅ Recipe analysis complete - search terms:', searchTerms);
       
       // Update debug info with analysis results
       newDebugInfo.categoryDetection = {
-        detectedCategory: analysis.recipeCategory,
-        method: 'Dynamic detection from translated title'
+        detectedCategory: hebrewCategory || 'none',
+        method: category ? 'provided by user (Hebrew)' : 'not provided'
       };
       newDebugInfo.dynamicAnalysis = {
-        mainIngredients: analysis.mainIngredients,
-        cookingMethods: analysis.cookingMethods
+        searchTerms: searchTerms,
+        cookingMethods: []
       };
 
       // PHASE 3: Query Generation - Create smart search queries
       console.log('🔄 Phase 3: Query Generation');
-      const searchQueries = intelligentImageSearch.generateSearchQueries(recipe, analysis);
+      
+      // Generate search queries based on recipe name and category
+      const searchQueries = searchTerms.map(term => ({
+        primary: term,
+        fallback: translatedRecipeName.translatedText || recipeName,
+        context: 'food recipe'
+      }));
+      
       console.log('✅ Generated', searchQueries.length, 'search query variations');
       
       // Update debug info with search queries and validation
@@ -255,7 +278,7 @@ const SmartImageSearch: React.FC<SmartImageSearchProps> = ({
         setImages(getIntelligentFallbackImages(basicAnalysis, currentSearchCount));
       } catch (fallbackErr) {
         console.error('❌ Even fallback failed:', fallbackErr);
-        setImages(getLegacyFallbackImages(recipeName || ingredients.join(' '), currentSearchCount));
+        setImages(getLegacyFallbackImages(recipeName || (hebrewCategory ? `${recipeName} ${hebrewCategory}` : recipeName), currentSearchCount));
       }
     } finally {
       setIsLoading(false);
@@ -382,9 +405,9 @@ const SmartImageSearch: React.FC<SmartImageSearchProps> = ({
                   <strong>שם המתכון:</strong> {recipeName}
                 </div>
               )}
-              {ingredients.filter(i => i.trim()).length > 0 && (
+              {category && (
                 <div className="mb-0.5">
-                  <strong>מרכיבים עיקריים:</strong> {ingredients.filter(i => i.trim()).slice(0, 3).join(', ')}
+                  <strong>קטגוריה:</strong> {getHebrewCategoryName(category)}
                 </div>
               )}
               <div className="text-purple-600 font-medium">
@@ -425,7 +448,7 @@ const SmartImageSearch: React.FC<SmartImageSearchProps> = ({
                     <strong className="text-blue-800">עברית מקורית:</strong>
                     <div className="bg-white p-2 rounded mt-1">
                       <div><strong>מתכון:</strong> {debugInfo.originalHebrew.recipeName || 'ללא שם'}</div>
-                      <div><strong>מרכיבים:</strong> {debugInfo.originalHebrew.ingredients.join(', ') || 'ללא מרכיבים'}</div>
+                      <div><strong>קטגוריה:</strong> {debugInfo.originalHebrew.category || 'ללא קטגוריה'}</div>
                     </div>
                   </div>
 
@@ -434,7 +457,7 @@ const SmartImageSearch: React.FC<SmartImageSearchProps> = ({
                     <strong className="text-blue-800">תרגום לאנגלית:</strong>
                     <div className="bg-white p-2 rounded mt-1">
                       <div><strong>Recipe:</strong> {debugInfo.translations.recipeName || 'No translation'}</div>
-                      <div><strong>Ingredients:</strong> {debugInfo.translations.ingredients.join(', ') || 'No ingredients translated'}</div>
+                      <div><strong>Category:</strong> {debugInfo.translations.category || 'No category'}</div>
                     </div>
                   </div>
 
@@ -451,8 +474,8 @@ const SmartImageSearch: React.FC<SmartImageSearchProps> = ({
                   <div>
                     <strong className="text-blue-800">ניתוח דינמי:</strong>
                     <div className="bg-white p-2 rounded mt-1">
-                      <div><strong>מרכיבים עיקריים:</strong> {debugInfo.dynamicAnalysis.mainIngredients.join(', ') || 'לא זוהו'}</div>
-                      <div><strong>שיטות בישול:</strong> {debugInfo.dynamicAnalysis.cookingMethods.join(', ') || 'לא זוהו'}</div>
+                      <div><strong>מונחי חיפוש:</strong> {debugInfo.dynamicAnalysis.searchTerms?.join(', ') || 'לא זוהו'}</div>
+                      <div><strong>שיטות בישול:</strong> {debugInfo.dynamicAnalysis.cookingMethods?.join(', ') || 'לא זוהו'}</div>
                     </div>
                   </div>
 
@@ -477,11 +500,11 @@ const SmartImageSearch: React.FC<SmartImageSearchProps> = ({
                     <strong className="text-blue-800">אימות שאילתות:</strong>
                     <div className="bg-white p-2 rounded mt-1">
                       <div className="text-green-700">
-                        <strong>עברו אימות:</strong> {debugInfo.queryValidation.passed.length} שאילתות
+                        <strong>עברו אימות:</strong> {debugInfo.queryValidation.passed?.length || 0} שאילתות
                       </div>
-                      {debugInfo.queryValidation.failed.length > 0 && (
+                      {debugInfo.queryValidation.failed?.length > 0 && (
                         <div className="text-red-700">
-                          <strong>נכשלו באימות:</strong> {debugInfo.queryValidation.failed.join(', ')}
+                          <strong>נכשלו באימות:</strong> {debugInfo.queryValidation.failed?.join(', ')}
                         </div>
                       )}
                     </div>
@@ -495,7 +518,7 @@ const SmartImageSearch: React.FC<SmartImageSearchProps> = ({
                         <strong>סטטוס:</strong> {debugInfo.hardcodedDetection.found ? 'נמצא תוכן קשיח!' : 'מערכת דינמית 100%'}
                       </div>
                       <div className="text-xs mt-1">
-                        {debugInfo.hardcodedDetection.details.join(', ')}
+                        {debugInfo.hardcodedDetection.details?.join(', ') || 'אין פרטים'}
                       </div>
                     </div>
                   </div>
@@ -521,14 +544,14 @@ const SmartImageSearch: React.FC<SmartImageSearchProps> = ({
                           {debugInfo.relevancyBreakdown.map((item, index) => (
                             <div key={index} className="border-b border-gray-200 pb-2">
                               <div className="font-medium">תמונה {index + 1}: {Math.round(item.score)}%</div>
-                              {item.reasons.length > 0 && (
+                              {item.reasons?.length > 0 && (
                                 <div className="text-green-700">
-                                  <strong>סיבות חיוביות:</strong> {item.reasons.join(', ')}
+                                  <strong>סיבות חיוביות:</strong> {item.reasons?.join(', ')}
                                 </div>
                               )}
-                              {item.penalties.length > 0 && (
+                              {item.penalties?.length > 0 && (
                                 <div className="text-red-700">
-                                  <strong>עונשים:</strong> {item.penalties.join(', ')}
+                                  <strong>עונשים:</strong> {item.penalties?.join(', ')}
                                 </div>
                               )}
                             </div>
@@ -556,17 +579,15 @@ const SmartImageSearch: React.FC<SmartImageSearchProps> = ({
           {/* Error State */}
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
-              <p className="text-red-800 text-sm">{error}</p>
+              <p className="text-red-800 text-sm mb-1">{error}</p>
               <button
                 onClick={searchImages}
-                className="mt-1 text-red-600 hover:text-red-700 underline text-sm"
+                className="text-red-600 hover:text-red-700 underline text-sm"
               >
                 נסה שוב
               </button>
             </div>
           )}
-
-
 
           {/* Results */}
           {hasSearched && !isLoading && images.length > 0 && (

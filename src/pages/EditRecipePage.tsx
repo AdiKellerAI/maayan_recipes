@@ -646,9 +646,12 @@ const EditRecipePage: React.FC = () => {
               <button
                 type="button"
                 onClick={addIngredient}
-                onMouseDown={(e) => e.preventDefault()}
-                onTouchStart={(e) => e.preventDefault()}
-                onTouchEnd={(e) => e.preventDefault()}
+                onTouchStart={(e) => {
+                  // Only prevent default if it's not a primary touch (to allow click events)
+                  if (e.touches.length > 1) {
+                    e.preventDefault();
+                  }
+                }}
                 className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm"
               >
                 <Plus className="w-4 h-4" />
@@ -694,9 +697,12 @@ const EditRecipePage: React.FC = () => {
               <button
                 type="button"
                 onClick={addDirection}
-                onMouseDown={(e) => e.preventDefault()}
-                onTouchStart={(e) => e.preventDefault()}
-                onTouchEnd={(e) => e.preventDefault()}
+                onTouchStart={(e) => {
+                  // Only prevent default if it's not a primary touch (to allow click events)
+                  if (e.touches.length > 1) {
+                    e.preventDefault();
+                  }
+                }}
                 className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm"
               >
                 <Plus className="w-4 h-4" />
@@ -940,7 +946,7 @@ const EditRecipePage: React.FC = () => {
         {showSmartImageSearch && (
           <SmartImageSearch
             recipeName={formData.title}
-            ingredients={ingredients}
+            category={formData.category}
             onImageSelect={handleSmartImageSelect}
             onClose={() => setShowSmartImageSearch(false)}
           />
