@@ -9,9 +9,9 @@ const pool = new Pool({
   password: 'MaayanRecipes2025',
   // Connection settings
   ssl: { rejectUnauthorized: false }, // Enable SSL with self-signed certificates
-  connectionTimeoutMillis: 10000,
+  connectionTimeoutMillis: 5000,
   idleTimeoutMillis: 30000,
-  max: 10
+  max: 5
 });
 
 // Test PostgreSQL connection

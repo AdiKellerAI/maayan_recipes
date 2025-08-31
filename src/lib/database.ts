@@ -12,7 +12,7 @@ console.log('🔍 DATABASE DEBUG: Using connection string:', connectionString);
 // Create PostgreSQL pool
 export const pool = new pg.Pool({
   connectionString,
-  ssl: false, // Try without SSL first
+  ssl: { rejectUnauthorized: false }, // Use SSL with self-signed certificates
   max: 20,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000,
@@ -33,7 +33,7 @@ export const testConnection = async (): Promise<boolean> => {
     console.log('  - Port: 5432');
     console.log('  - Database: recipes');
     console.log('  - User: postgres');
-    console.log('  - SSL: disabled');
+    console.log('  - SSL: enabled (rejectUnauthorized: false)');
     
     const client = await pool.connect();
     console.log('✅ DATABASE DEBUG: Pool connection successful');

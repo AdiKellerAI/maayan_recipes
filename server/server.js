@@ -20,10 +20,10 @@ app.use(express.static(join(__dirname, '../dist')));
 // PostgreSQL connection
 const pool = new Pool({
   connectionString: 'postgres://postgres:MaayanRecipes2025@34.132.167.99:5432/recipes',
-  ssl: false,
-  max: 20,
+  ssl: { rejectUnauthorized: false },
+  max: 5,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 10000,
+  connectionTimeoutMillis: 5000,
 });
 
 // Database connection status tracking

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import type { Recipe, ViewMode, RecipeInsert } from '../types/recipe';
 import { recipeService } from '../services/recipeService';
-import { optimizedRecipeService } from '../services/optimizedRecipeService';
+
 import { saveViewMode, loadViewMode } from '../utils/storage';
 import { useLocation } from 'react-router-dom';
 
@@ -113,8 +113,7 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     try {
       // Clear old cache on first load or when forcing refresh to ensure fresh data
       if (!isInitialized || forceRefresh) {
-        console.log('🧹 Clearing old cache to ensure fresh data from PostgreSQL...');
-        optimizedRecipeService.clearCache();
+        console.log('🧹 Loading fresh data from PostgreSQL...');
       }
 
       // Don't reload if we have recent data and not forcing refresh
@@ -122,8 +121,12 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           Date.now() - lastSyncTime.getTime() < 2 * 60 * 1000) { // Reduced to 2 minutes for faster updates
         console.log('🔄 Using cached recipes (last sync:', lastSyncTime.toLocaleTimeString(), ')');
         // Still check database status even when using cache
-        const isUsingPostgreSQL = await optimizedRecipeService.isAPIAvailable();
-        setPostgresqlStatus(isUsingPostgreSQL ? 'connected' : 'disconnected');
+        try {
+          await fetch('/api/test-connection');
+          setPostgresqlStatus('connected');
+        } catch {
+          setPostgresqlStatus('disconnected');
+        }
         return;
       }
 
@@ -131,25 +134,16 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setError(null);
       setPostgresqlStatus('checking');
       
-      // Check database connection first
-      const isUsingPostgreSQL = await optimizedRecipeService.isAPIAvailable();
-      console.log('🔍 CONTEXT: Database connection status:', isUsingPostgreSQL ? 'connected' : 'disconnected');
-      setPostgresqlStatus(isUsingPostgreSQL ? 'connected' : 'disconnected');
-      
-      // Use optimized loading - get summaries first, then details as needed
-      const summariesResult = await optimizedRecipeService.getRecipeSummaries({
-        page: 1,
-        limit: 100, // Load first 100 recipes quickly
-        sortBy: 'created_at_desc'
-      });
-      
-      // Convert summaries to full recipes (for backward compatibility)
-      const recipes: Recipe[] = [];
-      for (const summary of summariesResult.recipes) {
-        const fullRecipe = await optimizedRecipeService.getRecipeDetails(summary.id);
-        if (fullRecipe) {
-          recipes.push(fullRecipe);
-        }
+      // Check database connection first by trying to fetch recipes
+      let recipes: Recipe[] = [];
+      try {
+        recipes = await recipeService.getAllRecipes();
+        console.log('🔍 CONTEXT: Database connection status: connected');
+        setPostgresqlStatus('connected');
+      } catch (error) {
+        console.error('🔍 CONTEXT: Database connection failed:', error);
+        setPostgresqlStatus('disconnected');
+        throw error;
       }
       
       console.log(`🎯 CONTEXT: Setting ${recipes.length} recipes in state`);
