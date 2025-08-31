@@ -88,58 +88,67 @@ const Header: React.FC = () => {
     if (isConnecting) return;
     
     setIsConnecting(true);
-    console.log('🔄 Attempting to connect to database...');
+    console.log('🔄 Attempting to reconnect to database...');
     
     try {
-      // Strategy 1: Direct API connection test
-      console.log('🔄 Strategy 1: Testing API connection...');
-      const response = await fetch('/api/test-connection', {
-        method: 'GET',
+      // Strategy 1: Use the new reconnect endpoint for force reconnection
+      console.log('🔄 Strategy 1: Force reconnection...');
+      const reconnectResponse = await fetch('/api/reconnect', {
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        signal: AbortSignal.timeout(8000)
+        signal: AbortSignal.timeout(10000)
       });
       
-      if (response.ok) {
-        const result = await response.json();
+      if (reconnectResponse.ok) {
+        const result = await reconnectResponse.json();
+        console.log('📊 Reconnection result:', result);
+        
         if (result.connected) {
-          console.log('✅ Database connection successful!');
+          console.log('✅ Database reconnection successful!');
           await refreshRecipes(true);
-          // Success - the status should update automatically
+          alert('חיבור למאגר המידע הושלם בהצלחה!');
           return;
         }
       }
       
-      // Strategy 2: Retry with longer timeout
-      console.log('🔄 Strategy 2: Extended timeout retry...');
+      // Strategy 2: Test connection with extended timeout
+      console.log('🔄 Strategy 2: Connection test with extended timeout...');
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      const retryResponse = await fetch('/api/test-connection', {
+      const testResponse = await fetch('/api/test-connection', {
         method: 'GET',
         headers: { 'Content-Type': 'application/json' },
         signal: AbortSignal.timeout(15000)
       });
       
-      if (retryResponse.ok) {
-        const result = await retryResponse.json();
+      if (testResponse.ok) {
+        const result = await testResponse.json();
+        console.log('📊 Connection test result:', result);
+        
         if (result.connected) {
-          console.log('✅ Database connection successful via retry!');
+          console.log('✅ Database connection successful via test!');
           await refreshRecipes(true);
+          alert('חיבור למאגר המידע הושלם בהצלחה!');
           return;
         }
       }
       
-      // Strategy 3: Force refresh recipes even if connection test fails
-      console.log('🔄 Strategy 3: Force refresh recipes...');
+      // Strategy 3: Force refresh recipes even if connection fails
+      console.log('🔄 Strategy 3: Force refresh with local data...');
       await refreshRecipes(true);
       
-      console.log('🔄 Connection attempts completed');
+      alert('לא הצלחנו להתחבר למאגר המידע, אך המערכת תמשיך לעבוד עם נתונים מקומיים.');
+      console.log('⚠️ Connection failed but continuing with cached/local data');
     } catch (error) {
-      console.error('❌ Connection attempts failed:', error);
-      // Even if there's an error, try to refresh recipes
+      console.error('❌ Database connection failed:', error);
+      
+      // Still try to refresh recipes in case we have cached data
       try {
         await refreshRecipes(true);
+        alert('שגיאה בחיבור למאגר המידע. המערכת תמשיך לעבוד עם נתונים מקומיים.');
       } catch (refreshError) {
-        console.error('❌ Recipe refresh also failed:', refreshError);
+        console.error('❌ Failed to refresh recipes:', refreshError);
+        alert('שגיאה בטעינת המתכונים. אנא רענן את הדף ונסה שוב.');
       }
     } finally {
       setIsConnecting(false);

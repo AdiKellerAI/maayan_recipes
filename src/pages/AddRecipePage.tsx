@@ -2,9 +2,9 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useRecipes } from '../contexts/RecipeContext';
 import { useProtectedAction } from '../hooks/useProtectedAction';
-import type { RecipeInsert, Recipe, RecipeSection } from '../types/recipe';
+import type { RecipeInsert, RecipeSection } from '../types/recipe';
 import { categories } from '../data/categories';
-import { Plus, X, Upload, Camera, Sparkles, Link, Eye, Edit, Trash2 } from 'lucide-react';
+import { Plus, X, Upload, Camera, Sparkles, Link } from 'lucide-react';
 import { compressImages } from '../utils/imageCompression';
 import SmartImageSearch from '../components/SmartImageSearch';
 
@@ -27,7 +27,6 @@ const AddRecipePage: React.FC = () => {
   const [smartImportText, setSmartImportText] = useState('');
   const [smartImportUrl, setSmartImportUrl] = useState('');
   const [activeTab, setActiveTab] = useState<'text' | 'url'>('text');
-  const [previewRecipe, setPreviewRecipe] = useState<Recipe | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [showSectionNameModal, setShowSectionNameModal] = useState(false);
   const [newSectionName, setNewSectionName] = useState('');
@@ -645,12 +644,9 @@ const AddRecipePage: React.FC = () => {
         // Force refresh recipes in context to ensure the new recipe is visible
         await refreshRecipes();
         
-        setPreviewRecipe({
-          ...savedRecipe,
-          is_favorite: savedRecipe.is_favorite,
-          created_at: savedRecipe.created_at,
-          updated_at: savedRecipe.updated_at
-        });
+        // Show success message and redirect directly to recipe detail page
+        alert('המתכון נשמר בהצלחה!');
+        navigate(`/recipe/${savedRecipe.id}`);
         
         console.log('✅ Recipe submission completed successfully');
         
@@ -677,122 +673,7 @@ const AddRecipePage: React.FC = () => {
     });
   };
 
-  const handlePreviewAction = (action: 'view' | 'edit' | 'delete') => {
-    if (!previewRecipe) return;
 
-    switch (action) {
-      case 'view':
-        navigate(`/recipe/${previewRecipe.id}`);
-        break;
-      case 'edit':
-        navigate(`/edit/${previewRecipe.id}`);
-        break;
-      case 'delete':
-        executeProtectedAction(() => {
-          // Delete the recipe and reset form
-          setPreviewRecipe(null);
-          setTitle('');
-          setCategory('');
-          setDifficulty('');
-          setIngredients(['']);
-          setDirections(['']);
-          setImages([]);
-          setAdditionalInstructions({});
-          setAdditionalSections({});
-        });
-        break;
-    }
-  };
-
-  if (previewRecipe) {
-    return (
-      <div className="min-h-screen bg-gray-50 py-8">
-        <div className="max-w-4xl mx-auto px-4">
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <div className="text-center mb-6">
-              <h1 className="text-2xl font-bold text-gray-800 mb-2">המתכון נשמר בהצלחה!</h1>
-              <p className="text-gray-600">בחר מה תרצה לעשות עכשיו:</p>
-            </div>
-
-            <div className="flex justify-center gap-4 mb-8">
-              <button
-                onClick={() => handlePreviewAction('view')}
-                className="flex items-center gap-2 bg-green-600 text-white px-6 py-3 rounded-lg hover:bg-green-700 transition-colors"
-              >
-                <Eye className="w-5 h-5" />
-                אישור ותצוגה
-              </button>
-              <button
-                onClick={() => handlePreviewAction('edit')}
-                className="flex items-center gap-2 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Edit className="w-5 h-5" />
-                ערוך מתכון
-              </button>
-              <button
-                onClick={() => handlePreviewAction('delete')}
-                className="flex items-center gap-2 bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors"
-              >
-                <Trash2 className="w-5 h-5" />
-                מחק מתכון
-              </button>
-            </div>
-
-            <h2 className="text-xl font-bold mb-4">{previewRecipe.title}</h2>
-
-            {previewRecipe.images && previewRecipe.images.length > 0 && (
-              <div className="mb-4">
-                <img
-                  src={previewRecipe.images[0]}
-                  alt={previewRecipe.title}
-                  className="w-full h-64 object-cover rounded-lg"
-                />
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-4 mb-6">
-              <div>
-                <span className="font-semibold">קטגוריה: </span>
-                <span>{categories.find(cat => cat.id === previewRecipe.category)?.name}</span>
-              </div>
-              <div>
-                <span className="font-semibold">רמת קושי: </span>
-                <span>{previewRecipe.difficulty}</span>
-              </div>
-            </div>
-
-            <div className="grid md:grid-cols-2 gap-6">
-              <div>
-                <h3 className="font-semibold text-lg mb-3">רכיבים:</h3>
-                <ul className="space-y-2">
-                  {previewRecipe.ingredients.map((ingredient, index) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <span className="w-2 h-2 bg-orange-500 rounded-full mt-2 flex-shrink-0"></span>
-                      <span>{ingredient}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-
-              <div>
-                <h3 className="font-semibold text-lg mb-3">הוראות הכנה:</h3>
-                <ol className="space-y-3">
-                  {previewRecipe.directions.map((direction, index) => (
-                    <li key={index} className="flex gap-3">
-                      <span className="bg-orange-500 text-white rounded-full w-6 h-6 flex items-center justify-center text-sm font-semibold flex-shrink-0">
-                        {index + 1}
-                      </span>
-                      <span>{direction}</span>
-                    </li>
-                  ))}
-                </ol>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-rose-50 py-8">

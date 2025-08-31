@@ -26,13 +26,68 @@ const pool = new Pool({
   connectionTimeoutMillis: 10000,
 });
 
-// Test database connection
-pool.on('connect', () => {
-  console.log('✅ Connected to PostgreSQL database');
+// Database connection status tracking
+let isConnected = false;
+let connectionAttempts = 0;
+const maxConnectionAttempts = 5;
+
+// Test database connection with retry mechanism
+const testDatabaseConnection = async () => {
+  connectionAttempts++;
+  try {
+    console.log(`🔌 Attempting to connect to PostgreSQL (attempt ${connectionAttempts}/${maxConnectionAttempts})...`);
+    const client = await pool.connect();
+    const result = await client.query('SELECT NOW()');
+    client.release();
+    
+    isConnected = true;
+    connectionAttempts = 0; // Reset on successful connection
+    console.log('✅ Connected to PostgreSQL database successfully');
+    console.log('⏰ Database time:', result.rows[0].now);
+    return true;
+  } catch (error) {
+    isConnected = false;
+    console.error(`❌ PostgreSQL connection failed (attempt ${connectionAttempts}/${maxConnectionAttempts}):`, error.message);
+    
+    // Retry connection if not exceeded max attempts
+    if (connectionAttempts < maxConnectionAttempts) {
+      const retryDelay = Math.min(1000 * connectionAttempts, 5000); // Progressive delay
+      console.log(`🔄 Retrying connection in ${retryDelay}ms...`);
+      setTimeout(() => {
+        testDatabaseConnection();
+      }, retryDelay);
+    } else {
+      console.error('❌ Max connection attempts reached. Will retry on next API call.');
+    }
+    return false;
+  }
+};
+
+// Initial connection test
+testDatabaseConnection();
+
+// Connection event handlers
+pool.on('connect', (client) => {
+  console.log('✅ New PostgreSQL client connected');
+  isConnected = true;
+  connectionAttempts = 0;
 });
 
-pool.on('error', (err) => {
+pool.on('error', (err, client) => {
   console.error('❌ PostgreSQL connection error:', err);
+  isConnected = false;
+  
+  // Attempt to reconnect
+  if (err.code === 'ECONNRESET' || err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT') {
+    console.log('🔄 Connection lost, attempting to reconnect...');
+    setTimeout(() => {
+      testDatabaseConnection();
+    }, 2000);
+  }
+});
+
+pool.on('remove', () => {
+  console.log('🔌 PostgreSQL client disconnected');
 });
 
 // Ensure recipes table exists
@@ -109,32 +164,109 @@ const mapRowToRecipe = (row) => ({
 app.get('/api/test-connection', async (req, res) => {
   try {
     console.log('🔌 Testing PostgreSQL connection...');
+    
+    // First check if we already know we're disconnected
+    if (!isConnected && connectionAttempts >= maxConnectionAttempts) {
+      console.log('🔄 Force retry connection after max attempts reached');
+      connectionAttempts = 0; // Reset to allow retry
+    }
+    
     const client = await pool.connect();
     
     // Test basic query
-    const timeResult = await client.query('SELECT NOW() as current_time, version() as pg_version');
+    const result = await client.query('SELECT NOW() as current_time, version() as pg_version');
     console.log('✅ PostgreSQL connection successful!');
+    
+    // Update connection status
+    isConnected = true;
+    connectionAttempts = 0;
     
     // Ensure table exists
     await ensureRecipesTable(client);
+    
+    // Test recipes table
+    const recipeCountResult = await client.query('SELECT COUNT(*) as count FROM recipes');
     
     client.release();
     
     res.json({
       success: true,
       connected: true,
-      message: 'PostgreSQL connection successful',
+      message: 'Connected to PostgreSQL',
       timestamp: new Date().toISOString(),
-      server_time: timeResult.rows[0].current_time,
-      pg_version: timeResult.rows[0].pg_version.split(' ')[0]
+      server_time: result.rows[0].current_time ? new Date(result.rows[0].current_time).toISOString() : new Date().toISOString(),
+      pg_version: result.rows[0].pg_version ? result.rows[0].pg_version.split(' ')[0] : 'unknown',
+      recipe_count: parseInt(recipeCountResult.rows[0].count),
+      connection_attempts: connectionAttempts,
+      connection_status: 'healthy'
     });
   } catch (error) {
     console.error('❌ PostgreSQL connection failed:', error.message);
+    
+    // Update connection status
+    isConnected = false;
+    
+    // Trigger reconnection attempt if this was a manual test
+    if (connectionAttempts < maxConnectionAttempts) {
+      console.log('🔄 Triggering reconnection attempt...');
+      setTimeout(() => {
+        testDatabaseConnection();
+      }, 1000);
+    }
+    
     res.status(500).json({
       success: false,
       connected: false,
       message: 'PostgreSQL connection failed',
-      error: error.message
+      error: error.message || 'Unknown error',
+      error_code: error.code,
+      timestamp: new Date().toISOString(),
+      retry_attempts: connectionAttempts,
+      max_attempts: maxConnectionAttempts,
+      connection_status: connectionAttempts >= maxConnectionAttempts ? 'failed' : 'retrying',
+      next_retry: connectionAttempts < maxConnectionAttempts ? 'in progress' : 'manual'
+    });
+  }
+});
+
+// Force reconnection endpoint
+app.post('/api/reconnect', async (req, res) => {
+  try {
+    console.log('🔄 Manual reconnection requested...');
+    
+    // Reset connection state
+    isConnected = false;
+    connectionAttempts = 0;
+    
+    // Force a new connection test
+    const success = await testDatabaseConnection();
+    
+    if (success) {
+      res.json({
+        success: true,
+        connected: true,
+        message: 'Reconnection successful',
+        timestamp: new Date().toISOString(),
+        connection_attempts: connectionAttempts
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        connected: false,
+        message: 'Reconnection failed',
+        timestamp: new Date().toISOString(),
+        connection_attempts: connectionAttempts,
+        max_attempts: maxConnectionAttempts
+      });
+    }
+  } catch (error) {
+    console.error('❌ Manual reconnection failed:', error.message);
+    res.status(500).json({
+      success: false,
+      connected: false,
+      message: 'Reconnection error',
+      error: error.message || 'Unknown error',
+      timestamp: new Date().toISOString()
     });
   }
 });

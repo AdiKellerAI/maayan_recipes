@@ -93,6 +93,7 @@ async function createRecipesTable(client) {
         ingredients JSONB,
         directions JSONB,
         additional_instructions JSONB DEFAULT '{}',
+        additional_sections JSONB DEFAULT '{}',
         prep_time VARCHAR(50),
         difficulty VARCHAR(50),
         is_favorite BOOLEAN DEFAULT false,

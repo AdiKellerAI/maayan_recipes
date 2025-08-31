@@ -25,6 +25,70 @@ const pool = new Pool({
 
 console.log('PostgreSQL pool created...');
 
+// Database connection status tracking
+let isConnected = false;
+let connectionAttempts = 0;
+const maxConnectionAttempts = 5;
+
+// Test database connection with retry mechanism
+const testDatabaseConnection = async () => {
+  connectionAttempts++;
+  try {
+    console.log(`🔌 Attempting to connect to PostgreSQL (attempt ${connectionAttempts}/${maxConnectionAttempts})...`);
+    const client = await pool.connect();
+    const result = await client.query('SELECT NOW()');
+    client.release();
+    
+    isConnected = true;
+    connectionAttempts = 0; // Reset on successful connection
+    console.log('✅ Connected to PostgreSQL database successfully');
+    console.log('⏰ Database time:', result.rows[0].now);
+    return true;
+  } catch (error) {
+    isConnected = false;
+    console.error(`❌ PostgreSQL connection failed (attempt ${connectionAttempts}/${maxConnectionAttempts}):`, error.message);
+    
+    // Retry connection if not exceeded max attempts
+    if (connectionAttempts < maxConnectionAttempts) {
+      const retryDelay = Math.min(1000 * connectionAttempts, 5000); // Progressive delay
+      console.log(`🔄 Retrying connection in ${retryDelay}ms...`);
+      setTimeout(() => {
+        testDatabaseConnection();
+      }, retryDelay);
+    } else {
+      console.error('❌ Max connection attempts reached. Will retry on next API call.');
+    }
+    return false;
+  }
+};
+
+// Initial connection test
+testDatabaseConnection();
+
+// Connection event handlers
+pool.on('connect', (client) => {
+  console.log('✅ New PostgreSQL client connected');
+  isConnected = true;
+  connectionAttempts = 0;
+});
+
+pool.on('error', (err, client) => {
+  console.error('❌ PostgreSQL connection error:', err);
+  isConnected = false;
+  
+  // Attempt to reconnect
+  if (err.code === 'ECONNRESET' || err.code === 'ECONNREFUSED' || err.code === 'ETIMEDOUT') {
+    console.log('🔄 Connection lost, attempting to reconnect...');
+    setTimeout(() => {
+      testDatabaseConnection();
+    }, 2000);
+  }
+});
+
+pool.on('remove', () => {
+  console.log('🔌 PostgreSQL client disconnected');
+});
+
 // Helper function to map database row to Recipe type
 const mapRowToRecipe = (row) => ({
   id: row.id.toString(),
@@ -116,6 +180,7 @@ const ensureRecipesTable = async (client) => {
         ingredients JSONB NOT NULL DEFAULT '[]',
         directions JSONB NOT NULL DEFAULT '[]',
         additional_instructions JSONB DEFAULT '{}',
+        additional_sections JSONB DEFAULT '{}',
         prep_time VARCHAR(50) DEFAULT '',
         difficulty VARCHAR(50) DEFAULT '',
         is_favorite BOOLEAN DEFAULT false,
@@ -145,6 +210,17 @@ const ensureRecipesTable = async (client) => {
         EXECUTE FUNCTION update_updated_at_column();
     `);
     
+    // Ensure additional_sections column exists (for existing tables)
+    try {
+      await client.query(`
+        ALTER TABLE recipes 
+        ADD COLUMN IF NOT EXISTS additional_sections JSONB DEFAULT '{}';
+      `);
+      console.log('✅ additional_sections column ensured');
+    } catch (error) {
+      console.log('⚠️ additional_sections column already exists or error:', error.message);
+    }
+    
     console.log('✅ Recipes table ensured');
   } catch (error) {
     console.error('❌ Error ensuring recipes table:', error.message);
@@ -156,14 +232,28 @@ const ensureRecipesTable = async (client) => {
 app.get('/api/test-connection', async (req, res) => {
   try {
     console.log('🔌 Testing PostgreSQL connection...');
+    
+    // First check if we already know we're disconnected
+    if (!isConnected && connectionAttempts >= maxConnectionAttempts) {
+      console.log('🔄 Force retry connection after max attempts reached');
+      connectionAttempts = 0; // Reset to allow retry
+    }
+    
     const client = await pool.connect();
     
     // Test basic query
     const result = await client.query('SELECT NOW() as current_time, version() as pg_version');
     console.log('✅ PostgreSQL connection successful!');
     
+    // Update connection status
+    isConnected = true;
+    connectionAttempts = 0;
+    
     // Ensure table exists
     await ensureRecipesTable(client);
+    
+    // Test recipes table
+    const recipeCountResult = await client.query('SELECT COUNT(*) as count FROM recipes');
     
     client.release();
     
@@ -173,19 +263,85 @@ app.get('/api/test-connection', async (req, res) => {
       message: 'Connected to PostgreSQL',
       timestamp: new Date().toISOString(),
       server_time: result.rows[0].current_time ? new Date(result.rows[0].current_time).toISOString() : new Date().toISOString(),
-      pg_version: result.rows[0].pg_version ? result.rows[0].pg_version.split(' ')[0] : 'unknown'
+      pg_version: result.rows[0].pg_version ? result.rows[0].pg_version.split(' ')[0] : 'unknown',
+      recipe_count: parseInt(recipeCountResult.rows[0].count),
+      connection_attempts: connectionAttempts,
+      connection_status: 'healthy'
     };
     
     sendJsonResponse(res, responseData);
   } catch (error) {
     console.error('❌ PostgreSQL connection failed:', error.message);
+    
+    // Update connection status
+    isConnected = false;
+    
+    // Trigger reconnection attempt if this was a manual test
+    if (connectionAttempts < maxConnectionAttempts) {
+      console.log('🔄 Triggering reconnection attempt...');
+      setTimeout(() => {
+        testDatabaseConnection();
+      }, 1000);
+    }
+    
     const errorData = {
       success: false,
       connected: false,
       message: 'PostgreSQL connection failed',
-      error: error.message || 'Unknown error'
+      error: error.message || 'Unknown error',
+      error_code: error.code,
+      timestamp: new Date().toISOString(),
+      retry_attempts: connectionAttempts,
+      max_attempts: maxConnectionAttempts,
+      connection_status: connectionAttempts >= maxConnectionAttempts ? 'failed' : 'retrying',
+      next_retry: connectionAttempts < maxConnectionAttempts ? 'in progress' : 'manual'
     };
     
+    sendJsonResponse(res, errorData, 500);
+  }
+});
+
+// Force reconnection endpoint
+app.post('/api/reconnect', async (req, res) => {
+  try {
+    console.log('🔄 Manual reconnection requested...');
+    
+    // Reset connection state
+    isConnected = false;
+    connectionAttempts = 0;
+    
+    // Force a new connection test
+    const success = await testDatabaseConnection();
+    
+    if (success) {
+      const responseData = {
+        success: true,
+        connected: true,
+        message: 'Reconnection successful',
+        timestamp: new Date().toISOString(),
+        connection_attempts: connectionAttempts
+      };
+      sendJsonResponse(res, responseData);
+    } else {
+      const errorData = {
+        success: false,
+        connected: false,
+        message: 'Reconnection failed',
+        timestamp: new Date().toISOString(),
+        connection_attempts: connectionAttempts,
+        max_attempts: maxConnectionAttempts
+      };
+      sendJsonResponse(res, errorData, 500);
+    }
+  } catch (error) {
+    console.error('❌ Manual reconnection failed:', error.message);
+    const errorData = {
+      success: false,
+      connected: false,
+      message: 'Reconnection error',
+      error: error.message || 'Unknown error',
+      timestamp: new Date().toISOString()
+    };
     sendJsonResponse(res, errorData, 500);
   }
 });
@@ -249,6 +405,7 @@ app.post('/api/recipes', async (req, res) => {
       ingredients,
       directions,
       additional_instructions = {},
+      additional_sections = {},
       prep_time = '',
       difficulty = '',
       is_favorite = false,
@@ -273,8 +430,8 @@ app.post('/api/recipes', async (req, res) => {
     const result = await client.query(
       `INSERT INTO recipes (
         title, description, category, ingredients, directions, 
-        additional_instructions, prep_time, difficulty, is_favorite, current_step, images
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
+        additional_instructions, additional_sections, prep_time, difficulty, is_favorite, current_step, images
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) 
       RETURNING *`,
       [
         title,
@@ -283,6 +440,7 @@ app.post('/api/recipes', async (req, res) => {
         JSON.stringify(ingredients),
         JSON.stringify(directions),
         JSON.stringify(additional_instructions),
+        JSON.stringify(additional_sections),
         prep_time,
         difficulty,
         is_favorite,

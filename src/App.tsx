@@ -148,6 +148,7 @@ function App() {
                 <DatabaseStatus 
                   isVisible={showDatabaseStatus}
                   onStatusChange={handleDatabaseStatusChange}
+                  onClose={() => setShowDatabaseStatus(false)}
                 />
               </div>
             </NavigationProvider>

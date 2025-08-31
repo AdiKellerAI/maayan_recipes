@@ -237,7 +237,7 @@ app.post('/api/recipes', async (req, res) => {
       `INSERT INTO recipes (
         title, description, category, ingredients, directions, 
         additional_instructions, additional_sections, prep_time, difficulty, is_favorite, images
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12) 
       RETURNING *`,
       [
         title,
