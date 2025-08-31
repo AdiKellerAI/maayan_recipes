@@ -6,6 +6,8 @@ import { useProtectedAction } from '../../hooks/useProtectedAction';
 import { getCategoryColor } from '../../data/categories';
 import { useNavigate } from 'react-router-dom';
 import { categories } from '../../data/categories';
+import { useNavigation } from '../../contexts/NavigationContext';
+import DeleteConfirmationModal from '../DeleteConfirmationModal';
 
 // Category illustrations as emoji/unicode characters
 const getCategoryIllustration = (categoryId: string) => {
@@ -46,8 +48,10 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
   } = useRecipes();
   const { executeProtectedAction } = useProtectedAction();
   const navigate = useNavigate();
+  const { navigateToLastRecipesPage } = useNavigation();
   const [showDesktopOptions, setShowDesktopOptions] = useState(false);
   const [isLongPress, setIsLongPress] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   // Better mobile detection - check for touch support instead of screen width
   const [isMobile, setIsMobile] = useState(() => {
@@ -151,17 +155,44 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
     }
   };
 
-  const handleDelete = async () => {
+  const handleDelete = () => {
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async () => {
     executeProtectedAction(async () => {
-      if (confirm('האם אתה בטוח שברצונך למחוק את המתכון הזה?')) {
-        try {
-          await deleteRecipe(recipe.id);
-          // Recipe will be removed from the list automatically
-        } catch (error) {
-          console.error('Failed to delete recipe:', error);
-        }
+      try {
+        await deleteRecipe(recipe.id);
+        setShowDeleteModal(false);
+        
+        // Navigate to the last recipes page after successful deletion
+        setTimeout(() => {
+          const targetUrl = navigateToLastRecipesPage();
+          navigate(targetUrl, { replace: true });
+          console.log('✅ Recipe deleted successfully, navigating to:', targetUrl);
+        }, 100);
+      } catch (error) {
+        console.error('Failed to delete recipe:', error);
+        setShowDeleteModal(false);
+        // Navigate even if deletion failed to ensure consistent UX
+        setTimeout(() => {
+          const targetUrl = navigateToLastRecipesPage();
+          navigate(targetUrl, { replace: true });
+        }, 100);
       }
     });
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteModal(false);
+    // Reset any active states to prevent unwanted navigation
+    setIsLongPress(false);
+    setShowDesktopOptions(false);
+    // Clear any pending long press timers
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
   };
 
   const handleShare = async () => {
@@ -826,6 +857,12 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
       </div>
       </div>
       
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
 
     </div>
   );

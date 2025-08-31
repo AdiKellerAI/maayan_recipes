@@ -5,31 +5,42 @@ interface NavigationContextType {
   lastRecipesUrl: string;
   setLastRecipesUrl: (url: string) => void;
   navigateToLastRecipesPage: () => string;
+  setReferrerFromRecipes: (url: string) => void;
 }
 
 const NavigationContext = createContext<NavigationContextType | undefined>(undefined);
 
 export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [lastRecipesUrl, setLastRecipesUrl] = useState('/recipes');
+  const [referrerFromRecipes, setReferrerFromRecipes] = useState<string | null>(null);
   const location = useLocation();
 
-  // Track when user visits recipes page to save the URL with filters/search
+  // Track when user visits pages that display recipes to save the URL with filters/search
   useEffect(() => {
-    if (location.pathname === '/recipes') {
+    // Track recipes page, home page, and search results page
+    if (location.pathname === '/recipes' || location.pathname === '/' || location.pathname === '/search') {
       const fullUrl = location.pathname + location.search;
       setLastRecipesUrl(fullUrl);
+      // Clear any referrer since we're now on a recipes-displaying page
+      setReferrerFromRecipes(null);
     }
   }, [location.pathname, location.search]);
 
   const navigateToLastRecipesPage = () => {
-    return lastRecipesUrl;
+    // If we have a referrer from recipes, use that instead
+    return referrerFromRecipes || lastRecipesUrl;
+  };
+
+  const setReferrerFromRecipesHandler = (url: string) => {
+    setReferrerFromRecipes(url);
   };
 
   return (
     <NavigationContext.Provider value={{
       lastRecipesUrl,
       setLastRecipesUrl,
-      navigateToLastRecipesPage
+      navigateToLastRecipesPage,
+      setReferrerFromRecipes: setReferrerFromRecipesHandler
     }}>
       {children}
     </NavigationContext.Provider>

@@ -13,7 +13,7 @@ const EditRecipePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { recipes, updateRecipe, deleteRecipe } = useRecipes();
-  const { navigateToLastRecipesPage } = useNavigation();
+  const { navigateToLastRecipesPage, setReferrerFromRecipes } = useNavigation();
   const { executeProtectedAction } = useProtectedAction();
   
   const recipe = recipes.find(r => r.id === id);
@@ -67,7 +67,16 @@ const EditRecipePage: React.FC = () => {
     
     // Always scroll to top when page loads
     window.scrollTo(0, 0);
-  }, []);
+    
+    // Capture referrer from recipes page if coming from there
+    const referrer = document.referrer;
+    if (referrer && referrer.includes('/recipes')) {
+      // Extract the recipes URL with search params
+      const url = new URL(referrer);
+      const recipesPath = url.pathname + url.search;
+      setReferrerFromRecipes(recipesPath);
+    }
+  }, [setReferrerFromRecipes]);
 
   if (!recipe) {
     return (
@@ -639,6 +648,7 @@ const EditRecipePage: React.FC = () => {
                 onClick={addIngredient}
                 onMouseDown={(e) => e.preventDefault()}
                 onTouchStart={(e) => e.preventDefault()}
+                onTouchEnd={(e) => e.preventDefault()}
                 className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm"
               >
                 <Plus className="w-4 h-4" />
@@ -686,6 +696,7 @@ const EditRecipePage: React.FC = () => {
                 onClick={addDirection}
                 onMouseDown={(e) => e.preventDefault()}
                 onTouchStart={(e) => e.preventDefault()}
+                onTouchEnd={(e) => e.preventDefault()}
                 className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm"
               >
                 <Plus className="w-4 h-4" />

@@ -353,7 +353,7 @@ const SmartImageSearch: React.FC<SmartImageSearchProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-3 z-50">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-3 z-50 pt-8">
       <div className="bg-white rounded-lg max-w-3xl w-full max-h-[85vh] overflow-y-auto shadow-xl">
         <div className="p-4">
           {/* Header */}

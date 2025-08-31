@@ -8,6 +8,7 @@ import { categories } from '../data/categories';
 import { getCategoryColor } from '../data/categories';
 import ProgressTracker from '../components/Recipe/ProgressTracker';
 import { recipeProgressCache } from '../lib/cache';
+import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 
 // Category illustrations as emoji/unicode characters
 const getCategoryIllustration = (categoryId: string) => {
@@ -34,7 +35,7 @@ const RecipeDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { recipes, toggleFavorite, deleteRecipe } = useRecipes();
-  const { navigateToLastRecipesPage } = useNavigation();
+  const { navigateToLastRecipesPage, setReferrerFromRecipes } = useNavigation();
   const { executeProtectedAction } = useProtectedAction();
   const [currentImageIndex, setCurrentImageIndex] = React.useState(0);
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
@@ -146,18 +147,33 @@ const RecipeDetailPage: React.FC = () => {
     executeProtectedAction(async () => {
       try {
         await deleteRecipe(recipe.id);
-        // Return to last recipes page immediately after successful deletion
+        // Close modal first
         setShowDeleteModal(false);
-        navigate(navigateToLastRecipesPage());
+        
+        // Add a small delay before navigation to ensure state updates are processed
+        setTimeout(() => {
+          const targetUrl = navigateToLastRecipesPage();
+          navigate(targetUrl, { replace: true });
+        }, 100);
       } catch (error) {
         console.error('Failed to delete recipe:', error);
-        // You could add a toast notification here instead of alert
+        setShowDeleteModal(false);
+        // Navigate away even if deletion failed, since the UI might be in an inconsistent state
+        setTimeout(() => {
+          navigate(navigateToLastRecipesPage(), { replace: true });
+        }, 100);
       }
     });
   };
 
   const cancelDelete = () => {
     setShowDeleteModal(false);
+  };
+
+  const handleEdit = () => {
+    // Set the current recipes page as referrer before navigating to edit
+    setReferrerFromRecipes(navigateToLastRecipesPage());
+    navigate(`/edit/${recipe.id}`);
   };
 
   const nextImage = () => {
@@ -201,7 +217,7 @@ const RecipeDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div className="max-w-5xl mx-auto px-2 sm:px-6 lg:px-8 py-6">
         {/* Navigation */}
         <div className="flex items-center justify-between mb-6">
           <button
@@ -246,12 +262,12 @@ const RecipeDetailPage: React.FC = () => {
             >
               <Trash2 className="h-5 w-5" />
             </button>
-            <Link
-              to={`/edit/${recipe.id}`}
+            <button
+              onClick={handleEdit}
               className="p-3 rounded-xl bg-white/80 backdrop-blur-sm text-slate-600 hover:text-slate-900 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50"
             >
               <Edit className="h-5 w-5" />
-            </Link>
+            </button>
           </div>
         </div>
 
@@ -324,7 +340,7 @@ const RecipeDetailPage: React.FC = () => {
           ) : (
             <div className={`relative h-64 md:h-80 flex items-center justify-center ${getCategoryColor(recipe?.category || '')}`}>
               {category && (
-                <div className="text-6xl opacity-50">
+                <div className="text-8xl md:text-9xl opacity-80 filter drop-shadow-lg -translate-y-8">
                   {getCategoryIllustration(recipe?.category || '')}
                 </div>
               )}
@@ -346,7 +362,7 @@ const RecipeDetailPage: React.FC = () => {
           )}
 
           {/* Recipe Info */}
-          <div className="p-6">
+          <div className="p-3 sm:p-6">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center space-x-6 rtl:space-x-reverse">
                 {category && (
@@ -364,9 +380,9 @@ const RecipeDetailPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid lg:grid-cols-2 gap-6">
+            <div className="grid lg:grid-cols-2 gap-3 sm:gap-6">
               {/* Ingredients */}
-              <div className="bg-gradient-to-br from-amber-50/50 to-orange-50/30 px-3 py-5 md:px-6 rounded-2xl border border-amber-200/30">
+              <div className="bg-gradient-to-br from-amber-50/50 to-orange-50/30 px-2 py-4 sm:px-3 md:px-6 rounded-2xl border border-amber-200/30">
                 <h2 className="text-xl font-bold text-slate-900 mb-4">רכיבים</h2>
                 <ul className="space-y-3">
                   {recipe.ingredients.map((ingredient, index) => (
@@ -381,7 +397,7 @@ const RecipeDetailPage: React.FC = () => {
               </div>
 
               {/* Progress Tracker */}
-              <div className="bg-gradient-to-br from-amber-50/50 to-orange-50/30 px-3 py-5 md:px-6 rounded-2xl border border-amber-200/30">
+              <div className="bg-gradient-to-br from-amber-50/50 to-orange-50/30 px-2 py-4 sm:px-3 md:px-6 rounded-2xl border border-amber-200/30">
                 <ProgressTracker
                   key={progressTrackerKey}
                   recipeId={recipe.id}
@@ -400,50 +416,11 @@ const RecipeDetailPage: React.FC = () => {
       </div>
 
       {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-4 sm:p-6 mx-2 sm:mx-0">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-2 sm:space-x-3 rtl:space-x-reverse">
-                <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                  <Trash2 className="w-5 h-5 text-red-600" />
-                </div>
-                <h3 className="text-base sm:text-lg font-semibold text-gray-900">מחיקת מתכון</h3>
-              </div>
-              <button
-                onClick={cancelDelete}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <div className="mb-6">
-              <p className="text-gray-600 mb-2 text-sm sm:text-base">
-                האם אתה בטוח שברצונך למחוק את המתכון הזה?
-              </p>
-              <p className="text-sm text-red-600 font-medium">
-                פעולה זו לא ניתנת לביטול.
-              </p>
-            </div>
-            
-            <div className="flex space-x-3 rtl:space-x-reverse">
-              <button
-                onClick={cancelDelete}
-                className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors font-medium text-sm sm:text-base"
-              >
-                ביטול
-              </button>
-              <button
-                onClick={confirmDelete}
-                className="flex-1 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors font-medium text-sm sm:text-base"
-              >
-                מחק מתכון
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <DeleteConfirmationModal
+        isOpen={showDeleteModal}
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
 
       {/* Image Modal for Full Size View */}
       {showImageModal && currentImage && (
