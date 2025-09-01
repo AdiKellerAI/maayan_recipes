@@ -7,6 +7,7 @@ import { categories } from '../data/categories';
 import { Plus, X, Upload, Camera, Sparkles, Link } from 'lucide-react';
 import { compressImages } from '../utils/imageCompression';
 import SmartImageSearch from '../components/SmartImageSearch';
+import { recipeService } from '../services/recipeService';
 
 const AddRecipePage: React.FC = () => {
   const navigate = useNavigate();
@@ -641,11 +642,45 @@ const AddRecipePage: React.FC = () => {
         const savedRecipe = await addRecipe(newRecipe);
         console.log('✅ Recipe saved successfully:', savedRecipe);
         
+        // Verify that the recipe was saved correctly, especially images
+        if (images.length > 0) {
+          console.log('🔍 ADD: Verifying image save...');
+          try {
+            const verification = await recipeService.verifyRecipeUpdate(savedRecipe.id, images);
+            
+            if (!verification.success) {
+              console.warn('⚠️ ADD: Image save verification failed:', verification.message);
+              
+              // Check if we're on mobile and show appropriate message
+              const isMobile = window.innerWidth < 768;
+              if (isMobile) {
+                alert(`המתכון נשמר במכשיר, אך יש בעיה עם התמונות במאגר הנתונים.\n\nהמתכון יסונכרן אוטומטית כשהחיבור יחזור.`);
+              } else {
+                alert(`המתכון נשמר, אך יש בעיה עם התמונות במאגר הנתונים.\n\nהמתכון נשמר במכשיר ויסונכרן כשהחיבור יחזור.`);
+              }
+            } else {
+              console.log('✅ ADD: Image save verified successfully');
+              alert('המתכון נשמר בהצלחה!');
+            }
+          } catch (verifyError) {
+            console.warn('⚠️ ADD: Verification failed:', verifyError);
+            
+            // Check if we're on mobile and show appropriate message
+            const isMobile = window.innerWidth < 768;
+            if (isMobile) {
+              alert('המתכון נשמר במכשיר, אך לא ניתן לוודא שהתמונות נשמרו במאגר הנתונים.\n\nהמתכון יסונכרן אוטומטית כשהחיבור יחזור.');
+            } else {
+              alert('המתכון נשמר, אך לא ניתן לוודא שהתמונות נשמרו במאגר הנתונים.\n\nהמתכון נשמר במכשיר ויסונכרן כשהחיבור יחזור.');
+            }
+          }
+        } else {
+          alert('המתכון נשמר בהצלחה!');
+        }
+        
         // Force refresh recipes in context to ensure the new recipe is visible
         await refreshRecipes();
         
-        // Show success message and redirect directly to recipe detail page
-        alert('המתכון נשמר בהצלחה!');
+        // Navigate to recipe detail page
         navigate(`/recipe/${savedRecipe.id}`);
         
         console.log('✅ Recipe submission completed successfully');

@@ -261,13 +261,8 @@ const RecipeDetailPage: React.FC = () => {
           <div className="flex items-center justify-between">
             <button
               onClick={() => {
-                // On mobile, always go back to the main recipes page to ensure proper navigation
-                const isMobile = window.innerWidth < 768;
-                if (isMobile) {
-                  navigate('/recipes', { replace: true });
-                } else {
-                  navigate(navigateToLastRecipesPage());
-                }
+                // Always go back to the last recipes page, regardless of device
+                navigate(navigateToLastRecipesPage());
               }}
               className="group flex items-center space-x-2 rtl:space-x-reverse text-slate-600 hover:text-slate-900 transition-all duration-200"
             >

@@ -334,10 +334,10 @@ const LandingPage: React.FC = () => {
               {/* Recipes */}
               <div
                 onClick={() => handleNavigation('recipes')}
-                className="group cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-2xl"
+                className="group cursor-pointer transform transition-all duration-300 hover:scale-105"
               >
                 <div className="relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-md shadow-lg border border-white/30 p-3 md:p-6 hover:shadow-xl transition-all duration-300 hover:bg-white/90 max-w-sm md:max-w-none mx-auto md:mx-0">
-                  <div className="absolute inset-0 bg-gradient-to-br from-blue-500/10 to-purple-600/10 group-hover:from-blue-500/20 group-hover:to-purple-600/20 transition-all duration-300"></div>
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-600/10 group-hover:from-blue-500/20 group-hover:to-purple-600/20 transition-all duration-300"></div>
                   <div className="relative z-10">
                     <div className="flex items-center space-x-3 md:space-x-4 rtl:space-x-reverse mb-2 md:mb-4">
                       <div className="p-1.5 md:p-3 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-lg">
@@ -352,7 +352,7 @@ const LandingPage: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-gray-200 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-gray-200 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-b-2xl"></div>
                   </div>
                   <div className="absolute inset-0 rounded-2xl border border-transparent group-hover:border-blue-500/20 transition-all duration-300"></div>
                 </div>
@@ -361,10 +361,10 @@ const LandingPage: React.FC = () => {
               {/* Favorites */}
               <div
                 onClick={() => handleNavigation('favorites')}
-                className="group cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-2xl"
+                className="group cursor-pointer transform transition-all duration-300 hover:scale-105"
               >
                 <div className="relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-md shadow-lg border border-white/30 p-3 md:p-6 hover:shadow-xl transition-all duration-300 hover:bg-white/90 max-w-sm md:max-w-none mx-auto md:mx-0">
-                  <div className="absolute inset-0 bg-gradient-to-br from-red-500/10 to-pink-600/10 group-hover:from-red-500/20 group-hover:to-pink-600/20 transition-all duration-300"></div>
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-red-500/10 to-pink-600/10 group-hover:from-red-500/20 group-hover:to-pink-600/20 transition-all duration-300"></div>
                   <div className="relative z-10">
                     <div className="flex items-center space-x-3 md:space-x-4 rtl:space-x-reverse mb-2 md:mb-4">
                       <div className="p-1.5 md:p-3 rounded-xl bg-gradient-to-br from-red-500 to-pink-600 text-white shadow-lg">
@@ -379,7 +379,7 @@ const LandingPage: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-gray-200 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-gray-200 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-b-2xl"></div>
                   </div>
                   <div className="absolute inset-0 rounded-2xl border border-transparent group-hover:border-red-500/20 transition-all duration-300"></div>
                 </div>
@@ -388,10 +388,10 @@ const LandingPage: React.FC = () => {
               {/* Categories */}
               <div
                 onClick={() => handleNavigation('categories')}
-                className="group cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-2xl"
+                className="group cursor-pointer transform transition-all duration-300 hover:scale-105"
               >
                 <div className="relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-md shadow-lg border border-white/30 p-3 md:p-6 hover:shadow-xl transition-all duration-300 hover:bg-white/90 max-w-sm md:max-w-none mx-auto md:mx-0">
-                  <div className="absolute inset-0 bg-gradient-to-br from-green-500/10 to-teal-600/10 group-hover:from-green-500/20 group-hover:to-teal-600/20 transition-all duration-300"></div>
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-green-500/10 to-teal-600/10 group-hover:from-green-500/20 group-hover:to-teal-600/20 transition-all duration-300"></div>
                   <div className="relative z-10">
                     <div className="flex items-center space-x-3 md:space-x-4 rtl:space-x-reverse mb-2 md:mb-4">
                       <div className="p-1.5 md:p-3 rounded-xl bg-gradient-to-br from-green-500 to-teal-600 text-white shadow-lg">
@@ -406,7 +406,7 @@ const LandingPage: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-gray-200 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-gray-200 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-b-2xl"></div>
                   </div>
                   <div className="absolute inset-0 rounded-2xl border border-transparent group-hover:border-green-500/20 transition-all duration-300"></div>
                 </div>
@@ -415,10 +415,10 @@ const LandingPage: React.FC = () => {
               {/* Search */}
               <div
                 onClick={() => handleNavigation('search')}
-                className="group cursor-pointer transform transition-all duration-300 hover:scale-105 hover:shadow-2xl"
+                className="group cursor-pointer transform transition-all duration-300 hover:scale-105"
               >
                 <div className="relative overflow-hidden rounded-2xl bg-white/80 backdrop-blur-md shadow-lg border border-white/30 p-3 md:p-6 hover:shadow-xl transition-all duration-300 hover:bg-white/90 max-w-sm md:max-w-none mx-auto md:mx-0">
-                  <div className="absolute inset-0 bg-gradient-to-br from-orange-500/10 to-yellow-600/10 group-hover:from-orange-500/20 group-hover:to-yellow-600/20 transition-all duration-300"></div>
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-orange-500/10 to-yellow-600/10 group-hover:from-orange-500/20 group-hover:to-yellow-600/20 transition-all duration-300"></div>
                   <div className="relative z-10">
                     <div className="flex items-center space-x-3 md:space-x-4 rtl:space-x-reverse mb-2 md:mb-4">
                       <div className="p-1.5 md:p-3 rounded-xl bg-gradient-to-br from-orange-500 to-yellow-600 text-white shadow-lg">
@@ -433,7 +433,7 @@ const LandingPage: React.FC = () => {
                         </p>
                       </div>
                     </div>
-                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-gray-200 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-gray-200 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-b-2xl"></div>
                   </div>
                   <div className="absolute inset-0 rounded-2xl border border-transparent group-hover:border-orange-500/20 transition-all duration-300"></div>
                 </div>

@@ -490,9 +490,9 @@ const EditRecipePage: React.FC = () => {
               // Check if we're on mobile and show appropriate message
               const isMobile = window.innerWidth < 768;
               if (isMobile) {
-                alert(`המתכון נשמר במכשיר, אך יש בעיה עם התמונות במאגר הנתונים:\n${verification.message}\n\nהמתכון יסונכרן אוטומטית כשהחיבור יחזור.`);
+                alert(`המתכון נשמר במכשיר, אך יש בעיה עם התמונות במאגר הנתונים.\n\nהמתכון יסונכרן אוטומטית כשהחיבור יחזור.`);
               } else {
-                alert(`המתכון נשמר, אך יש בעיה עם התמונות: ${verification.message}\n\nהמתכון נשמר במכשיר ויסונכרן כשהחיבור יחזור.`);
+                alert(`המתכון נשמר, אך יש בעיה עם התמונות במאגר הנתונים.\n\nהמתכון נשמר במכשיר ויסונכרן כשהחיבור יחזור.`);
               }
             } else {
               console.log('✅ EDIT: Image update verified successfully');

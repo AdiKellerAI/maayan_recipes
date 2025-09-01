@@ -385,7 +385,7 @@ export const recipeService = {
       if (expectedImages.length !== savedImages.length) {
         return {
           success: false,
-          message: `התמונות לא נשמרו כראוי במאגר הנתונים. צפוי: ${expectedImages.length}, נשמר: ${savedImages.length}`,
+          message: `לא עודכנו: תמונות (צפוי: ${expectedImages.length}, נשמר: ${savedImages.length})`,
           savedImages
         };
       }
@@ -399,7 +399,7 @@ export const recipeService = {
       if (!imagesMatch) {
         return {
           success: false,
-          message: 'חלק מהתמונות לא נשמרו כראוי במאגר הנתונים',
+          message: 'לא עודכנו: תמונות',
           savedImages
         };
       }
