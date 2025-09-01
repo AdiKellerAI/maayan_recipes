@@ -320,7 +320,9 @@ app.put('/api/recipes/:id', async (req, res) => {
     }
     if (updates.images !== undefined) {
       updateFields.push(`images = $${paramCount++}`);
-      values.push(JSON.stringify(updates.images));
+      const imageData = JSON.stringify(updates.images);
+      console.log('🖼️ API: Updating images, count:', updates.images.length, 'data size:', Math.round(imageData.length / 1024) + 'KB');
+      values.push(imageData);
     }
     
     // Always update updated_at
@@ -344,6 +346,7 @@ app.put('/api/recipes/:id', async (req, res) => {
     
     const recipe = mapRowToRecipe(result.rows[0]);
     console.log('✅ API: Recipe updated:', id);
+    console.log('✅ API: Updated recipe images count:', recipe.images ? recipe.images.length : 0);
     
     res.json(recipe);
   } catch (error) {

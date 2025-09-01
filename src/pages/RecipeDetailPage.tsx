@@ -1,12 +1,12 @@
 import React from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { Heart, ChefHat, Share2, Edit, ArrowRight, ChevronLeft, ChevronRight, Trash2, X, RotateCcw } from 'lucide-react';
+import { Heart, ChefHat, Share2, Edit, ArrowRight, ChevronLeft, ChevronRight, Trash2, X, RotateCcw, Check } from 'lucide-react';
 import { useRecipes } from '../contexts/RecipeContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useProtectedAction } from '../hooks/useProtectedAction';
 import { categories } from '../data/categories';
 import { getCategoryColor } from '../data/categories';
-import ProgressTracker from '../components/Recipe/ProgressTracker';
+// ProgressTracker removed from main section; using inline compact layout
 import { recipeProgressCache } from '../lib/cache';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
 
@@ -17,7 +17,7 @@ const getCategoryIllustration = (categoryId: string) => {
     soups: '🍲',
     meat: '🥩',
     vegetarian: '🥬',
-    pastries: '🥐',
+    pastries: '🍞',
     cakes: '🎂',
     cookies: '🍪',
     desserts: '🍨',
@@ -40,8 +40,8 @@ const RecipeDetailPage: React.FC = () => {
   const [currentImageIndex, setCurrentImageIndex] = React.useState(0);
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   const [showImageModal, setShowImageModal] = React.useState(false);
-  const [additionalCurrentSteps, setAdditionalCurrentSteps] = React.useState<{ [key: string]: number }>({});
-  const [progressTrackerKey, setProgressTrackerKey] = React.useState(0);
+  // Main directions current step
+  const [mainCurrentStep, setMainCurrentStep] = React.useState(0);
   
   // Touch gesture states
   const [touchStart, setTouchStart] = React.useState<number | null>(null);
@@ -57,6 +57,71 @@ const RecipeDetailPage: React.FC = () => {
   const category = recipe ? categories.find(c => c.id === recipe.category) : null;
   const images = recipe?.images || [];
   const currentImage = images.length > 0 ? images[currentImageIndex] : null;
+
+  // Pastel background schemes for additional sections
+  const additionalColorSchemes = [
+    {
+      containerBg: 'from-rose-50/60 via-white to-pink-50/40',
+      containerBorder: 'border-rose-200/40',
+      subBg: 'from-rose-50/50 to-pink-50/30',
+      subBorder: 'border-rose-200/30'
+    },
+    {
+      containerBg: 'from-blue-50/60 via-white to-sky-50/40',
+      containerBorder: 'border-blue-200/40',
+      subBg: 'from-blue-50/50 to-sky-50/30',
+      subBorder: 'border-blue-200/30'
+    },
+    {
+      containerBg: 'from-emerald-50/60 via-white to-teal-50/40',
+      containerBorder: 'border-emerald-200/40',
+      subBg: 'from-emerald-50/50 to-teal-50/30',
+      subBorder: 'border-emerald-200/30'
+    },
+    {
+      containerBg: 'from-violet-50/60 via-white to-purple-50/40',
+      containerBorder: 'border-violet-200/40',
+      subBg: 'from-violet-50/50 to-purple-50/30',
+      subBorder: 'border-violet-200/30'
+    }
+  ];
+
+  // Track progress per additional section (for step marking)
+  const [additionalSectionSteps, setAdditionalSectionSteps] = React.useState<{ [key: string]: number }>({});
+
+  // Initialize additional section steps from recipe data and cache
+  React.useEffect(() => {
+    if (!recipe) return;
+    const initial: { [key: string]: number } = {};
+    if (recipe?.additional_sections) {
+      Object.keys(recipe.additional_sections).forEach((name) => {
+        initial[name] = 0;
+      });
+    }
+    const cached = recipeProgressCache.loadProgress(recipe.id);
+    const cachedAdd = cached?.additionalSteps || {};
+    const merged: { [key: string]: number } = { ...initial };
+    Object.keys(cachedAdd).forEach((name) => {
+      if (name in merged) merged[name] = cachedAdd[name];
+    });
+    setAdditionalSectionSteps(merged);
+  }, [recipe]);
+
+  // Initialize main step from cache/recipe
+  React.useEffect(() => {
+    if (!recipe) return;
+    const cached = recipeProgressCache.loadProgress(recipe.id);
+    setMainCurrentStep(cached?.currentStep ?? (recipe.current_step || 0));
+  }, [recipe]);
+
+  const handleAdditionalSectionStepClick = (sectionName: string, stepIndex: number) => {
+    if (!recipe) return;
+    const current = additionalSectionSteps[sectionName] ?? 0;
+    const newStep = stepIndex === current ? stepIndex + 1 : stepIndex;
+    const newMap = { ...additionalSectionSteps, [sectionName]: newStep };
+    setAdditionalSectionSteps(newMap);
+    recipeProgressCache.saveProgress(recipe.id, mainCurrentStep, newMap);
+  };
 
   if (!recipe) {
     return (
@@ -74,16 +139,13 @@ const RecipeDetailPage: React.FC = () => {
   }
 
   const handleStepClick = async (stepIndex: number) => {
-    // For now, don't update database - just handle locally
-    console.log('Step clicked:', stepIndex);
+    if (!recipe) return;
+    const newStep = stepIndex === mainCurrentStep ? stepIndex + 1 : stepIndex;
+    setMainCurrentStep(newStep);
+    recipeProgressCache.saveProgress(recipe.id, newStep, additionalSectionSteps);
   };
 
-  const handleAdditionalStepClick = (sectionName: string, stepIndex: number) => {
-    setAdditionalCurrentSteps(prev => ({
-      ...prev,
-      [sectionName]: stepIndex === prev[sectionName] ? stepIndex + 1 : stepIndex
-    }));
-  };
+  // No-op: additional sections handled separately below
 
   const resetProgress = async () => {
     if (!id) return;
@@ -91,41 +153,17 @@ const RecipeDetailPage: React.FC = () => {
     // Clear progress from cache
     recipeProgressCache.clearProgress(id);
     
-    // Reset local state
-    setAdditionalCurrentSteps(prev => {
+    // Reset local steps
+    if (recipe?.additional_sections) {
       const reset: { [key: string]: number } = {};
-      Object.keys(prev).forEach(key => {
-        reset[key] = 0;
-      });
-      return reset;
-    });
-    
-    // Force re-render of ProgressTracker by updating its key
-    setProgressTrackerKey(prev => prev + 1);
+      Object.keys(recipe.additional_sections).forEach((name) => (reset[name] = 0));
+      setAdditionalSectionSteps(reset);
+    }
+    setMainCurrentStep(0);
     console.log('Progress reset');
   };
 
-  // Initialize additional steps from recipe data
-  React.useEffect(() => {
-    // Initialize additional steps for both legacy additional_instructions and new additional_sections
-    const initialSteps: { [key: string]: number } = {};
-    
-    if (recipe?.additional_instructions) {
-      Object.keys(recipe.additional_instructions).forEach(sectionName => {
-        initialSteps[sectionName] = 0;
-      });
-    }
-    
-    if (recipe?.additional_sections) {
-      Object.keys(recipe.additional_sections).forEach(sectionName => {
-        initialSteps[sectionName] = 0;
-      });
-    }
-    
-    if (Object.keys(initialSteps).length > 0) {
-      setAdditionalCurrentSteps(initialSteps);
-    }
-  }, [recipe]);
+  // Additional sections are rendered independently; no local step tracking here
 
   const handleShare = () => {
     if (navigator.share) {
@@ -275,68 +313,90 @@ const RecipeDetailPage: React.FC = () => {
         <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden border border-slate-200/50">
           {/* Hero Image */}
           {currentImage ? (
-          <div 
-            className="relative h-64 md:h-80 group overflow-hidden"
-            onTouchStart={onTouchStart}
-            onTouchMove={onTouchMove}
-            onTouchEnd={onTouchEnd}
-          >
-            <div className="absolute inset-2 rounded-xl overflow-hidden shadow-inner">
+          <>
+          <div className="p-4 flex justify-center">
+            <div 
+              className="relative group cursor-pointer overflow-hidden rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 w-full max-w-md"
+              onTouchStart={onTouchStart}
+              onTouchMove={onTouchMove}
+              onTouchEnd={onTouchEnd}
+              onClick={() => setShowImageModal(true)}
+            >
               <img
                 src={currentImage}
                 alt={recipe.title}
-                className="w-full h-full object-cover cursor-pointer hover:scale-105 transition-all duration-300 rounded-xl"
-                onClick={() => setShowImageModal(true)}
+                className="w-full h-auto object-cover rounded-xl group-hover:scale-[1.02] transition-transform duration-300"
               />
-            </div>
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-200/20 via-transparent to-slate-200/20 pointer-events-none"></div>
-            
-            {/* Image Navigation */}
-            {images.length > 1 && (
-              <>
-                <button
-                  onClick={prevImage}
-                   className="absolute left-4 rtl:right-4 rtl:left-auto top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-opacity z-10"
-                >
-                  <ChevronLeft className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={nextImage}
-                   className="absolute right-4 rtl:left-4 rtl:right-auto top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-2 rounded-full transition-opacity z-10"
-                >
-                  <ChevronRight className="h-5 w-5" />
-                </button>
-                
-                {/* Image Indicators */}
-                <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2 rtl:space-x-reverse">
-                  {images.map((_, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setCurrentImageIndex(index)}
-                      className={`w-2 h-2 rounded-full transition-colors ${
-                        index === currentImageIndex ? 'bg-white' : 'bg-white/50'
-                      }`}
-                    />
-                  ))}
+              
+              {/* Subtle overlay on hover */}
+              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/5 transition-colors duration-300 rounded-xl"></div>
+              
+              {/* Image Navigation - subtle and minimal */}
+              {images.length > 1 && (
+                <>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      prevImage();
+                    }}
+                    className="absolute left-3 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white text-gray-700 hover:text-gray-900 p-2 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      nextImage();
+                    }}
+                    className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-white/90 hover:bg-white text-gray-700 hover:text-gray-900 p-2 rounded-full shadow-sm opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                  
+                  {/* Minimal indicators */}
+                  <div className="absolute bottom-3 left-1/2 transform -translate-x-1/2 flex space-x-1.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    {images.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCurrentImageIndex(index);
+                        }}
+                        className={`w-1.5 h-1.5 rounded-full transition-colors duration-200 ${
+                          index === currentImageIndex ? 'bg-white' : 'bg-white/60 hover:bg-white/80'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+              
+              {/* Title overlay - bottom-right with readable pill */}
+              <div className="absolute bottom-3 left-3 rtl:right-3 rtl:left-auto">
+                <div className="max-w-[75vw]">
+                  <span className="inline-block bg-black/30 text-white px-3 py-1.5 rounded-lg backdrop-blur-[2px] shadow-sm">
+                    <span className="text-base md:text-lg font-semibold leading-tight break-words">{recipe.title}</span>
+                  </span>
                 </div>
-              </>
-            )}
-            
-            <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-            <div className="absolute bottom-6 left-6 rtl:right-6 rtl:left-auto text-white">
-              <h1 className="text-3xl md:text-4xl font-bold mb-2">{recipe.title}</h1>
+              </div>
+
+              {/* Favorite button - moved to top-right */}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  executeProtectedAction(() => toggleFavorite(recipe.id));
+                }}
+                className={`absolute top-3 right-3 rtl:left-3 rtl:right-auto p-2 rounded-full shadow-sm transition-all duration-200 ${
+                  isFavorite 
+                    ? 'bg-red-50 text-red-500 hover:bg-red-100' 
+                    : 'bg-white/90 text-gray-600 hover:bg-white hover:text-red-500'
+                }`}
+              >
+                <Heart className={`h-4 w-4 ${isFavorite ? 'fill-current' : ''}`} />
+              </button>
             </div>
-            <button
-              onClick={() => executeProtectedAction(() => toggleFavorite(recipe.id))}
-              className={`absolute top-6 right-6 rtl:left-6 rtl:right-auto p-3 rounded-full backdrop-blur-sm transition-colors ${
-                isFavorite 
-                  ? 'bg-red-100/80 text-red-500' 
-                  : 'bg-white/80 text-gray-600 hover:text-red-500'
-              }`}
-            >
-              <Heart className={`h-6 w-6 ${isFavorite ? 'fill-current' : ''}`} />
-            </button>
           </div>
+          </>
           ) : (
             <div className={`relative h-64 md:h-80 flex items-center justify-center ${getCategoryColor(recipe?.category || '')}`}>
               {category && (
@@ -344,16 +404,22 @@ const RecipeDetailPage: React.FC = () => {
                   {getCategoryIllustration(recipe?.category || '')}
                 </div>
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-              <div className="absolute bottom-6 left-6 rtl:right-6 rtl:left-auto text-white">
-                <h1 className="text-3xl md:text-4xl font-bold mb-2">{recipe?.title}</h1>
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+              {/* Title overlay for no-image state - bottom-left */}
+              <div className="absolute bottom-3 left-3 rtl:right-3 rtl:left-auto">
+                <div className="max-w-[75vw]">
+                  <span className="inline-block bg-black/30 text-white px-3 py-1.5 rounded-lg backdrop-blur-[2px] shadow-sm">
+                    <span className="text-xl md:text-2xl font-bold leading-tight break-words">{recipe?.title}</span>
+                  </span>
+                </div>
               </div>
+              {/* Favorite button moved to top-right */}
               <button
                 onClick={() => recipe && executeProtectedAction(() => toggleFavorite(recipe.id))}
-                className={`absolute top-6 right-6 rtl:left-6 rtl:right-auto p-3 rounded-full backdrop-blur-sm transition-colors ${
+                className={`absolute top-3 right-3 rtl:left-3 rtl:right-auto p-3 rounded-full backdrop-blur-md transition-all duration-300 shadow-lg ring-1 ring-white/20 hover:scale-110 z-20 ${
                   isFavorite 
-                    ? 'bg-red-100/80 text-red-500' 
-                    : 'bg-white/80 text-gray-600 hover:text-red-500'
+                    ? 'bg-red-100/90 text-red-500 hover:bg-red-100' 
+                    : 'bg-white/30 text-white hover:bg-white/40 hover:text-red-400'
                 }`}
               >
                 <Heart className={`h-6 w-6 ${isFavorite ? 'fill-current' : ''}`} />
@@ -380,37 +446,167 @@ const RecipeDetailPage: React.FC = () => {
               </div>
             </div>
 
-            <div className="grid lg:grid-cols-2 gap-3 sm:gap-6">
-              {/* Ingredients */}
-              <div className="bg-gradient-to-br from-amber-50/50 to-orange-50/30 px-2 py-4 sm:px-3 md:px-6 rounded-2xl border border-amber-200/30">
+            {/* Main section compact like additional sections, desktop layout: ingredients right, directions left */}
+            <div className="grid md:grid-cols-2 gap-3 md:gap-4">
+              {/* Ingredients (right on desktop) */}
+              <div className="order-1 md:order-1 bg-gradient-to-br from-amber-50/60 via-white to-orange-50/40 px-2 py-4 md:px-3 rounded-2xl border border-amber-200/40 shadow-sm">
                 <h2 className="text-xl font-bold text-slate-900 mb-4">רכיבים</h2>
-                <ul className="space-y-3">
+                <ul className="space-y-2">
                   {recipe.ingredients.map((ingredient, index) => (
-                    <li key={index} className="flex items-start space-x-4 rtl:space-x-reverse group">
-                      <div className="flex-shrink-0 w-6 h-6 bg-gradient-to-br from-amber-400 to-orange-400 rounded-full flex items-center justify-center mt-0.5 shadow-sm">
+                    <li key={index} className="flex items-start space-x-3 rtl:space-x-reverse group">
+                      <div className="flex-shrink-0 w-5 h-5 bg-gradient-to-br from-amber-400 to-orange-400 rounded-full flex items-center justify-center mt-0.5 shadow-sm">
                         <span className="text-xs font-bold text-white">{index + 1}</span>
                       </div>
-                      <span className="text-slate-700 leading-relaxed group-hover:text-slate-900 transition-colors text-base">{ingredient}</span>
+                      <span className="text-slate-700 leading-relaxed group-hover:text-slate-900 transition-colors">{ingredient}</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
-              {/* Progress Tracker */}
-              <div className="bg-gradient-to-br from-amber-50/50 to-orange-50/30 px-2 py-4 sm:px-3 md:px-6 rounded-2xl border border-amber-200/30">
-                <ProgressTracker
-                  key={progressTrackerKey}
-                  recipeId={recipe.id}
-                  directions={recipe.directions}
-                  currentStep={recipe.current_step || 0}
-                  onStepClick={handleStepClick}
-                  additionalInstructions={recipe.additional_instructions}
-                  additionalSections={recipe.additional_sections}
-                  onAdditionalStepClick={handleAdditionalStepClick}
-                  additionalCurrentSteps={additionalCurrentSteps}
-                />
+              {/* Directions (left on desktop) with step marking preserved */}
+              <div className="order-2 md:order-2 bg-gradient-to-br from-amber-50/60 via-white to-orange-50/40 px-2 py-4 md:px-3 rounded-2xl border border-amber-200/40 shadow-sm">
+                <h2 className="text-xl font-bold text-slate-900 mb-4">הוראות הכנה</h2>
+                <ol className="space-y-2">
+                  {recipe.directions.map((direction, index) => {
+                    const cached = recipeProgressCache.loadProgress(recipe.id);
+                    const currentStep = cached?.currentStep ?? (recipe.current_step || 0);
+                    const isCompleted = index < currentStep;
+                    const isCurrent = index === currentStep;
+                    return (
+                      <li key={index} className="flex space-x-4 rtl:space-x-reverse group">
+                        <button
+                          onClick={() => handleStepClick(index)}
+                          className={`flex-shrink-0 rounded-full flex items-center justify-center font-bold transition-all duration-300 hover:scale-110 touch-manipulation shadow-sm ${
+                            isCompleted
+                              ? 'bg-gradient-to-br from-emerald-400 to-emerald-500 text-white shadow-emerald-200'
+                              : isCurrent
+                              ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-orange-200 ring-2 ring-orange-200/50'
+                              : 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-600 hover:from-slate-200 hover:to-slate-300'
+                          }`}
+                          style={{ width: '28px', height: '28px', minWidth: '28px', minHeight: '28px' }}
+                        >
+                          {isCompleted ? (
+                            <Check className="h-4 w-4" />
+                          ) : (
+                            <span className="text-xs">{index + 1}</span>
+                          )}
+                        </button>
+                        <div
+                          className={`flex-1 pt-1 cursor-pointer transition-all duration-200 ${
+                            isCompleted
+                              ? 'text-slate-500 line-through opacity-70'
+                              : isCurrent
+                              ? 'text-slate-900 font-medium bg-white/60 px-4 py-4 rounded-xl border border-amber-200/30'
+                              : 'text-slate-700 hover:text-slate-900 px-4 py-4 hover:bg-white/40 rounded-xl transition-colors'
+                          }`}
+                          onClick={() => handleStepClick(index)}
+                        >
+                          <div className={`leading-relaxed text-base ${
+                            direction.length <= 50 ? 'min-h-[36px] flex items-center' : 'min-h-[56px]'
+                          }`}>
+                            {direction}
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ol>
               </div>
             </div>
+            {/* Additional Sections Title across full width */}
+            {(recipe.additional_sections && Object.keys(recipe.additional_sections).length > 0) && (
+              <div className="mt-8">
+                <div className="relative mb-6 mt-8">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t-2 border-gradient-to-r from-transparent via-slate-300/60 to-transparent"></div>
+                  </div>
+                  <div className="relative flex justify-center">
+                    <div className="bg-gradient-to-r from-slate-50 via-white to-slate-50 px-6 py-2 rounded-full shadow-sm border border-slate-200/50">
+                      <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                        <div className="w-2 h-2 bg-gradient-to-r from-slate-400 to-slate-500 rounded-full"></div>
+                        <h2 className="text-lg font-bold text-slate-800 tracking-wide">חלקים נוספים</h2>
+                        <div className="w-2 h-2 bg-gradient-to-r from-slate-400 to-slate-500 rounded-full"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Render additional sections in two columns like main layout */}
+                <div className="space-y-6">
+                  {Object.entries(recipe.additional_sections || {}).map(([sectionName, section], idx) => {
+                    const cs = additionalColorSchemes[idx % additionalColorSchemes.length];
+                    return (
+                    <div key={sectionName} className={`bg-gradient-to-br ${cs.containerBg} px-2 py-6 md:px-4 rounded-2xl border ${cs.containerBorder} shadow-sm`}>
+                      <div className="mb-4">
+                        <h3 className="text-xl font-bold text-slate-900">{sectionName}</h3>
+                      </div>
+                      <div className="grid md:grid-cols-2 gap-3 md:gap-4">
+                        {/* Ingredients Right (desktop) */}
+                        <div className={`order-1 md:order-1 bg-gradient-to-br ${cs.subBg} px-2 py-4 md:px-3 rounded-xl border ${cs.subBorder}`}>
+                          <h4 className="text-lg font-bold text-slate-800 mb-4">מרכיבים ל{sectionName}</h4>
+                          <ul className="space-y-2">
+                            {section.ingredients.map((ingredient, i) => (
+                              <li key={i} className="flex items-start space-x-3 rtl:space-x-reverse">
+                                <div className="flex-shrink-0 w-5 h-5 bg-gradient-to-br from-amber-400 to-orange-400 rounded-full flex items-center justify-center mt-0.5 shadow-sm">
+                                  <span className="text-xs font-bold text-white">{i + 1}</span>
+                                </div>
+                                <span className="text-slate-700 leading-relaxed">{ingredient}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        {/* Directions Left (desktop) */}
+                        <div className={`order-2 md:order-2 bg-gradient-to-br ${cs.subBg} px-2 py-4 md:px-3 rounded-xl border ${cs.subBorder}`}>
+                          <h4 className="text-lg font-bold text-slate-800 mb-4">הוראות הכנה ל{sectionName}</h4>
+                          <ol className="space-y-2">
+                            {section.directions.map((direction, i) => {
+                              const isCompleted = i < (additionalSectionSteps[sectionName] ?? 0);
+                              const isCurrent = i === (additionalSectionSteps[sectionName] ?? 0);
+                              return (
+                                <li key={i} className="flex space-x-4 rtl:space-x-reverse group">
+                                  <button
+                                    onClick={() => handleAdditionalSectionStepClick(sectionName, i)}
+                                    className={`flex-shrink-0 rounded-full flex items-center justify-center font-bold transition-all duration-300 hover:scale-110 touch-manipulation shadow-sm ${
+                                      isCompleted
+                                        ? 'bg-gradient-to-br from-emerald-400 to-emerald-500 text-white shadow-emerald-200'
+                                        : isCurrent
+                                        ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-orange-200 ring-2 ring-orange-200/50'
+                                        : 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-600 hover:from-slate-200 hover:to-slate-300'
+                                    }`}
+                                    style={{ width: '28px', height: '28px', minWidth: '28px', minHeight: '28px' }}
+                                  >
+                                    {isCompleted ? (
+                                      <Check className="h-4 w-4" />
+                                    ) : (
+                                      <span className="text-xs">{i + 1}</span>
+                                    )}
+                                  </button>
+                                  <div className={`flex-1 pt-1 cursor-pointer transition-all duration-200 ${
+                                      isCompleted
+                                        ? 'text-slate-500 line-through opacity-70'
+                                        : isCurrent
+                                        ? 'text-slate-900 font-medium bg-white/60 px-4 py-4 rounded-xl border border-amber-200/30'
+                                        : 'text-slate-700 hover:text-slate-900 px-4 py-4 hover:bg-white/40 rounded-xl transition-colors'
+                                    }`}
+                                    onClick={() => handleAdditionalSectionStepClick(sectionName, i)}
+                                  >
+                                    <div className={`leading-relaxed text-base ${
+                                      direction.length <= 50 ? 'min-h-[36px] flex items-center' : 'min-h-[56px]'
+                                    }`}>
+                                      {direction}
+                                    </div>
+                                  </div>
+                                </li>
+                              );
+                            })}
+                          </ol>
+                        </div>
+                      </div>
+                    </div>
+                  )})}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>

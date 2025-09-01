@@ -278,6 +278,9 @@ const DatabaseStatus: React.FC<DatabaseStatusProps> = ({ isVisible = false, onSt
                 {details.connection_status && (
                   <div>🔗 סטטוס: {details.connection_status}</div>
                 )}
+                {details.error && details.error.includes('fetch') && (
+                  <div>🚫 השרת לא פועל - יש להפעיל את השרת</div>
+                )}
                 <div>📦 משתמש ב-localStorage</div>
               </>
             )}

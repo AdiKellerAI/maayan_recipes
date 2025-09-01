@@ -21,14 +21,16 @@ function App() {
 
   // Handle database status changes
   const handleDatabaseStatusChange = React.useCallback((status: 'checking' | 'connected' | 'disconnected' | 'error') => {
-    // Show status window only if there's a problem
-    if (status === 'disconnected' || status === 'error') {
+    console.log('🔍 APP: Database status changed to:', status);
+    
+    // Show status window for any non-connected status, and always show for errors
+    if (status === 'disconnected' || status === 'error' || status === 'checking') {
       setShowDatabaseStatus(true);
     } else if (status === 'connected') {
       // Hide status window after a short delay when connection is restored
       setTimeout(() => {
         setShowDatabaseStatus(false);
-      }, 2000);
+      }, 3000); // Increased delay to 3 seconds for better visibility
     }
   }, []);
 
@@ -36,25 +38,37 @@ function App() {
   React.useEffect(() => {
     // Create a hidden database status component to check connection
     const checkInitialConnection = async () => {
+      console.log('🔍 APP: Checking initial database connection...');
+      handleDatabaseStatusChange('checking');
+      
       try {
         const response = await fetch('/api/test-connection', {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
-          signal: AbortSignal.timeout(5000)
+          signal: AbortSignal.timeout(8000) // Increased timeout
         });
         
         if (!response.ok) {
+          console.error('❌ APP: API server responded with error:', response.status, response.statusText);
           handleDatabaseStatusChange('error');
           return;
         }
         
         const result = await response.json();
+        console.log('✅ APP: API response received:', result);
+        
         if (result.connected === true || result.success === true) {
           handleDatabaseStatusChange('connected');
         } else {
+          console.warn('⚠️ APP: Database not connected according to API response');
           handleDatabaseStatusChange('disconnected');
         }
       } catch (error) {
+        console.error('❌ APP: Failed to reach API server:', error);
+        // Distinguish between network errors (server not running) and other errors
+        if (error instanceof TypeError && error.message.includes('fetch')) {
+          console.error('❌ APP: Backend server appears to be offline');
+        }
         handleDatabaseStatusChange('error');
       }
     };

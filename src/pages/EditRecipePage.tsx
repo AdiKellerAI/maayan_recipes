@@ -195,10 +195,13 @@ const EditRecipePage: React.FC = () => {
       compressImages(fileList) // Use HD quality compression
         .then(compressedImages => {
           clearTimeout(loadingToast);
-          console.log('✅ Images compressed successfully:', compressedImages.length);
+          console.log('✅ EDIT: Images compressed successfully:', compressedImages.length);
+          console.log('✅ EDIT: Compressed image sizes:', compressedImages.map(img => `${Math.round(img.length / 1024)}KB`));
+          
           setImages(prev => {
             const newImages = [...prev, ...compressedImages];
-            console.log('📸 Total images after upload:', newImages.length);
+            console.log('📸 EDIT: Total images after upload:', newImages.length);
+            console.log('📸 EDIT: Previous images:', prev.length, 'New images:', compressedImages.length);
             setHasUnsavedChanges(true); // Mark as unsaved for mobile
             return newImages.slice(0, 6); // Ensure we never exceed 6 images
           });
@@ -405,12 +408,23 @@ const EditRecipePage: React.FC = () => {
       };
 
       try {
+        console.log('🔄 EDIT: Updating recipe with images:', images.length);
+        console.log('🔄 EDIT: Images data:', images.map(img => `${img.substring(0, 50)}...`));
+        
         await updateRecipe(recipe.id, updatedRecipe);
+        
+        console.log('✅ EDIT: Recipe updated successfully, navigating back...');
         setHasUnsavedChanges(false);
-        navigate(`/recipe/${recipe.id}`);
+        
+        // Add a small delay to ensure the update is processed
+        setTimeout(() => {
+          navigate(`/recipe/${recipe.id}`);
+        }, 100);
+        
       } catch (error) {
-        console.error('Failed to update recipe:', error);
-        // Error is already handled in the context
+        console.error('❌ EDIT: Failed to update recipe:', error);
+        const errorMessage = error instanceof Error ? error.message : 'שגיאה לא ידועה';
+        alert(`שגיאה בעדכון המתכון: ${errorMessage}`);
       } finally {
         setIsSaving(false);
       }
@@ -878,30 +892,51 @@ const EditRecipePage: React.FC = () => {
             </button>
           </div>
 
-          {/* Submit Section */}
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-3 rounded-lg border border-gray-200">
-            <div className="flex gap-2">
+          {/* Submit Section - Centered Design */}
+          <div className="pt-6 border-t border-gray-100">
+            {/* Unsaved changes indicator */}
+            {hasUnsavedChanges && (
+              <div className="flex items-center justify-center gap-2 text-amber-600 text-xs mb-4">
+                <div className="w-2 h-2 bg-amber-400 rounded-full animate-pulse"></div>
+                <span>יש שינויים שלא נשמרו</span>
+              </div>
+            )}
+            
+            {/* Centered buttons */}
+            <div className="flex items-center justify-center gap-3">
               <button
                 type="submit"
                 disabled={isSaving}
-                className="flex-[2] bg-gradient-to-r from-green-500 to-green-600 text-white py-2 px-4 rounded-md hover:from-green-600 hover:to-green-700 transition-all duration-200 font-medium disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md text-sm"
+                className="group relative overflow-hidden bg-white border border-green-200 text-green-700 hover:text-white px-6 py-2.5 rounded-full transition-all duration-300 font-medium text-sm shadow-sm hover:shadow-md hover:border-green-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
               >
-                {isSaving ? (
-                  <>
-                    <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent"></div>
-                    <span>שומר שינויים...</span>
-                  </>
-                ) : (
-                  <span>שמור שינויים</span>
-                )}
+                <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-green-600 translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out"></div>
+                <div className="relative flex items-center gap-2">
+                  {isSaving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3.5 w-3.5 border-2 border-current border-t-transparent"></div>
+                      <span>שומר...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      <span>שמור שינויים</span>
+                    </>
+                  )}
+                </div>
               </button>
+              
               <button
                 type="button"
                 onClick={handleDelete}
-                className="flex-1 bg-gradient-to-r from-red-500 to-red-600 text-white py-2 px-4 rounded-md hover:from-red-600 hover:to-red-700 transition-all duration-200 font-medium flex items-center justify-center gap-1.5 shadow-sm hover:shadow-md text-sm"
+                className="group relative overflow-hidden bg-white border border-red-200 text-red-600 hover:text-white px-4 py-2.5 rounded-full transition-all duration-300 font-medium text-sm shadow-sm hover:shadow-md hover:border-red-300 flex items-center gap-2"
               >
-                <Trash2 className="h-3 w-3" />
-                <span>מחק מתכון</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-red-600 translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out"></div>
+                <div className="relative flex items-center gap-2">
+                  <Trash2 className="h-3.5 w-3.5" />
+                  <span>מחק</span>
+                </div>
               </button>
             </div>
           </div>

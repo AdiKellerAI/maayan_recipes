@@ -12,6 +12,7 @@ interface ProgressTrackerProps {
   additionalSections?: { [key: string]: RecipeSection };
   onAdditionalStepClick?: (sectionName: string, stepIndex: number) => void;
   additionalCurrentSteps?: { [key: string]: number };
+  hideAdditionalSections?: boolean; // when true, do not render additional sections here
 }
 
 const ProgressTracker: React.FC<ProgressTrackerProps> = ({
@@ -22,7 +23,8 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
   additionalInstructions = {},
   additionalSections = {},
   onAdditionalStepClick,
-  additionalCurrentSteps = {}
+  additionalCurrentSteps = {},
+  hideAdditionalSections = false
 }) => {
   // Initialize state from cache or props
   const [localCurrentStep, setLocalCurrentStep] = React.useState(() => {
@@ -115,7 +117,7 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
       </div>
 
       {/* Additional Sections with Ingredients and Directions */}
-      {Object.keys(additionalSections).length > 0 && (
+      {!hideAdditionalSections && Object.keys(additionalSections).length > 0 && (
         <div className="mt-8">
           {/* Elegant Separator */}
           <div className="relative mb-8 mt-10">
@@ -252,7 +254,7 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
       )}
 
       {/* Additional Instructions (Legacy) */}
-      {Object.keys(additionalInstructions).length > 0 && (
+      {!hideAdditionalSections && Object.keys(additionalInstructions).length > 0 && (
         <div className="mt-8">
           <h2 className="text-2xl font-bold text-gray-900 mb-6">הוראות נוספות</h2>
           <div className="space-y-6">

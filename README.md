@@ -1,12 +1,48 @@
 ## 🚀 Run Locally
 
+### Option 1: Quick Start (Recommended)
 1. **Open [Cursor](https://cursor.sh/)**
-2. **Open the terminal** in Cursor and run:
-npm run dev
-3. **Open your browser** and navigate to:
-http://localhost:5173/
+2. **Run the startup script:**
+   ```bash
+   ./start-dev.sh
+   ```
+   This script will:
+   - Check dependencies and install if needed
+   - Test PostgreSQL connection
+   - Start both frontend and backend servers
+   - Handle port conflicts automatically
+
+### Option 2: Manual Start
+1. **Open the terminal** in Cursor and run:
+   ```bash
+   npm run dev
+   ```
+2. **Open your browser** and navigate to:
+   http://localhost:5173/
 
 ✅ You should now see the app running locally!
+
+### 🔍 Troubleshooting Database Connection
+
+If you see "לא מחובר למאגר המידע" (Not connected to database):
+
+1. **Check if backend server is running:**
+   - Backend should be available at `http://localhost:3001`
+   - Frontend is at `http://localhost:5173`
+
+2. **Use the Database Status Widget:**
+   - Press `Ctrl+Shift+D` to toggle the database status widget
+   - It shows real-time connection status and detailed error information
+   - Click 🔄 to reconnect or 🧹 to clear cache and refresh
+
+3. **Common Issues:**
+   - **Backend server not running:** The widget will show "השרת לא פועל" 
+   - **Database connection failed:** Shows PostgreSQL connection errors
+   - **Network issues:** Check internet connection for database access
+
+4. **Fallback Mode:**
+   - The app works offline using localStorage when database is unavailable
+   - All recipes are saved locally and will sync when connection is restored
 
 ## ✨ Smart Image Search Feature
 

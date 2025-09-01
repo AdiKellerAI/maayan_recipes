@@ -58,10 +58,10 @@ const LandingPage: React.FC = () => {
     'delay-800', 'delay-900', 'delay-1000', 'delay-1100', 'delay-1200', 'delay-1350', 'delay-1450'
   ];
 
-  // Fade-in animation delays (random timing up to 2 seconds in milliseconds)
+  // Fade-in animation delays (random timing up to 1 second in milliseconds - 2x faster)
   const fadeInDelays = [
-    0, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000, 1100,
-    1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000
+    0, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500, 550,
+    600, 650, 700, 750, 800, 850, 900, 950, 1000
   ];
 
   // Generate uniformly distributed circles using useMemo to prevent regeneration on re-renders
