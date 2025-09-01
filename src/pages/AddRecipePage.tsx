@@ -9,7 +9,7 @@ import { compressImages } from '../utils/imageCompression';
 import SmartImageSearch from '../components/SmartImageSearch';
 import { recipeService } from '../services/recipeService';
 import { imageService, RecipeImage } from '../services/imageService';
-import { blobToBase64, analyzeImageUrl } from '../utils/imageUtils';
+import { blobToBase64, analyzeImageUrl, processImagesForStorage, detectPlatform } from '../utils/imageUtils';
 
 const AddRecipePage: React.FC = () => {
   const navigate = useNavigate();
@@ -249,31 +249,16 @@ const AddRecipePage: React.FC = () => {
     console.log('✨ Smart image added:', imageUrl);
   };
 
-  // Convert blob URLs to base64 before saving
-  const convertBlobImagesToBase64 = async (images: RecipeImage[]): Promise<string[]> => {
-    const convertedImages: string[] = [];
+  // Universal image processing for all platforms
+  const processImagesForRecipe = async (images: RecipeImage[]): Promise<string[]> => {
+    const platform = detectPlatform();
+    console.log(`🔄 Processing images for ${platform} platform...`);
     
-    for (const image of images) {
-      const analysis = analyzeImageUrl(image.url);
-      
-      if (analysis.type === 'blob') {
-        try {
-          console.log('🔄 Converting blob URL to base64:', image.filename);
-          const base64Url = await blobToBase64(image.url);
-          convertedImages.push(base64Url);
-          console.log('✅ Successfully converted blob to base64');
-        } catch (error) {
-          console.error('❌ Failed to convert blob to base64:', error);
-          // If conversion fails, skip this image
-          continue;
-        }
-      } else {
-        // For non-blob URLs, use as is
-        convertedImages.push(image.url);
-      }
-    }
+    const imageUrls = images.map(img => img.url);
+    const processedUrls = await processImagesForStorage(imageUrls, title);
     
-    return convertedImages;
+    console.log(`✅ Processed ${processedUrls.length} images for ${platform}`);
+    return processedUrls;
   };
 
   // Upload images to server
@@ -768,12 +753,12 @@ const AddRecipePage: React.FC = () => {
           }
         });
 
-        // Convert blob images to base64 before saving
+        // Process images for storage (universal for all platforms)
         let processedImages: string[] = [];
         if (images.length > 0) {
           try {
             console.log('🔄 Processing images before saving...');
-            processedImages = await convertBlobImagesToBase64(images);
+            processedImages = await processImagesForRecipe(images);
             console.log(`✅ Processed ${processedImages.length} images`);
           } catch (error) {
             console.error('❌ Error processing images:', error);

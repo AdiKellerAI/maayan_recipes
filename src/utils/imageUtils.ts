@@ -191,3 +191,78 @@ export async function validateImageUrl(url: string): Promise<boolean> {
     return false;
   }
 }
+
+/**
+ * Universal image processing function for all platforms
+ * This ensures consistent image format regardless of platform (mobile/desktop)
+ */
+export async function processImageForStorage(imageUrl: string, recipeTitle?: string): Promise<string> {
+  const imageInfo = analyzeImageUrl(imageUrl);
+  
+  // If it's already a valid data URL, return as is
+  if (imageInfo.type === 'data') {
+    return imageUrl;
+  }
+  
+  // If it's a blob URL, convert to base64
+  if (imageInfo.type === 'blob') {
+    try {
+      console.log('🔄 Converting blob URL to base64 for storage...');
+      const base64Url = await blobToBase64(imageUrl);
+      console.log('✅ Successfully converted blob to base64');
+      return base64Url;
+    } catch (error) {
+      console.error('❌ Failed to convert blob to base64:', error);
+      // Return placeholder if conversion fails
+      return getPlaceholderUrl(500, 500, recipeTitle || 'תמונה לא זמינה');
+    }
+  }
+  
+  // If it's a server or external URL, return as is
+  if (imageInfo.type === 'server' || imageInfo.type === 'external') {
+    return imageUrl;
+  }
+  
+  // For invalid URLs, return placeholder
+  return getPlaceholderUrl(500, 500, recipeTitle || 'תמונה לא זמינה');
+}
+
+/**
+ * Process multiple images for storage
+ */
+export async function processImagesForStorage(images: string[], recipeTitle?: string): Promise<string[]> {
+  const processedImages: string[] = [];
+  
+  for (const imageUrl of images) {
+    try {
+      const processedUrl = await processImageForStorage(imageUrl, recipeTitle);
+      processedImages.push(processedUrl);
+    } catch (error) {
+      console.error('❌ Failed to process image:', imageUrl, error);
+      // Skip this image if processing fails
+      continue;
+    }
+  }
+  
+  return processedImages;
+}
+
+/**
+ * Detect platform (mobile/desktop) for better image handling
+ */
+export function detectPlatform(): 'mobile' | 'desktop' {
+  // Check for touch support and screen size
+  const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+  const isSmallScreen = window.innerWidth < 768;
+  
+  return (hasTouch && isSmallScreen) ? 'mobile' : 'desktop';
+}
+
+/**
+ * Get optimal image format for platform
+ */
+export function getOptimalImageFormat(platform: 'mobile' | 'desktop'): 'base64' | 'url' {
+  // For mobile, prefer base64 to avoid network issues
+  // For desktop, prefer URLs for better performance
+  return platform === 'mobile' ? 'base64' : 'url';
+}

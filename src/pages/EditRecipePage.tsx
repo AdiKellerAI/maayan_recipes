@@ -11,6 +11,7 @@ import SmartImageSearch from '../components/SmartImageSearch';
 import { recipeService } from '../services/recipeService';
 import { imageService, RecipeImage } from '../services/imageService';
 import ImageManager from '../components/ImageManager';
+import { processImagesForStorage, detectPlatform } from '../utils/imageUtils';
 
 const EditRecipePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -46,6 +47,18 @@ const EditRecipePage: React.FC = () => {
   // Refs for auto-focusing
   const ingredientRefs = useRef<(HTMLInputElement | null)[]>([]);
   const directionRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
+
+  // Universal image processing for all platforms
+  const processImagesForRecipe = async (images: RecipeImage[]): Promise<string[]> => {
+    const platform = detectPlatform();
+    console.log(`🔄 Processing images for ${platform} platform...`);
+    
+    const imageUrls = images.map(img => img.url);
+    const processedUrls = await processImagesForStorage(imageUrls, formData.title);
+    
+    console.log(`✅ Processed ${processedUrls.length} images for ${platform}`);
+    return processedUrls;
+  };
 
   // Initialize form data when recipe loads
   useEffect(() => {
@@ -358,8 +371,19 @@ const EditRecipePage: React.FC = () => {
         }
       });
 
-              // After processing temporary images, get the final image URLs
-        const finalImageUrls = images.map(img => img.url);
+              // Process images for storage (universal for all platforms)
+        let finalImageUrls: string[] = [];
+        if (images.length > 0) {
+          try {
+            console.log('🔄 Processing images before saving...');
+            finalImageUrls = await processImagesForRecipe(images);
+            console.log(`✅ Processed ${finalImageUrls.length} images`);
+          } catch (error) {
+            console.error('❌ Error processing images:', error);
+            // Use original URLs if processing fails
+            finalImageUrls = images.map(img => img.url);
+          }
+        }
       
               const updatedRecipe = {
           ...formData,
