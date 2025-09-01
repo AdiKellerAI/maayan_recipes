@@ -600,3 +600,69 @@ body {
     @apply text-black bg-white shadow-none;
   }
 }
+
+/* Mobile-specific button hover effects */
+@media (hover: none) and (pointer: coarse) {
+  /* For touch devices, show active state on touch */
+  .group:active .group-active\\:translate-x-0 {
+    transform: translateX(0);
+  }
+  
+  /* For touch devices, show focus state on touch */
+  .group:focus .group-focus\\:translate-x-0 {
+    transform: translateX(0);
+  }
+  
+  /* For touch devices, show active text color on touch */
+  .group:active .group-active\\:text-white {
+    color: white;
+  }
+  
+  /* For touch devices, show focus text color on touch */
+  .group:focus .group-focus\\:text-white {
+    color: white;
+  }
+  
+  /* For touch devices, show active border color on touch */
+  .group:active .group-active\\:border-green-300 {
+    border-color: rgb(34 197 94);
+  }
+  
+  .group:active .group-active\\:border-red-300 {
+    border-color: rgb(252 165 165);
+  }
+  
+  /* For touch devices, show active shadow on touch */
+  .group:active .group-active\\:shadow-md {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+}
+
+/* Ensure touch devices get proper button feedback */
+.touch-manipulation {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Mobile button active states */
+@media (max-width: 768px) {
+  .group:active .group-active\\:translate-x-0 {
+    transform: translateX(0);
+  }
+  
+  .group:active .group-active\\:text-white {
+    color: white;
+  }
+  
+  .group:active .group-active\\:border-green-300 {
+    border-color: rgb(34 197 94);
+  }
+  
+  .group:active .group-active\\:border-red-300 {
+    border-color: rgb(252 165 165);
+  }
+  
+  .group:active .group-active\\:shadow-md {
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  }
+}

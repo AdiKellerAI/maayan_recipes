@@ -1210,9 +1210,9 @@ const EditRecipePage: React.FC = () => {
                   <button
                     type="submit"
                     disabled={isSaving || isNavigating}
-                    className="group relative overflow-hidden bg-white border border-green-200 text-green-700 hover:text-white px-6 py-2.5 rounded-full transition-all duration-300 font-medium text-sm shadow-sm hover:shadow-md hover:border-green-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="group relative overflow-hidden bg-white border border-green-200 text-green-700 hover:text-white active:text-white focus:text-white px-6 py-2.5 rounded-full transition-all duration-300 font-medium text-sm shadow-sm hover:shadow-md active:shadow-md focus:shadow-md hover:border-green-300 active:border-green-300 focus:border-green-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 touch-manipulation"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-green-600 translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out"></div>
+                    <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-green-600 translate-x-full group-hover:translate-x-0 group-active:translate-x-0 group-focus:translate-x-0 transition-transform duration-300 ease-out"></div>
                     <div className="relative flex items-center gap-2">
                       {isSaving ? (
                         <>
@@ -1234,9 +1234,9 @@ const EditRecipePage: React.FC = () => {
                     type="button"
                     onClick={handleDelete}
                     disabled={isNavigating}
-                    className="group relative overflow-hidden bg-white border border-red-200 text-red-600 hover:text-white px-4 py-2.5 rounded-full transition-all duration-300 font-medium text-sm shadow-sm hover:shadow-md hover:border-red-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="group relative overflow-hidden bg-white border border-red-200 text-red-600 hover:text-white active:text-white focus:text-white px-4 py-2.5 rounded-full transition-all duration-300 font-medium text-sm shadow-sm hover:shadow-md active:shadow-md focus:shadow-md hover:border-red-300 active:border-red-300 focus:border-red-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 touch-manipulation"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-red-600 translate-x-full group-hover:translate-x-0 transition-transform duration-300 ease-out"></div>
+                    <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-red-600 translate-x-full group-hover:translate-x-0 group-active:translate-x-0 group-focus:translate-x-0 transition-transform duration-300 ease-out"></div>
                     <div className="relative flex items-center gap-2">
                       <Trash2 className="h-3.5 w-3.5" />
                       <span>מחק</span>
