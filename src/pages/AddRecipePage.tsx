@@ -784,31 +784,31 @@ const AddRecipePage: React.FC = () => {
         const savedRecipe = await addRecipe(newRecipe);
         console.log('✅ Recipe saved successfully:', savedRecipe);
         
-        // Upload images after recipe is saved (only if we have files to upload)
-        if (imageFiles.length > 0) {
-          try {
-            const uploadedImages = await uploadImagesToServer(savedRecipe.id);
-            console.log('✅ Images uploaded successfully:', uploadedImages.length);
-            setUploadStatus(`הועלו ${uploadedImages.length} תמונות בהצלחה`);
-          } catch (uploadError) {
-            console.error('❌ Error uploading images:', uploadError);
-            setUploadStatus('שגיאה בהעלאת התמונות');
-            
-            // Show warning but continue
-            const isMobile = window.innerWidth < 768;
-            if (isMobile) {
-              alert('המתכון נשמר במכשיר, אך יש בעיה עם התמונות במאגר הנתונים.\n\nהמתכון יסונכרן אוטומטית כשהחיבור יחזור.');
-            } else {
-              alert('המתכון נשמר, אך יש בעיה עם התמונות במאגר הנתונים.\n\nהמתכון נשמר במכשיר ויסונכרן כשהחיבור יחזור.');
-            }
+        // Verify that recipe and images were saved to database
+        try {
+          console.log('🔍 Verifying recipe save to database...');
+          const verification = await recipeService.verifyRecipeSave(savedRecipe.id, processedImages);
+          
+          if (verification.success) {
+            console.log('✅ Recipe and images verified in database');
+            setUploadStatus('המתכון והתמונות נשמרו בהצלחה במאגר הנתונים!');
+            setTimeout(() => {
+              alert('המתכון והתמונות נשמרו בהצלחה במאגר הנתונים!');
+            }, 500);
+          } else {
+            console.warn('⚠️ Recipe saved but verification failed:', verification.message);
+            setUploadStatus('המתכון נשמר, אך יש בעיה עם התמונות במאגר הנתונים');
+            setTimeout(() => {
+              alert('המתכון נשמר, אך יש בעיה עם התמונות במאגר הנתונים.\n\nהמתכון יסונכרן אוטומטית כשהחיבור יחזור.');
+            }, 500);
           }
+        } catch (verifyError) {
+          console.error('❌ Error verifying recipe save:', verifyError);
+          setUploadStatus('המתכון נשמר, אך לא ניתן לוודא את השמירה במאגר הנתונים');
+          setTimeout(() => {
+            alert('המתכון נשמר, אך לא ניתן לוודא את השמירה במאגר הנתונים.\n\nהמתכון יסונכרן אוטומטית כשהחיבור יחזור.');
+          }, 500);
         }
-        
-        // Show success message
-        setUploadStatus('המתכון נשמר בהצלחה!');
-        setTimeout(() => {
-          alert('המתכון נשמר בהצלחה!');
-        }, 500);
         
         // Force refresh recipes in context to ensure the new recipe is visible
         await refreshRecipes();

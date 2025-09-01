@@ -5,6 +5,7 @@ import { useProtectedAction } from '../../hooks/useProtectedAction';
 import { useAuth } from '../../contexts/AuthContext';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { clearAllMemory } from '../../utils/storage';
+import { recipeService } from '../../services/recipeService';
 
 const Header: React.FC = () => {
   const { 
@@ -55,6 +56,47 @@ const Header: React.FC = () => {
       setLocalSearchQuery('');
     }
   }, [location.pathname, setSearchQuery]);
+
+  // Auto-sync localStorage recipes to server when connection is restored
+  useEffect(() => {
+    const checkConnectionAndSync = async () => {
+      try {
+        // Check if we have any fallback recipes to sync
+        const fallbackRecipes = JSON.parse(localStorage.getItem('fallback_recipes') || '[]');
+        const recipesToSync = fallbackRecipes.filter((recipe: any) => recipe.id?.startsWith('fallback-'));
+        
+        if (recipesToSync.length > 0) {
+          console.log(`🔄 AUTO-SYNC: Found ${recipesToSync.length} recipes to sync`);
+          
+          // Try to sync them
+          const result = await recipeService.syncLocalStorageToServer();
+          
+          if (result.synced > 0) {
+            console.log(`✅ AUTO-SYNC: Successfully synced ${result.synced} recipes`);
+            // Refresh recipes to show the synced ones
+            await refreshRecipes();
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ AUTO-SYNC: Failed to sync recipes:', error);
+      }
+    };
+
+    // Check for sync on app load
+    checkConnectionAndSync();
+
+    // Also check when connection is restored
+    const handleOnline = () => {
+      console.log('🌐 Connection restored, checking for sync...');
+      setTimeout(checkConnectionAndSync, 2000); // Wait a bit for connection to stabilize
+    };
+
+    window.addEventListener('online', handleOnline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [refreshRecipes]);
 
   // Handle scroll to show/hide search bar on recipe detail pages
   useEffect(() => {
@@ -206,6 +248,40 @@ const Header: React.FC = () => {
       setMemoryCleanupMessage('שגיאה בניקוי הזיכרון. נסה שוב.');
     } finally {
       setIsClearingMemory(false);
+    }
+  };
+
+  const handleSyncRecipes = async () => {
+    setIsConnecting(true);
+    setMemoryCleanupMessage(null);
+    
+    try {
+      console.log('🔄 Manual sync initiated...');
+      const result = await recipeService.syncLocalStorageToServer();
+      
+      if (result.synced > 0) {
+        setMemoryCleanupMessage(`סנכרן ${result.synced} מתכונים בהצלחה!`);
+        console.log(`✅ Manual sync completed: ${result.synced} recipes synced`);
+        
+        // Refresh recipes to show the synced ones
+        await refreshRecipes();
+      } else if (result.errors > 0) {
+        setMemoryCleanupMessage(`שגיאה בסנכרון ${result.errors} מתכונים`);
+        console.error(`❌ Manual sync failed: ${result.errors} errors`);
+      } else {
+        setMemoryCleanupMessage('אין מתכונים לסנכרון');
+        console.log('ℹ️ Manual sync: No recipes to sync');
+      }
+    } catch (error) {
+      console.error('❌ Error during manual sync:', error);
+      setMemoryCleanupMessage('שגיאה בסנכרון המתכונים');
+    } finally {
+      setIsConnecting(false);
+      
+      // Clear message after delay
+      setTimeout(() => {
+        setMemoryCleanupMessage(null);
+      }, 3000);
     }
   };
 
@@ -531,7 +607,44 @@ const Header: React.FC = () => {
                       )}
                     </div>
                     
-                    {/* Memory Cleanup Button */}
+                    {/* Sync Data Section */}
+                    <div className="w-full flex items-center justify-between py-1.5 px-2.5">
+                      <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                          isConnecting 
+                            ? 'bg-blue-400' 
+                            : 'bg-gradient-to-br from-blue-500 to-indigo-600'
+                        }`}>
+                          <Database className="h-2.5 w-2.5 text-white" />
+                        </div>
+                        <span className="text-xs font-medium text-black">
+                          {isConnecting ? 'מסנכרן...' : 'סנכרון נתונים'}
+                        </span>
+                      </div>
+                      
+                      {/* Sync Recipes Button */}
+                      <button
+                        onClick={handleSyncRecipes}
+                        disabled={isConnecting}
+                        className={`${
+                          isConnecting
+                            ? 'bg-blue-100 text-blue-400 border-blue-200 cursor-not-allowed'
+                            : 'bg-gradient-to-br from-blue-500/80 to-indigo-600/80 border border-blue-400/80 text-white hover:from-blue-600/80 hover:to-indigo-700/80 transition-all duration-300 shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95'
+                        } px-3 py-0 rounded-md font-medium flex items-center justify-center`}
+                        style={{
+                          height: '24px',
+                          fontSize: '0.75rem',
+                          lineHeight: '1.2',
+                          minHeight: '24px',
+                          width: '60px'
+                        }}
+                        title="סנכרן מתכונים לשרת"
+                      >
+                        {isConnecting ? 'מסנכרן...' : 'סנכרן'}
+                      </button>
+                    </div>
+
+                    {/* Memory Cleanup Section */}
                     <div className="w-full flex items-center justify-between py-1.5 px-2.5">
                       <div className="flex items-center space-x-2 rtl:space-x-reverse">
                         <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
@@ -559,7 +672,8 @@ const Header: React.FC = () => {
                           height: '24px',
                           fontSize: '0.75rem',
                           lineHeight: '1.2',
-                          minHeight: '24px'
+                          minHeight: '24px',
+                          width: '60px'
                         }}
                         title="נקה את כל הזיכרון המקומי"
                       >

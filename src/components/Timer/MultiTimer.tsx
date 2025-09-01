@@ -701,7 +701,7 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose, initialTime
 
 				{/* Alert Modal */}
 				{showAlert && alertTimerId && (
-					<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+					<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999] p-4">
 						<div className="bg-white rounded-lg p-6 max-w-md w-full text-center animate-pulse">
 							<div className="text-6xl mb-4">⏰</div>
 							<h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -756,7 +756,7 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose, initialTime
 	return (
 		<>
 			{/* Main Timer Setup Window */}
-			<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+			<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999] p-4">
 				<div className="bg-white rounded-xl shadow-2xl w-80 max-w-[90vw] max-h-[85vh] overflow-hidden border border-gray-100">
 					{/* Sticky Header */}
 					<div className="sticky top-0 bg-gradient-to-r from-orange-50 to-red-50 border-b border-orange-100 p-3 z-10">

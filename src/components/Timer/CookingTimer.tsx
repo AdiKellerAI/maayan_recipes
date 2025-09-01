@@ -403,7 +403,7 @@ const CookingTimer: React.FC<CookingTimerProps> = ({
     // Minimized view
     if (isMinimized) {
       return (
-        <div className="fixed bottom-4 right-4 rtl:left-4 rtl:right-auto z-50 bg-gradient-to-br from-orange-500/95 to-red-500/95 rounded-full shadow-2xl border border-orange-300/50 backdrop-blur-md cursor-pointer hover:scale-105 transition-all duration-200"
+        <div className="fixed bottom-4 right-4 rtl:left-4 rtl:right-auto z-[99999] bg-gradient-to-br from-orange-500/95 to-red-500/95 rounded-full shadow-2xl border border-orange-300/50 backdrop-blur-md cursor-pointer hover:scale-105 transition-all duration-200"
              onClick={toggleMinimize}>
           <div className="p-3 flex items-center justify-center">
             <div className="flex flex-col items-center">
@@ -422,7 +422,7 @@ const CookingTimer: React.FC<CookingTimerProps> = ({
 
     // Full view
     return (
-      <div className="fixed bottom-4 right-4 rtl:left-4 rtl:right-auto z-50 bg-gradient-to-br from-white/90 to-gray-50/90 rounded-2xl shadow-2xl border border-gray-100/50 p-4 min-w-[240px] backdrop-blur-md">
+      <div className="fixed bottom-4 right-4 rtl:left-4 rtl:right-auto z-[99999] bg-gradient-to-br from-white/90 to-gray-50/90 rounded-2xl shadow-2xl border border-gray-100/50 p-4 min-w-[240px] backdrop-blur-md">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center space-x-2 rtl:space-x-reverse">
             <div className="w-8 h-8 bg-orange-100/80 rounded-full flex items-center justify-center">
@@ -624,7 +624,7 @@ const CookingTimer: React.FC<CookingTimerProps> = ({
 
       {/* Alert Modal */}
       {showAlert && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999] p-4">
           <div className="bg-white rounded-lg p-6 max-w-sm w-full text-center animate-pulse">
             <div className="text-6xl mb-4">⏰</div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">הטיימר הסתיים!</h2>

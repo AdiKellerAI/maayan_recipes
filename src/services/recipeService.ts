@@ -274,18 +274,23 @@ export const recipeService = {
   // Add new recipe
   async addRecipe(recipe: RecipeInsert): Promise<Recipe> {
     console.log('➕ Adding new recipe:', recipe.title);
-    const isAvailable = await isAPIAvailable();
     
-    if (isAvailable) {
-      try {
-        console.log('💾 Saving via API...');
+    // Detect platform for better error handling
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    console.log(`📱 Platform detected: ${isMobile ? 'mobile' : 'desktop'}`);
+    
+    // Try API first with retry logic
+    try {
+      console.log('💾 Attempting to save via API...');
+      
+      const savedRecipe = await retryApiCall(async () => {
         const response = await fetch('/api/recipes', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(recipe),
-          signal: AbortSignal.timeout(15000) // 15 second timeout for creation
+          signal: AbortSignal.timeout(isMobile ? 20000 : 15000) // Longer timeout for mobile
         });
         
         if (!response.ok) {
@@ -293,25 +298,32 @@ export const recipeService = {
           throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorData.error || ''}`);
         }
         
-        const savedRecipe = await response.json();
-        const processedRecipe = {
-          ...savedRecipe,
-          created_at: new Date(savedRecipe.created_at),
-          updated_at: new Date(savedRecipe.updated_at)
-        };
-        
-        console.log('✅ Recipe saved via API with ID:', processedRecipe.id);
-        
-        // Clear caches to ensure fresh data
-        cacheManager.clear();
-        return processedRecipe;
-      } catch (error) {
-        console.warn('❌ API request failed:', error);
-        console.log('📦 Falling back to localStorage...');
-        return this.addRecipeToLocalStorage(recipe);
+        return await response.json();
+      }, isMobile ? 3 : 2, isMobile ? 2000 : 1000); // More retries for mobile
+      
+      const processedRecipe = {
+        ...savedRecipe,
+        created_at: new Date(savedRecipe.created_at),
+        updated_at: new Date(savedRecipe.updated_at)
+      };
+      
+      console.log('✅ Recipe saved via API with ID:', processedRecipe.id);
+      
+      // Clear caches to ensure fresh data
+      cacheManager.clear();
+      return processedRecipe;
+      
+    } catch (error) {
+      console.warn('❌ API request failed after retries:', error);
+      
+      // For mobile, show a more informative message
+      if (isMobile) {
+        console.log('📱 Mobile: Saving to localStorage as fallback');
+        console.log('📱 Mobile: Recipe will sync when connection is restored');
+      } else {
+        console.log('📦 Desktop: Falling back to localStorage...');
       }
-    } else {
-      console.log('📦 API not available, using localStorage');
+      
       return this.addRecipeToLocalStorage(recipe);
     }
   },
@@ -358,8 +370,128 @@ export const recipeService = {
     }
   },
 
+  // Sync localStorage recipes to server when connection is restored
+  async syncLocalStorageToServer(): Promise<{ synced: number; errors: number }> {
+    try {
+      console.log('🔄 SYNC: Attempting to sync localStorage recipes to server...');
+      
+      const fallbackRecipes = getFallbackRecipes();
+      const recipesToSync = fallbackRecipes.filter(recipe => recipe.id.startsWith('fallback-'));
+      
+      if (recipesToSync.length === 0) {
+        console.log('✅ SYNC: No recipes to sync');
+        return { synced: 0, errors: 0 };
+      }
+      
+      console.log(`🔄 SYNC: Found ${recipesToSync.length} recipes to sync`);
+      
+      let synced = 0;
+      let errors = 0;
+      
+      for (const recipe of recipesToSync) {
+        try {
+          // Convert Recipe back to RecipeInsert format
+          const recipeInsert: RecipeInsert = {
+            title: recipe.title,
+            category: recipe.category,
+            ingredients: recipe.ingredients,
+            directions: recipe.directions,
+            images: recipe.images,
+            additional_instructions: recipe.additional_instructions,
+            additional_sections: recipe.additional_sections,
+            prep_time: recipe.prep_time,
+            difficulty: recipe.difficulty,
+            is_favorite: recipe.is_favorite
+          };
+          
+          // Try to save to server
+          const response = await fetch('/api/recipes', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(recipeInsert),
+            signal: AbortSignal.timeout(10000)
+          });
+          
+          if (response.ok) {
+            const savedRecipe = await response.json();
+            console.log(`✅ SYNC: Recipe "${recipe.title}" synced with ID: ${savedRecipe.id}`);
+            synced++;
+          } else {
+            console.error(`❌ SYNC: Failed to sync recipe "${recipe.title}": ${response.status}`);
+            errors++;
+          }
+        } catch (error) {
+          console.error(`❌ SYNC: Error syncing recipe "${recipe.title}":`, error);
+          errors++;
+        }
+      }
+      
+      // If sync was successful, remove synced recipes from localStorage
+      if (synced > 0) {
+        const remainingRecipes = fallbackRecipes.filter(recipe => !recipe.id.startsWith('fallback-'));
+        saveFallbackRecipes(remainingRecipes);
+        console.log(`✅ SYNC: Removed ${synced} synced recipes from localStorage`);
+      }
+      
+      console.log(`✅ SYNC: Completed - ${synced} synced, ${errors} errors`);
+      return { synced, errors };
+      
+    } catch (error) {
+      console.error('❌ SYNC: Failed to sync recipes:', error);
+      return { synced: 0, errors: 1 };
+    }
+  },
+
   // Verify that recipe was saved to database
   async verifyRecipeUpdate(id: string, expectedImages: string[]): Promise<{ success: boolean; message: string; savedImages?: string[] }> {
+    try {
+      console.log('🔍 VERIFY: Checking if recipe was saved to database...');
+      
+      const response = await fetch(`/api/recipes/${id}`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(10000)
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch recipe: ${response.status} ${response.statusText}`);
+      }
+      
+      const savedRecipe = await response.json();
+      console.log('✅ VERIFY: Recipe found in database:', savedRecipe.title);
+      
+      // Check if images were saved correctly
+      const savedImages = savedRecipe.images || [];
+      const imagesMatch = expectedImages.length === savedImages.length && 
+        expectedImages.every((img, index) => savedImages[index] === img);
+      
+      if (imagesMatch) {
+        console.log('✅ VERIFY: Images saved correctly');
+        return {
+          success: true,
+          message: 'Recipe and images saved successfully to database',
+          savedImages
+        };
+      } else {
+        console.warn('⚠️ VERIFY: Images mismatch detected');
+        return {
+          success: false,
+          message: 'Recipe saved but images may not be complete',
+          savedImages
+        };
+      }
+    } catch (error) {
+      console.error('❌ VERIFY: Failed to verify recipe:', error);
+      return {
+        success: false,
+        message: `Failed to verify recipe: ${error instanceof Error ? error.message : 'Unknown error'}`
+      };
+    }
+  },
+
+  // Verify that recipe was saved to database with image validation
+  async verifyRecipeSave(id: string, expectedImages: string[]): Promise<{ success: boolean; message: string; savedImages?: string[] }> {
     try {
       console.log('🔍 VERIFY: Checking if recipe was saved to database...');
       

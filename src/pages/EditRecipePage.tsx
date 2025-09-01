@@ -437,14 +437,46 @@ const EditRecipePage: React.FC = () => {
         await updateRecipe(recipe!.id, updatedRecipe);
         
         console.log('✅ EDIT: Recipe updated successfully');
-        setHasUnsavedChanges(false);
-        setUploadStatus('המתכון נשמר בהצלחה!');
         
-        // Navigate to recipe detail page after successful save
-        setTimeout(() => {
-          setIsNavigating(false); // Reset navigation state before navigating
-          safeNavigate(`/recipe/${recipe!.id}`);
-        }, 1000);
+        // Verify that recipe and images were saved to database
+        try {
+          console.log('🔍 Verifying recipe update to database...');
+          const verification = await recipeService.verifyRecipeSave(recipe!.id, finalImageUrls);
+          
+          if (verification.success) {
+            console.log('✅ Recipe and images verified in database');
+            setUploadStatus('המתכון והתמונות נשמרו בהצלחה במאגר הנתונים!');
+            setHasUnsavedChanges(false);
+            
+            // Navigate to recipe detail page after successful save
+            setTimeout(() => {
+              setIsNavigating(false); // Reset navigation state before navigating
+              safeNavigate(`/recipe/${recipe!.id}`);
+            }, 1000);
+          } else {
+            console.warn('⚠️ Recipe saved but verification failed:', verification.message);
+            setUploadStatus('המתכון נשמר, אך יש בעיה עם התמונות במאגר הנתונים');
+            setHasUnsavedChanges(false);
+            
+            // Still navigate but show warning
+            setTimeout(() => {
+              alert('המתכון נשמר, אך יש בעיה עם התמונות במאגר הנתונים.\n\nהמתכון יסונכרן אוטומטית כשהחיבור יחזור.');
+              setIsNavigating(false);
+              safeNavigate(`/recipe/${recipe!.id}`);
+            }, 1000);
+          }
+        } catch (verifyError) {
+          console.error('❌ Error verifying recipe update:', verifyError);
+          setUploadStatus('המתכון נשמר, אך לא ניתן לוודא את השמירה במאגר הנתונים');
+          setHasUnsavedChanges(false);
+          
+          // Still navigate but show warning
+          setTimeout(() => {
+            alert('המתכון נשמר, אך לא ניתן לוודא את השמירה במאגר הנתונים.\n\nהמתכון יסונכרן אוטומטית כשהחיבור יחזור.');
+            setIsNavigating(false);
+            safeNavigate(`/recipe/${recipe!.id}`);
+          }, 1000);
+        }
         
       } catch (error) {
         console.error('❌ EDIT: Failed to update recipe:', error);
