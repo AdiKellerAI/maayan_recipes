@@ -142,7 +142,7 @@ class MobileImageService {
     if (status.indexedDB.available) {
       try {
         const databases = await indexedDB.databases();
-        status.indexedDB.databases = databases.map(db => db.name).filter((name): name is string => name !== undefined);
+        status.indexedDB.databases = databases.map(db => db.name);
         status.indexedDB.version = this.dbVersion;
       } catch (error) {
         console.warn('Could not get IndexedDB databases list:', error);
@@ -171,16 +171,8 @@ class MobileImageService {
       img.onload = () => {
         let { width, height } = img;
         
-        // Mobile-optimized dimensions - more aggressive for very large images
-        let maxDimension = 1024;
-        
-        // If image is very large, use smaller dimensions
-        if (width > 2048 || height > 2048) {
-          maxDimension = 800;
-        } else if (width > 1500 || height > 1500) {
-          maxDimension = 900;
-        }
-        
+        // Mobile-optimized dimensions
+        const maxDimension = 1024;
         if (width > maxDimension || height > maxDimension) {
           const ratio = Math.min(maxDimension / width, maxDimension / height);
           width = Math.floor(width * ratio);
@@ -195,41 +187,17 @@ class MobileImageService {
           ctx.imageSmoothingQuality = 'medium';
           ctx.drawImage(img, 0, 0, width, height);
 
-          // Progressive quality reduction for mobile with better size control
+          // Progressive quality reduction for mobile
           let quality = this.COMPRESSION_QUALITY;
           let dataUrl = canvas.toDataURL('image/jpeg', quality);
           
-          // Ensure image is under size limit with progressive quality reduction
-          let attempts = 0;
-          const maxAttempts = 10;
-          
-          while (dataUrl.length > this.MAX_IMAGE_SIZE && quality > 0.1 && attempts < maxAttempts) {
+          // Ensure image is under size limit
+          while (dataUrl.length > this.MAX_IMAGE_SIZE && quality > 0.3) {
             quality -= 0.1;
             dataUrl = canvas.toDataURL('image/jpeg', quality);
-            attempts++;
-            
-            // If still too large, reduce dimensions further
-            if (attempts > 5 && dataUrl.length > this.MAX_IMAGE_SIZE) {
-              maxDimension = Math.floor(maxDimension * 0.9);
-              const ratio = Math.min(maxDimension / img.naturalWidth, maxDimension / img.naturalHeight);
-              width = Math.floor(img.naturalWidth * ratio);
-              height = Math.floor(img.naturalHeight * ratio);
-              canvas.width = width;
-              canvas.height = height;
-              ctx.drawImage(img, 0, 0, width, height);
-              dataUrl = canvas.toDataURL('image/jpeg', quality);
-            }
           }
 
-          console.log(`📱 Mobile image compressed: ${file.name} -> ${Math.round(dataUrl.length / 1024)}KB (quality: ${quality.toFixed(1)}, dimensions: ${width}x${height})`);
-          
-          // If still too large, return a placeholder
-          if (dataUrl.length > this.MAX_IMAGE_SIZE) {
-            console.warn(`⚠️ Image still too large after compression: ${Math.round(dataUrl.length / 1024)}KB`);
-            resolve('placeholder');
-            return;
-          }
-          
+          console.log(`📱 Mobile image compressed: ${file.name} -> ${Math.round(dataUrl.length / 1024)}KB (quality: ${quality.toFixed(1)})`);
           resolve(dataUrl);
         } else {
           reject(new Error('Could not get canvas context'));
@@ -362,7 +330,6 @@ class MobileImageService {
   async saveImage(file: File, recipeId: string): Promise<string> {
     try {
       console.log('📱 Mobile: Starting image save process...');
-      console.log(`📱 Original file size: ${Math.round(file.size / 1024)}KB`);
       
       // Check storage status
       const storageStatus = await this.checkStorageStatus();
@@ -370,15 +337,7 @@ class MobileImageService {
 
       // Compress image for mobile
       const compressedData = await this.compressImageForMobile(file);
-      
-      // If compression returned placeholder, return it
-      if (compressedData === 'placeholder') {
-        console.warn('⚠️ Image compression failed, using placeholder');
-        return 'placeholder';
-      }
-      
       const imageId = `${recipeId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      console.log(`📱 Compressed image size: ${Math.round(compressedData.length / 1024)}KB`);
 
       // Try IndexedDB first
       if (storageStatus.indexedDB.available && this.db) {
@@ -400,16 +359,6 @@ class MobileImageService {
 
           // Store minimal metadata in localStorage
           const localStorageKey = `image_meta_${imageId}`;
-          const metadataSize = JSON.stringify(metadata).length;
-          
-          // Check if we have enough localStorage space for metadata
-          if (metadataSize > storageStatus.localStorage.remaining) {
-            console.warn('⚠️ Not enough localStorage space for metadata, using IndexedDB only');
-            // Metadata is stored in IndexedDB, so we can still retrieve the image
-            console.log('✅ Image saved to IndexedDB (metadata in IndexedDB)');
-            return imageId;
-          }
-          
           localStorage.setItem(localStorageKey, JSON.stringify({
             id: imageId,
             recipeId,
@@ -437,7 +386,7 @@ class MobileImageService {
         
         // Store metadata
         const metadataKey = `image_meta_${imageId}`;
-        const metadata = {
+        localStorage.setItem(metadataKey, JSON.stringify({
           id: imageId,
           recipeId,
           filename: file.name,
@@ -447,9 +396,7 @@ class MobileImageService {
           chunks: 1,
           createdAt: Date.now(),
           storage: 'localstorage'
-        };
-        
-        localStorage.setItem(metadataKey, JSON.stringify(metadata));
+        }));
 
         console.log('✅ Image saved to localStorage');
         return imageId;
@@ -457,7 +404,6 @@ class MobileImageService {
 
       // Last resort: return placeholder
       console.warn('⚠️ All storage methods failed, using placeholder');
-      console.warn(`📊 Compressed size: ${Math.round(compressedData.length / 1024)}KB, Available: ${Math.round(storageStatus.localStorage.remaining / 1024)}KB`);
       return 'placeholder';
     } catch (error) {
       console.error('❌ Image save failed:', error);

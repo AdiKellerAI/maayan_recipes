@@ -152,22 +152,6 @@ class MobileRecipeService {
       const status = await this.checkStorageStatus();
       const recipeId = `mobile_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      // Check if this is an update to an existing recipe
-      let isUpdate = false;
-      let existingRecipeId = '';
-      
-      // Try to find existing recipe by title and category
-      const existingRecipes = await this.getAllRecipes();
-      const existingRecipe = existingRecipes.find(r => 
-        r.title === recipe.title && r.category === recipe.category
-      );
-      
-      if (existingRecipe) {
-        isUpdate = true;
-        existingRecipeId = existingRecipe.id;
-        console.log(`📱 Mobile: Found existing recipe "${recipe.title}", updating instead of creating new...`);
-      }
-      
       // Process images first
       let processedImages: string[] = [];
       if (recipe.images && recipe.images.length > 0) {
@@ -191,21 +175,14 @@ class MobileRecipeService {
               const blob = new Blob([byteArray], { type: 'image/jpeg' });
               const file = new File([blob], `recipe_${i}.jpg`, { type: 'image/jpeg' });
               
-              console.log(`📱 Mobile: Processing image ${i + 1}/${recipe.images.length} (${Math.round(file.size / 1024)}KB)`);
-              
               // Save using mobile image service
-              const imageId = await mobileImageService.saveImage(file, isUpdate ? existingRecipeId : recipeId);
+              const imageId = await mobileImageService.saveImage(file, recipeId);
               if (imageId && imageId !== 'placeholder') {
                 processedImages.push(imageId);
-                console.log(`✅ Mobile: Image ${i + 1} saved successfully`);
-              } else {
-                console.warn(`⚠️ Mobile: Image ${i + 1} failed to save, using placeholder`);
-                processedImages.push('placeholder');
               }
             } catch (error) {
               console.warn(`⚠️ Mobile: Failed to process image ${i}:`, error);
-              // Use placeholder for failed images
-              processedImages.push('placeholder');
+              // Continue with other images
             }
           } else {
             // Keep external URLs
@@ -213,12 +190,12 @@ class MobileRecipeService {
           }
         }
         
-        console.log(`📱 Mobile: Successfully processed ${processedImages.filter(img => img !== 'placeholder').length}/${recipe.images.length} images`);
+        console.log(`📱 Mobile: Successfully processed ${processedImages.length} images`);
       }
 
       // Create recipe object
       const mobileRecipe: Recipe = {
-        id: isUpdate ? existingRecipeId : recipeId,
+        id: recipeId,
         title: recipe.title,
         category: recipe.category,
         ingredients: recipe.ingredients,
@@ -229,7 +206,7 @@ class MobileRecipeService {
         difficulty: recipe.difficulty,
         is_favorite: recipe.is_favorite || false,
         images: processedImages,
-        created_at: isUpdate && existingRecipe ? existingRecipe.created_at : new Date(),
+        created_at: new Date(),
         updated_at: new Date()
       };
 
@@ -242,7 +219,7 @@ class MobileRecipeService {
         await this.saveRecipePlaceholder(mobileRecipe);
       }
 
-      console.log(`✅ Mobile: Recipe "${recipe.title}" ${isUpdate ? 'updated' : 'saved'} successfully`);
+      console.log(`✅ Mobile: Recipe "${recipe.title}" saved successfully`);
       return mobileRecipe;
     } catch (error) {
       console.error('❌ Mobile: Failed to save recipe:', error);
@@ -277,12 +254,10 @@ class MobileRecipeService {
     const metadataKey = this.METADATA_KEY_PREFIX + recipe.id;
     localStorage.setItem(metadataKey, JSON.stringify(metadata));
 
-    // Update recipe list (only if not already in list)
+    // Update recipe list
     const recipeList = this.getRecipeList();
-    if (!recipeList.includes(recipe.id)) {
-      recipeList.unshift(recipe.id);
-      localStorage.setItem(this.RECIPE_LIST_KEY, JSON.stringify(recipeList));
-    }
+    recipeList.unshift(recipe.id);
+    localStorage.setItem(this.RECIPE_LIST_KEY, JSON.stringify(recipeList));
 
     console.log('✅ Mobile: Recipe saved using hybrid storage');
   }
@@ -312,12 +287,10 @@ class MobileRecipeService {
     const recipeKey = this.METADATA_KEY_PREFIX + recipe.id;
     localStorage.setItem(recipeKey, JSON.stringify(recipe));
 
-    // Update recipe list (only if not already in list)
+    // Update recipe list
     const recipeList = this.getRecipeList();
-    if (!recipeList.includes(recipe.id)) {
-      recipeList.unshift(recipe.id);
-      localStorage.setItem(this.RECIPE_LIST_KEY, JSON.stringify(recipeList));
-    }
+    recipeList.unshift(recipe.id);
+    localStorage.setItem(this.RECIPE_LIST_KEY, JSON.stringify(recipeList));
 
     console.log('✅ Mobile: Recipe saved to localStorage');
   }
@@ -355,12 +328,10 @@ class MobileRecipeService {
     const metadataKey = this.METADATA_KEY_PREFIX + recipe.id;
     localStorage.setItem(metadataKey, JSON.stringify(metadata));
 
-    // Update recipe list (only if not already in list)
+    // Update recipe list
     const recipeList = this.getRecipeList();
-    if (!recipeList.includes(recipe.id)) {
-      recipeList.unshift(recipe.id);
-      localStorage.setItem(this.RECIPE_LIST_KEY, JSON.stringify(recipeList));
-    }
+    recipeList.unshift(recipe.id);
+    localStorage.setItem(this.RECIPE_LIST_KEY, JSON.stringify(recipeList));
 
     console.log('✅ Mobile: Recipe saved with placeholder images');
   }
@@ -370,120 +341,17 @@ class MobileRecipeService {
    */
   async getAllRecipes(): Promise<Recipe[]> {
     try {
-      console.log('📱 Mobile: Getting all recipes...');
-      
-      // First, try to get recipes from mobile storage
       const recipeList = this.getRecipeList();
-      const mobileRecipes: Recipe[] = [];
-      
+      const recipes: Recipe[] = [];
+
       for (const recipeId of recipeList) {
         const recipe = await this.getRecipe(recipeId);
         if (recipe) {
-          mobileRecipes.push(recipe);
+          recipes.push(recipe);
         }
       }
-      
-      // If no mobile recipes found, try to migrate existing localStorage recipes
-      if (mobileRecipes.length === 0) {
-        console.log('📱 Mobile: No mobile recipes found, checking for existing localStorage recipes...');
-        
-        // Check for existing recipes in fallback_recipes
-        const fallbackRecipesStr = localStorage.getItem('fallback_recipes');
-        if (fallbackRecipesStr) {
-          try {
-            const fallbackRecipes = JSON.parse(fallbackRecipesStr);
-            if (Array.isArray(fallbackRecipes) && fallbackRecipes.length > 0) {
-              console.log(`📱 Mobile: Found ${fallbackRecipes.length} existing recipes in fallback_recipes, migrating to mobile storage...`);
-              
-              // Migrate each recipe to mobile storage
-              for (const recipe of fallbackRecipes) {
-                try {
-                  // Convert to Recipe type if needed
-                  const mobileRecipe: Recipe = {
-                    id: recipe.id,
-                    title: recipe.title,
-                    category: recipe.category,
-                    ingredients: recipe.ingredients,
-                    directions: recipe.directions,
-                    additional_instructions: recipe.additional_instructions || {},
-                    additional_sections: recipe.additional_sections || {},
-                    prep_time: recipe.prep_time || '',
-                    difficulty: recipe.difficulty,
-                    is_favorite: recipe.is_favorite || false,
-                    images: recipe.images || [],
-                    created_at: new Date(recipe.created_at),
-                    updated_at: new Date(recipe.updated_at)
-                  };
-                  
-                  // Save to mobile storage
-                  await this.saveRecipe(mobileRecipe);
-                  mobileRecipes.push(mobileRecipe);
-                  
-                  console.log(`✅ Mobile: Migrated recipe "${recipe.title}" to mobile storage`);
-                } catch (error) {
-                  console.warn(`⚠️ Mobile: Failed to migrate recipe "${recipe.title}":`, error);
-                }
-              }
-              
-              // Clear the old fallback_recipes to prevent conflicts
-              localStorage.removeItem('fallback_recipes');
-              console.log('📱 Mobile: Cleared old fallback_recipes to prevent conflicts');
-            }
-          } catch (error) {
-            console.warn('⚠️ Mobile: Failed to parse fallback_recipes:', error);
-          }
-        }
-        
-        // Also check hebrew-recipes
-        const hebrewRecipesStr = localStorage.getItem('hebrew-recipes');
-        if (hebrewRecipesStr) {
-          try {
-            const hebrewRecipes = JSON.parse(hebrewRecipesStr);
-            if (Array.isArray(hebrewRecipes) && hebrewRecipes.length > 0) {
-              console.log(`📱 Mobile: Found ${hebrewRecipes.length} existing recipes in hebrew-recipes, migrating to mobile storage...`);
-              
-              // Migrate each recipe to mobile storage
-              for (const recipe of hebrewRecipes) {
-                try {
-                  // Convert to Recipe type if needed
-                  const mobileRecipe: Recipe = {
-                    id: recipe.id,
-                    title: recipe.title,
-                    category: recipe.category,
-                    ingredients: recipe.ingredients,
-                    directions: recipe.directions,
-                    additional_instructions: recipe.additional_instructions || {},
-                    additional_sections: recipe.additional_sections || {},
-                    prep_time: recipe.prep_time || '',
-                    difficulty: recipe.difficulty,
-                    is_favorite: recipe.is_favorite || false,
-                    images: recipe.images || [],
-                    created_at: new Date(recipe.created_at),
-                    updated_at: new Date(recipe.updated_at)
-                  };
-                  
-                  // Save to mobile storage
-                  await this.saveRecipe(mobileRecipe);
-                  mobileRecipes.push(mobileRecipe);
-                  
-                  console.log(`✅ Mobile: Migrated recipe "${recipe.title}" to mobile storage`);
-                } catch (error) {
-                  console.warn(`⚠️ Mobile: Failed to migrate recipe "${recipe.title}":`, error);
-                }
-              }
-              
-              // Clear the old hebrew-recipes to prevent conflicts
-              localStorage.removeItem('hebrew-recipes');
-              console.log('📱 Mobile: Cleared old hebrew-recipes to prevent conflicts');
-            }
-          } catch (error) {
-            console.warn('⚠️ Mobile: Failed to parse hebrew-recipes:', error);
-          }
-        }
-      }
-      
-      console.log(`📱 Mobile: Total recipes found: ${mobileRecipes.length}`);
-      return mobileRecipes;
+
+      return recipes;
     } catch (error) {
       console.error('❌ Mobile: Failed to get recipes:', error);
       return [];
@@ -495,141 +363,60 @@ class MobileRecipeService {
    */
   async getRecipe(id: string): Promise<Recipe | null> {
     try {
-      console.log(`📱 Mobile: Getting recipe with ID: ${id}`);
-      
-      // First, try to get from mobile storage
       const metadataKey = this.METADATA_KEY_PREFIX + id;
       const metadataStr = localStorage.getItem(metadataKey);
       
-      if (metadataStr) {
-        const metadata: MobileRecipeMetadata = JSON.parse(metadataStr);
+      if (!metadataStr) {
+        return null;
+      }
+
+      const metadata: MobileRecipeMetadata = JSON.parse(metadataStr);
+      
+      if (metadata.storage === 'hybrid') {
+        // Reconstruct recipe from metadata and images
+        const recipe: Recipe = {
+          id: metadata.id,
+          title: metadata.title,
+          category: metadata.category,
+          ingredients: metadata.ingredients,
+          directions: metadata.directions,
+          additional_instructions: metadata.additional_instructions || {},
+          additional_sections: metadata.additional_sections || {},
+          prep_time: metadata.prep_time || '',
+          difficulty: metadata.difficulty,
+          is_favorite: metadata.is_favorite,
+          images: [], // Will be populated from image service
+          created_at: new Date(metadata.createdAt),
+          updated_at: new Date(metadata.updatedAt)
+        };
+
+        // Get images from image service
+        if (metadata.imageCount > 0) {
+          try {
+            const images = await mobileImageService.getRecipeImages(id);
+            recipe.images = images;
+          } catch (error) {
+            console.warn(`⚠️ Mobile: Failed to get images for recipe ${id}:`, error);
+            // Use placeholder images
+            recipe.images = Array(metadata.imageCount).fill('placeholder');
+          }
+        }
+
+        return recipe;
+      } else {
+        // Full recipe stored in localStorage
+        const recipeKey = this.METADATA_KEY_PREFIX + id;
+        const recipeStr = localStorage.getItem(recipeKey);
         
-        if (metadata.storage === 'hybrid') {
-          // Reconstruct recipe from metadata and images
-          const recipe: Recipe = {
-            id: metadata.id,
-            title: metadata.title,
-            category: metadata.category,
-            ingredients: metadata.ingredients,
-            directions: metadata.directions,
-            additional_instructions: metadata.additional_instructions || {},
-            additional_sections: metadata.additional_sections || {},
-            prep_time: metadata.prep_time || '',
-            difficulty: metadata.difficulty,
-            is_favorite: metadata.is_favorite,
-            images: [], // Will be populated from image service
-            created_at: new Date(metadata.createdAt),
-            updated_at: new Date(metadata.updatedAt)
-          };
-
-          // Get images from image service
-          if (metadata.imageCount > 0) {
-            try {
-              const images = await mobileImageService.getRecipeImages(id);
-              recipe.images = images;
-            } catch (error) {
-              console.warn(`⚠️ Mobile: Failed to get images for recipe ${id}:`, error);
-              // Use placeholder images
-              recipe.images = Array(metadata.imageCount).fill('placeholder');
-            }
-          }
-
+        if (recipeStr) {
+          const recipe = JSON.parse(recipeStr);
+          // Convert date strings back to Date objects
+          recipe.created_at = new Date(recipe.created_at);
+          recipe.updated_at = new Date(recipe.updated_at);
           return recipe;
-        } else {
-          // Full recipe stored in localStorage
-          const recipeKey = this.METADATA_KEY_PREFIX + id;
-          const recipeStr = localStorage.getItem(recipeKey);
-          
-          if (recipeStr) {
-            const recipe = JSON.parse(recipeStr);
-            // Convert date strings back to Date objects
-            recipe.created_at = new Date(recipe.created_at);
-            recipe.updated_at = new Date(recipe.updated_at);
-            return recipe;
-          }
-        }
-      }
-      
-      // If not found in mobile storage, check existing localStorage
-      console.log(`📱 Mobile: Recipe ${id} not found in mobile storage, checking existing localStorage...`);
-      
-      // Check fallback_recipes
-      const fallbackRecipesStr = localStorage.getItem('fallback_recipes');
-      if (fallbackRecipesStr) {
-        try {
-          const fallbackRecipes = JSON.parse(fallbackRecipesStr);
-          if (Array.isArray(fallbackRecipes)) {
-            const recipe = fallbackRecipes.find(r => r.id === id);
-            if (recipe) {
-              console.log(`📱 Mobile: Found recipe ${id} in fallback_recipes, migrating to mobile storage...`);
-              
-              // Convert to Recipe type and save to mobile storage
-              const mobileRecipe: Recipe = {
-                id: recipe.id,
-                title: recipe.title,
-                category: recipe.category,
-                ingredients: recipe.ingredients,
-                directions: recipe.directions,
-                additional_instructions: recipe.additional_instructions || {},
-                additional_sections: recipe.additional_sections || {},
-                prep_time: recipe.prep_time || '',
-                difficulty: recipe.difficulty,
-                is_favorite: recipe.is_favorite || false,
-                images: recipe.images || [],
-                created_at: new Date(recipe.created_at),
-                updated_at: new Date(recipe.updated_at)
-              };
-              
-              // Save to mobile storage
-              await this.saveRecipe(mobileRecipe);
-              
-              return mobileRecipe;
-            }
-          }
-        } catch (error) {
-          console.warn('⚠️ Mobile: Failed to parse fallback_recipes:', error);
-        }
-      }
-      
-      // Check hebrew-recipes
-      const hebrewRecipesStr = localStorage.getItem('hebrew-recipes');
-      if (hebrewRecipesStr) {
-        try {
-          const hebrewRecipes = JSON.parse(hebrewRecipesStr);
-          if (Array.isArray(hebrewRecipes)) {
-            const recipe = hebrewRecipes.find(r => r.id === id);
-            if (recipe) {
-              console.log(`📱 Mobile: Found recipe ${id} in hebrew-recipes, migrating to mobile storage...`);
-              
-              // Convert to Recipe type and save to mobile storage
-              const mobileRecipe: Recipe = {
-                id: recipe.id,
-                title: recipe.title,
-                category: recipe.category,
-                ingredients: recipe.ingredients,
-                directions: recipe.directions,
-                additional_instructions: recipe.additional_instructions || {},
-                additional_sections: recipe.additional_sections || {},
-                prep_time: recipe.prep_time || '',
-                difficulty: recipe.difficulty,
-                is_favorite: recipe.is_favorite || false,
-                images: recipe.images || [],
-                created_at: new Date(recipe.created_at),
-                updated_at: new Date(recipe.updated_at)
-              };
-              
-              // Save to mobile storage
-              await this.saveRecipe(mobileRecipe);
-              
-              return mobileRecipe;
-            }
-          }
-        } catch (error) {
-          console.warn('⚠️ Mobile: Failed to parse hebrew-recipes:', error);
         }
       }
 
-      console.log(`📱 Mobile: Recipe ${id} not found anywhere`);
       return null;
     } catch (error) {
       console.error('❌ Mobile: Failed to get recipe:', error);
@@ -656,8 +443,6 @@ class MobileRecipeService {
 
       // Handle image updates
       if (updates.images) {
-        console.log(`📱 Mobile: Updating ${updates.images.length} images for recipe ${id}...`);
-        
         // Process new images
         const processedImages: string[] = [];
         for (let i = 0; i < updates.images.length; i++) {
@@ -678,21 +463,13 @@ class MobileRecipeService {
               const blob = new Blob([byteArray], { type: 'image/jpeg' });
               const file = new File([blob], `recipe_${i}.jpg`, { type: 'image/jpeg' });
               
-              console.log(`📱 Mobile: Processing updated image ${i + 1}/${updates.images.length} (${Math.round(file.size / 1024)}KB)`);
-              
               // Save using mobile image service
               const imageId = await mobileImageService.saveImage(file, id);
               if (imageId && imageId !== 'placeholder') {
                 processedImages.push(imageId);
-                console.log(`✅ Mobile: Updated image ${i + 1} saved successfully`);
-              } else {
-                console.warn(`⚠️ Mobile: Updated image ${i + 1} failed to save, using placeholder`);
-                processedImages.push('placeholder');
               }
             } catch (error) {
               console.warn(`⚠️ Mobile: Failed to process updated image ${i}:`, error);
-              // Use placeholder for failed images
-              processedImages.push('placeholder');
             }
           } else {
             processedImages.push(imageData);
@@ -700,7 +477,6 @@ class MobileRecipeService {
         }
         
         updatedRecipe.images = processedImages;
-        console.log(`📱 Mobile: Successfully processed ${processedImages.filter(img => img !== 'placeholder').length}/${updates.images.length} updated images`);
       }
 
       // Save updated recipe
@@ -811,67 +587,18 @@ class MobileRecipeService {
   }> {
     try {
       const status = await this.checkStorageStatus();
+      const recipeList = this.getRecipeList();
       
-      // Get recipes from mobile storage
-      let mobileRecipes = this.getRecipeList();
-      let totalRecipes = mobileRecipes.length;
       let totalImages = 0;
-      
-      // If no mobile recipes, check existing localStorage
-      if (totalRecipes === 0) {
-        console.log('📱 Mobile: No mobile recipes found, checking existing localStorage for stats...');
-        
-        // Check fallback_recipes
-        const fallbackRecipesStr = localStorage.getItem('fallback_recipes');
-        if (fallbackRecipesStr) {
-          try {
-            const fallbackRecipes = JSON.parse(fallbackRecipesStr);
-            if (Array.isArray(fallbackRecipes)) {
-              totalRecipes = fallbackRecipes.length;
-              console.log(`📱 Mobile: Found ${totalRecipes} recipes in fallback_recipes for stats`);
-              
-              // Count images
-              for (const recipe of fallbackRecipes) {
-                totalImages += recipe.images?.length || 0;
-              }
-            }
-          } catch (error) {
-            console.warn('⚠️ Mobile: Failed to parse fallback_recipes for stats:', error);
-          }
-        }
-        
-        // Check hebrew-recipes if still no recipes
-        if (totalRecipes === 0) {
-          const hebrewRecipesStr = localStorage.getItem('hebrew-recipes');
-          if (hebrewRecipesStr) {
-            try {
-              const hebrewRecipes = JSON.parse(hebrewRecipesStr);
-              if (Array.isArray(hebrewRecipes)) {
-                totalRecipes = hebrewRecipes.length;
-                console.log(`📱 Mobile: Found ${totalRecipes} recipes in hebrew-recipes for stats`);
-                
-                // Count images
-                for (const recipe of hebrewRecipes) {
-                  totalImages += recipe.images?.length || 0;
-                }
-              }
-            } catch (error) {
-              console.warn('⚠️ Mobile: Failed to parse hebrew-recipes for stats:', error);
-            }
-          }
-        }
-      } else {
-        // Count images from mobile recipes
-        for (const recipeId of mobileRecipes) {
-          const recipe = await this.getRecipe(recipeId);
-          if (recipe) {
-            totalImages += recipe.images.length;
-          }
+      for (const recipeId of recipeList) {
+        const recipe = await this.getRecipe(recipeId);
+        if (recipe) {
+          totalImages += recipe.images.length;
         }
       }
 
       return {
-        totalRecipes,
+        totalRecipes: recipeList.length,
         totalImages,
         localStorageUsed: status.localStorage.used,
         localStorageRemaining: status.localStorage.remaining,

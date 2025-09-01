@@ -162,42 +162,12 @@ const getFallbackRecipes = (): Recipe[] => {
 // Save fallback recipes to localStorage
 const saveFallbackRecipes = (recipes: Recipe[]) => {
   try {
-    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    
-    if (isMobile) {
-      console.log('📱 Mobile: Skipping localStorage fallback save to prevent quota exceeded');
-      return;
-    }
-    
-    // For desktop, save to multiple keys to ensure consistency
+    // Save to multiple keys to ensure consistency
     const keys = ['fallback_recipes', 'hebrew-recipes'];
-    
-    // Check localStorage quota before saving
-    const recipesData = JSON.stringify(recipes);
-    const dataSize = recipesData.length;
-    
-    // Estimate localStorage usage
-    let used = 0;
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i);
-      if (key) {
-        used += localStorage.getItem(key)?.length || 0;
-      }
-    }
-    
-    const available = 5 * 1024 * 1024 - used; // 5MB typical limit minus used
-    const safetyMargin = 1024 * 1024; // 1MB safety margin
-    
-    if (dataSize > available - safetyMargin) {
-      console.warn('⚠️ Not enough localStorage space, skipping fallback save');
-      console.warn(`📊 Data size: ${Math.round(dataSize / 1024)}KB, Available: ${Math.round(available / 1024)}KB`);
-      return;
-    }
-    
     for (const key of keys) {
-      localStorage.setItem(key, recipesData);
+      localStorage.setItem(key, JSON.stringify(recipes));
     }
-    console.log(`💾 Saved ${recipes.length} recipes to localStorage (${Math.round(dataSize / 1024)}KB)`);
+    console.log(`💾 Saved ${recipes.length} recipes to localStorage`);
   } catch (error) {
     console.warn('Failed to save fallback recipes to localStorage:', error);
   }
@@ -404,21 +374,6 @@ export const recipeService = {
   // Helper method to add recipe to localStorage
   async addRecipeToLocalStorage(recipe: RecipeInsert): Promise<Recipe> {
     try {
-      const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      
-      // For mobile, use mobile service instead of localStorage
-      if (isMobile) {
-        try {
-          console.log('📱 Mobile: Using mobile recipe service for localStorage fallback...');
-          const mobileRecipe = await mobileRecipeService.saveRecipe(recipe);
-          console.log('✅ Mobile: Recipe saved successfully via mobile service');
-          return mobileRecipe;
-        } catch (error) {
-          console.warn('⚠️ Mobile service failed, falling back to localStorage:', error);
-          // Continue with localStorage fallback
-        }
-      }
-      
       const currentRecipes = getFallbackRecipes();
       
       // Generate unique ID for new recipe
@@ -426,6 +381,7 @@ export const recipeService = {
       
       // Process images for mobile storage if on mobile
       let processedImages: string[] = [];
+      const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
       if (isMobile && recipe.images && recipe.images.length > 0) {
         try {
           console.log('📱 Mobile: Processing images for mobile storage...');
@@ -489,48 +445,13 @@ export const recipeService = {
       // Add new recipe to the beginning of the list
       const updatedRecipes = [newRecipe, ...currentRecipes];
       
-      // Check localStorage quota before saving
-      const updatedRecipesData = JSON.stringify(updatedRecipes);
-      const dataSize = updatedRecipesData.length;
-      
-      // Estimate localStorage usage
-      let used = 0;
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key) {
-          used += localStorage.getItem(key)?.length || 0;
-        }
-      }
-      
-      const available = 5 * 1024 * 1024 - used; // 5MB typical limit minus used
-      const safetyMargin = 1024 * 1024; // 1MB safety margin
-      
-      if (dataSize > available - safetyMargin) {
-        console.warn('⚠️ Not enough localStorage space for new recipe, skipping save');
-        console.warn(`📊 Data size: ${Math.round(dataSize / 1024)}KB, Available: ${Math.round(available / 1024)}KB`);
-        
-        // For mobile, try to use mobile service as fallback
-        if (isMobile) {
-          try {
-            console.log('📱 Mobile: Attempting mobile service fallback for new recipe...');
-            const mobileRecipe = await mobileRecipeService.saveRecipe(recipe);
-            console.log('✅ Mobile: Recipe saved successfully via mobile service fallback');
-            return mobileRecipe;
-          } catch (mobileError) {
-            console.warn('⚠️ Mobile service fallback also failed:', mobileError);
-          }
-        }
-        
-        throw new Error('Not enough storage space to save new recipe');
-      }
-      
       // Save updated list back to localStorage (only recipe metadata, not images)
       saveFallbackRecipes(updatedRecipes);
       
       // Clear caches
       cacheManager.clear();
       
-      console.log(`✅ Recipe "${recipe.title}" added to localStorage with ${processedImages.length} images (${Math.round(dataSize / 1024)}KB)`);
+      console.log(`✅ Recipe "${recipe.title}" added to localStorage with ${processedImages.length} images`);
       return newRecipe;
     } catch (error) {
       console.error('❌ Failed to add recipe to localStorage:', error);
@@ -1050,33 +971,6 @@ export const recipeService = {
       console.log(`🔍 UPDATE DEBUG: Images in updates:`, updates.images?.length || 0);
       console.log(`🔍 UPDATE DEBUG: Updates:`, JSON.stringify({...updates, images: updates.images ? `[${updates.images.length} images]` : 'none'}));
       
-      const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-      
-      // For mobile, use mobile service instead of localStorage
-      if (isMobile) {
-        try {
-          console.log('📱 Mobile: Using mobile recipe service for update...');
-          
-          // Get current recipe from mobile service
-          const currentRecipe = await mobileRecipeService.getRecipe(id);
-          if (!currentRecipe) {
-            throw new Error('Recipe not found in mobile storage');
-          }
-          
-          // Apply updates
-          const updatedRecipe = await mobileRecipeService.updateRecipe(id, updates);
-          if (!updatedRecipe) {
-            throw new Error('Failed to update recipe in mobile storage');
-          }
-          
-          console.log(`✅ Mobile: Recipe "${id}" updated successfully via mobile service`);
-          return updatedRecipe;
-        } catch (error) {
-          console.warn('⚠️ Mobile service failed, falling back to localStorage:', error);
-          // Continue with localStorage fallback
-        }
-      }
-      
       // Get current recipes from localStorage
       let currentRecipes: Recipe[] = [];
       let storageKey = '';
@@ -1139,55 +1033,18 @@ export const recipeService = {
       console.log(`🔍 Images before update: ${existingRecipe.images?.length || 0}`);
       console.log(`🔍 Images after update: ${updatedRecipe.images?.length || 0}`);
       
-      // Check localStorage quota before saving
-      const updatedRecipesData = JSON.stringify(currentRecipes);
-      const dataSize = updatedRecipesData.length;
-      
-      // Estimate localStorage usage
-      let used = 0;
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key) {
-          used += localStorage.getItem(key)?.length || 0;
-        }
-      }
-      
-      const available = 5 * 1024 * 1024 - used; // 5MB typical limit minus used
-      const safetyMargin = 1024 * 1024; // 1MB safety margin
-      
-      if (dataSize > available - safetyMargin) {
-        console.warn('⚠️ Not enough localStorage space for update, skipping save');
-        console.warn(`📊 Data size: ${Math.round(dataSize / 1024)}KB, Available: ${Math.round(available / 1024)}KB`);
-        
-        // For mobile, try to use mobile service as fallback
-        if (isMobile) {
-          try {
-            console.log('📱 Mobile: Attempting mobile service fallback for update...');
-            const mobileUpdatedRecipe = await mobileRecipeService.updateRecipe(id, updates);
-            if (mobileUpdatedRecipe) {
-              console.log('✅ Mobile: Update successful via mobile service fallback');
-              return mobileUpdatedRecipe;
-            }
-          } catch (mobileError) {
-            console.warn('⚠️ Mobile service fallback also failed:', mobileError);
-          }
-        }
-        
-        throw new Error('Not enough storage space to save updated recipe');
-      }
-      
       // Replace the recipe in the array
       currentRecipes[recipeIndex] = updatedRecipe;
       
       // Save updated list back to localStorage using the same key
-      console.log(`💾 Saving ${currentRecipes.length} recipes to localStorage (${Math.round(dataSize / 1024)}KB)`);
-      localStorage.setItem(storageKey, updatedRecipesData);
+      console.log(`💾 Saving ${currentRecipes.length} recipes to localStorage`);
+      localStorage.setItem(storageKey, JSON.stringify(currentRecipes));
       
       // Also update other possible keys to keep them in sync
       for (const key of possibleKeys) {
         if (key !== storageKey && localStorage.getItem(key)) {
           console.log(`🔄 Syncing localStorage key: ${key}`);
-          localStorage.setItem(key, updatedRecipesData);
+          localStorage.setItem(key, JSON.stringify(currentRecipes));
         }
       }
       
