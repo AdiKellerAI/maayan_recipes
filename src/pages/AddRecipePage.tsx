@@ -9,6 +9,7 @@ import { compressImages } from '../utils/imageCompression';
 import SmartImageSearch from '../components/SmartImageSearch';
 import { recipeService } from '../services/recipeService';
 import { imageService, RecipeImage } from '../services/imageService';
+import { blobToBase64, analyzeImageUrl } from '../utils/imageUtils';
 
 const AddRecipePage: React.FC = () => {
   const navigate = useNavigate();
@@ -246,6 +247,33 @@ const AddRecipePage: React.FC = () => {
     setImages(prev => [...prev, tempImage]);
     setShowSmartImageSearch(false); // Close the modal after selecting an image
     console.log('✨ Smart image added:', imageUrl);
+  };
+
+  // Convert blob URLs to base64 before saving
+  const convertBlobImagesToBase64 = async (images: RecipeImage[]): Promise<string[]> => {
+    const convertedImages: string[] = [];
+    
+    for (const image of images) {
+      const analysis = analyzeImageUrl(image.url);
+      
+      if (analysis.type === 'blob') {
+        try {
+          console.log('🔄 Converting blob URL to base64:', image.filename);
+          const base64Url = await blobToBase64(image.url);
+          convertedImages.push(base64Url);
+          console.log('✅ Successfully converted blob to base64');
+        } catch (error) {
+          console.error('❌ Failed to convert blob to base64:', error);
+          // If conversion fails, skip this image
+          continue;
+        }
+      } else {
+        // For non-blob URLs, use as is
+        convertedImages.push(image.url);
+      }
+    }
+    
+    return convertedImages;
   };
 
   // Upload images to server
@@ -740,13 +768,27 @@ const AddRecipePage: React.FC = () => {
           }
         });
 
+        // Convert blob images to base64 before saving
+        let processedImages: string[] = [];
+        if (images.length > 0) {
+          try {
+            console.log('🔄 Processing images before saving...');
+            processedImages = await convertBlobImagesToBase64(images);
+            console.log(`✅ Processed ${processedImages.length} images`);
+          } catch (error) {
+            console.error('❌ Error processing images:', error);
+            // Continue without images if processing fails
+            processedImages = [];
+          }
+        }
+
         const newRecipe: RecipeInsert = {
           title: title.trim(),
           category,
           difficulty: difficulty || undefined,
           ingredients: filteredIngredients,
           directions: filteredDirections,
-          images: [], // We'll handle images separately
+          images: processedImages, // Use processed images
           additional_instructions: Object.keys(additionalInstructions).length > 0 ? additionalInstructions : undefined,
           additional_sections: filteredAdditionalSections,
           is_favorite: false
@@ -757,18 +799,12 @@ const AddRecipePage: React.FC = () => {
         const savedRecipe = await addRecipe(newRecipe);
         console.log('✅ Recipe saved successfully:', savedRecipe);
         
-        // Upload images after recipe is saved
+        // Upload images after recipe is saved (only if we have files to upload)
         if (imageFiles.length > 0) {
           try {
             const uploadedImages = await uploadImagesToServer(savedRecipe.id);
             console.log('✅ Images uploaded successfully:', uploadedImages.length);
             setUploadStatus(`הועלו ${uploadedImages.length} תמונות בהצלחה`);
-            
-            // Show success message
-            setUploadStatus('המתכון נשמר בהצלחה!');
-            setTimeout(() => {
-              alert('המתכון נשמר בהצלחה!');
-            }, 500);
           } catch (uploadError) {
             console.error('❌ Error uploading images:', uploadError);
             setUploadStatus('שגיאה בהעלאת התמונות');
@@ -781,12 +817,13 @@ const AddRecipePage: React.FC = () => {
               alert('המתכון נשמר, אך יש בעיה עם התמונות במאגר הנתונים.\n\nהמתכון נשמר במכשיר ויסונכרן כשהחיבור יחזור.');
             }
           }
-        } else {
-          setUploadStatus('המתכון נשמר בהצלחה!');
-          setTimeout(() => {
-            alert('המתכון נשמר בהצלחה!');
-          }, 500);
         }
+        
+        // Show success message
+        setUploadStatus('המתכון נשמר בהצלחה!');
+        setTimeout(() => {
+          alert('המתכון נשמר בהצלחה!');
+        }, 500);
         
         // Force refresh recipes in context to ensure the new recipe is visible
         await refreshRecipes();

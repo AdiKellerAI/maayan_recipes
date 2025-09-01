@@ -41,7 +41,6 @@ const EditRecipePage: React.FC = () => {
   const [newSectionNameWithIngredients, setNewSectionNameWithIngredients] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showSmartImageSearch, setShowSmartImageSearch] = useState(false);
-  const [connectionStatus, setConnectionStatus] = useState<'online' | 'offline' | 'checking'>('checking');
   const [isNavigating, setIsNavigating] = useState(false);
   
   // Refs for auto-focusing
@@ -100,45 +99,7 @@ const EditRecipePage: React.FC = () => {
     }
   }, [setReferrerFromRecipes]);
 
-  // Connection status monitoring for mobile
-  useEffect(() => {
-    const isMobile = window.innerWidth < 768;
-    
-    if (isMobile) {
-      const checkConnection = async () => {
-        try {
-          setConnectionStatus('checking');
-          const isConnected = await recipeService.checkPostgreSQLConnection();
-          setConnectionStatus(isConnected ? 'online' : 'offline');
-        } catch (error) {
-          setConnectionStatus('offline');
-        }
-      };
 
-      checkConnection();
-      
-      const handleOnline = () => {
-        console.log('📱 MOBILE: Connection restored');
-        setConnectionStatus('online');
-      };
-
-      const handleOffline = () => {
-        console.log('📱 MOBILE: Connection lost');
-        setConnectionStatus('offline');
-      };
-
-      window.addEventListener('online', handleOnline);
-      window.addEventListener('offline', handleOffline);
-      
-      const interval = setInterval(checkConnection, 30000);
-      
-      return () => {
-        window.removeEventListener('online', handleOnline);
-        window.removeEventListener('offline', handleOffline);
-        clearInterval(interval);
-      };
-    }
-  }, []);
 
   // Prevent navigation if there are unsaved changes
   useEffect(() => {
@@ -600,43 +561,22 @@ const EditRecipePage: React.FC = () => {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-orange-100/50 overflow-hidden">
           {/* Header Section */}
-          <div className="bg-gradient-to-r from-orange-500 to-rose-500 px-8 py-6 relative overflow-hidden">
+          <div className="bg-gradient-to-r from-orange-500 to-rose-500 px-8 py-4 relative overflow-hidden">
             <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
             <div className="relative flex justify-between items-center">
               <div className="flex items-center gap-4">
                 <div>
-                  <h1 className="text-3xl font-bold text-white mb-1">עריכת מתכון</h1>
-                  {/* Connection Status Indicator for Mobile */}
-                  {window.innerWidth < 768 && (
-                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
-                      connectionStatus === 'online' 
-                        ? 'bg-green-500/20 text-green-100 border border-green-300/30' 
-                        : connectionStatus === 'offline'
-                        ? 'bg-red-500/20 text-red-100 border border-red-300/30'
-                        : 'bg-yellow-500/20 text-yellow-100 border border-yellow-300/30'
-                    }`}>
-                      <div className={`w-2 h-2 rounded-full ${
-                        connectionStatus === 'online' ? 'bg-green-400' 
-                        : connectionStatus === 'offline' ? 'bg-red-400'
-                        : 'bg-yellow-400 animate-pulse'
-                      }`}></div>
-                      <span>
-                        {connectionStatus === 'online' ? 'מאגר נתונים מחובר' 
-                         : connectionStatus === 'offline' ? 'מאגר נתונים לא מחובר'
-                         : 'בודק חיבור למאגר...'}
-                      </span>
-                    </div>
-                  )}
+                  <h1 className="text-3xl font-bold text-white">עריכת מתכון</h1>
                 </div>
               </div>
               <button
                 type="button"
                 onClick={handleClose}
-                className="bg-white/20 backdrop-blur-sm text-white p-2 rounded-lg hover:bg-white/30 transition-all duration-300 border border-white/30"
+                className="bg-white/20 backdrop-blur-sm text-white p-1.5 rounded-lg hover:bg-white/30 transition-all duration-300 border border-white/30"
                 title="סגור"
                 disabled={isNavigating}
               >
-                <X className="h-5 w-5" />
+                <X className="h-4 w-4" />
               </button>
             </div>
           </div>

@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { categories } from '../../data/categories';
 import { useNavigation } from '../../contexts/NavigationContext';
 import DeleteConfirmationModal from '../DeleteConfirmationModal';
+import { getImageDisplayUrl, analyzeImageUrl } from '../../utils/imageUtils';
 
 // Category illustrations as emoji/unicode characters
 const getCategoryIllustration = (categoryId: string) => {
@@ -250,7 +251,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
     }
   };
 
-  const primaryImage = recipe.images && recipe.images.length > 0 ? recipe.images[0] : null;
+  const primaryImage = recipe.images && recipe.images.length > 0 ? getImageDisplayUrl(recipe.images[0], recipe.title) : null;
   const imageCount = recipe.images ? recipe.images.length : 0;
 
 
