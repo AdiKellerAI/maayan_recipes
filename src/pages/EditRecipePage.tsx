@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, X, Trash2, Upload, Camera, Sparkles } from 'lucide-react';
+import { Plus, X, Trash2, Upload, Camera, Sparkles, Image as ImageIcon } from 'lucide-react';
 import { useRecipes } from '../contexts/RecipeContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useProtectedAction } from '../hooks/useProtectedAction';
@@ -43,6 +43,7 @@ const EditRecipePage: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showSmartImageSearch, setShowSmartImageSearch] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   
   // Refs for auto-focusing
   const ingredientRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -71,6 +72,7 @@ const EditRecipePage: React.FC = () => {
       });
       setIngredients(recipe.ingredients);
       setDirections(recipe.directions);
+      
       // Convert string URLs to RecipeImage objects for existing images
       const existingImages: RecipeImage[] = (recipe.images || []).map((url, index) => ({
         id: `existing-${index}`,
@@ -81,12 +83,14 @@ const EditRecipePage: React.FC = () => {
         image_type: 'gallery',
         file_size: 0,
         mime_type: 'image/jpeg',
-        alt_text: `תמונה קיימת ${index + 1}`,
+        alt_text: `תמונה ${index + 1}`,
         width: 0,
         height: 0,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
       }));
+      
+      console.log('🖼️ EDIT: Converted images:', existingImages.map(img => ({ id: img.id, url: img.url.substring(0, 50) + '...' })));
       setImages(existingImages);
       setAdditionalSections(recipe.additional_sections || {});
       setHasUnsavedChanges(false);
@@ -149,6 +153,58 @@ const EditRecipePage: React.FC = () => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     setHasUnsavedChanges(true);
+  };
+
+  // Handle file selection for images
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+
+    try {
+      setIsLoading(true);
+      setUploadStatus('מעבד תמונות...');
+
+      const fileArray = Array.from(files);
+      
+      // Convert files to RecipeImage objects
+      const newImages: RecipeImage[] = await Promise.all(
+        fileArray.map(async (file, index) => {
+          const base64 = await new Promise<string>((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.readAsDataURL(file);
+          });
+
+          return {
+            id: `temp-${Date.now()}-${index}`,
+            recipe_id: id || '',
+            filename: file.name,
+            file_path: '',
+            url: base64,
+            image_type: 'gallery',
+            file_size: file.size,
+            mime_type: file.type,
+            alt_text: `תמונה ${images.length + index + 1}`,
+            width: 0,
+            height: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+        })
+      );
+
+      setImages(prev => [...prev, ...newImages]);
+      setHasUnsavedChanges(true);
+      setUploadStatus('');
+      console.log('✅ EDIT: Added', newImages.length, 'new images');
+    } catch (error) {
+      console.error('❌ EDIT: Error processing images:', error);
+      setUploadStatus('שגיאה בעיבוד התמונות');
+    } finally {
+      setIsLoading(false);
+      // Reset file input
+      e.target.value = '';
+    }
   };
 
   // Ingredient management
@@ -702,23 +758,200 @@ const EditRecipePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Images Section */}
-              <div className="bg-gradient-to-r from-pink-50 to-purple-50 p-4 rounded-lg border border-pink-200">
-                <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-pink-500 rounded-full"></div>
-                  תמונות (עד 6)
-                </h2>
-                <ImageManager
-                  recipeId={id || ''}
-                  initialImages={images}
-                  onImagesChange={useCallback((newImages: RecipeImage[]) => {
-                    setImages(newImages);
-                    setHasUnsavedChanges(true);
-                  }, [setImages, setHasUnsavedChanges])}
-                  maxImages={6}
-                  className="space-y-3"
-                />
-              </div>
+              {/* Images Section - Elegant Design */}
+              {images.length > 0 && (
+                <div className="bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50 p-4 rounded-xl border border-pink-200 shadow-sm">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full"></div>
+                      תמונות המתכון ({images.length}/6)
+                    </h2>
+                  </div>
+                  
+                  {/* Elegant Image Display */}
+                  <div className="space-y-3">
+                    {/* Main Image - Larger display for first image */}
+                    <div className="relative aspect-video rounded-lg overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 shadow-md group">
+                      <img
+                        src={images[0].url}
+                        alt={images[0].alt_text || 'תמונה ראשית'}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.style.display = 'none';
+                          console.warn('🖼️ EDIT: Failed to load main image:', images[0].url);
+                        }}
+                        onLoad={() => {
+                          console.log('🖼️ EDIT: Successfully loaded main image:', images[0].url.substring(0, 50) + '...');
+                        }}
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (window.confirm('האם אתה בטוח שברצונך למחוק את התמונה הזו?')) {
+                            setImages(prev => prev.filter((_, index) => index !== 0));
+                            setHasUnsavedChanges(true);
+                          }
+                        }}
+                        className="absolute top-2 right-2 w-6 h-6 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                        title="מחק תמונה"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                    
+                                         {/* Additional Images Grid */}
+                     {images.length > 1 && (
+                       <div className="grid grid-cols-4 gap-2">
+                         {images.slice(1, 5).map((image, index) => (
+                           <div key={image.id} className="relative aspect-square rounded-lg overflow-hidden bg-gray-100 shadow-sm group">
+                             <img
+                               src={image.url}
+                               alt={image.alt_text || `תמונה ${index + 2}`}
+                               className="w-full h-full object-cover"
+                               onError={(e) => {
+                                 const target = e.target as HTMLImageElement;
+                                 target.style.display = 'none';
+                                 console.warn('🖼️ EDIT: Failed to load image:', image.url);
+                               }}
+                             />
+                             <button
+                               type="button"
+                               onClick={() => {
+                                 if (window.confirm('האם אתה בטוח שברצונך למחוק את התמונה הזו?')) {
+                                   setImages(prev => prev.filter((_, imgIndex) => imgIndex !== index + 1));
+                                   setHasUnsavedChanges(true);
+                                 }
+                               }}
+                               className="absolute top-1 right-1 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                               title="מחק תמונה"
+                             >
+                               <X className="w-2.5 h-2.5" />
+                             </button>
+                           </div>
+                         ))}
+                        {images.length > 5 && (
+                          <div className="relative aspect-square rounded-lg overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center shadow-sm">
+                            <div className="text-center">
+                              <span className="text-sm font-medium text-gray-600">+{images.length - 5}</span>
+                              <div className="text-xs text-gray-500">תמונות נוספות</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    
+                    {/* Add More Images and Manage Images Buttons */}
+                    <div className="pt-2">
+                      <div className="flex gap-2">
+                        {images.length < 6 && (
+                          <>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={handleFileSelect}
+                              className="hidden"
+                              id="add-more-images-input"
+                              disabled={isLoading}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => document.getElementById('add-more-images-input')?.click()}
+                              disabled={isLoading}
+                              className="flex-1 flex items-center justify-center gap-2 bg-blue-500/90 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                            >
+                              <Upload className="w-4 h-4" />
+                              הוסף תמונות
+                            </button>
+                          </>
+                        )}
+                        
+                        <button
+                          type="button"
+                          onClick={() => setShowSmartImageSearch(true)}
+                          className={`flex items-center justify-center gap-2 bg-gray-500/90 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors text-sm font-medium ${images.length < 6 ? 'flex-1' : 'w-full'}`}
+                        >
+                          <ImageIcon className="w-4 h-4" />
+                          ניהול תמונות
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Add Images Button - Only show when no images */}
+              {images.length === 0 && (
+                <div className="bg-gradient-to-r from-pink-50 to-purple-50 p-3 rounded-lg border border-pink-200">
+                  <div className="flex items-center justify-between mb-3">
+                    <h2 className="text-sm font-medium text-gray-800 flex items-center gap-2">
+                      <div className="w-1.5 h-1.5 bg-pink-500 rounded-full"></div>
+                      תמונות (0/6)
+                    </h2>
+                  </div>
+                  
+                  {/* Mobile Upload Buttons */}
+                  <div className="flex gap-2 sm:hidden">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      id="mobile-camera-input"
+                      disabled={isLoading || images.length >= 6}
+                    />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      id="mobile-gallery-input"
+                      disabled={isLoading || images.length >= 6}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById('mobile-gallery-input')?.click()}
+                      disabled={isLoading || images.length >= 6}
+                      className="flex-1 flex items-center justify-center gap-2 bg-blue-500/90 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    >
+                      <Upload className="w-4 h-4" />
+                      בחר מהגלריה
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById('mobile-camera-input')?.click()}
+                      disabled={isLoading || images.length >= 6}
+                      className="flex-1 flex items-center justify-center gap-2 bg-green-500/90 text-white px-3 py-2 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    >
+                      <Camera className="w-4 h-4" />
+                      צלם
+                    </button>
+                  </div>
+
+                  {/* Desktop Upload Button */}
+                  <div className="hidden sm:block">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleFileSelect}
+                      className="hidden"
+                      id="desktop-gallery-input"
+                      disabled={isLoading || images.length >= 6}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => document.getElementById('desktop-gallery-input')?.click()}
+                      disabled={isLoading || images.length >= 6}
+                      className="w-full flex items-center justify-center gap-2 bg-blue-500/90 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+                    >
+                      <Upload className="w-4 h-4" />
+                      בחר מהגלריה
+                    </button>
+                  </div>
+                </div>
+              )}
 
               {/* Ingredients Section */}
               <div className="bg-gradient-to-r from-orange-50 to-rose-50 p-4 rounded-lg border border-orange-200">
@@ -1054,14 +1287,35 @@ const EditRecipePage: React.FC = () => {
               </div>
             )}
 
-            {/* Smart Image Search Modal */}
+            {/* Image Management Modal */}
             {showSmartImageSearch && (
-              <SmartImageSearch
-                recipeName={formData.title}
-                category={formData.category}
-                onImageSelect={handleSmartImageSelect}
-                onClose={() => setShowSmartImageSearch(false)}
-              />
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+                <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+                  <div className="flex items-center justify-between p-4 border-b border-gray-200">
+                    <h3 className="text-lg font-semibold text-gray-900">ניהול תמונות המתכון</h3>
+                    <button
+                      type="button"
+                      onClick={() => setShowSmartImageSearch(false)}
+                      className="text-gray-400 hover:text-gray-600"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  
+                  <div className="p-4 overflow-y-auto max-h-[calc(90vh-80px)]">
+                    <ImageManager
+                      recipeId={id || ''}
+                      initialImages={images}
+                      onImagesChange={useCallback((newImages: RecipeImage[]) => {
+                        setImages(newImages);
+                        setHasUnsavedChanges(true);
+                      }, [])}
+                      maxImages={6}
+                      className="space-y-3"
+                    />
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>
