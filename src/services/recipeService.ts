@@ -2,6 +2,8 @@ import { cacheManager, CACHE_KEYS } from '../lib/cache';
 import { sampleRecipes } from '../data/sampleRecipes';
 import type { Recipe, RecipeInsert, RecipeUpdate } from '../types/recipe';
 import { imageService } from './imageService';
+import { mobileImageService } from './mobileImageService';
+import { mobileRecipeService } from './mobileRecipeService';
 
 // Convert database row to Recipe type
 const mapRowToRecipe = (row: any): Recipe => ({
@@ -176,6 +178,23 @@ export const recipeService = {
   async getAllRecipes(): Promise<Recipe[]> {
     console.log('🔄 Getting all recipes...');
     
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    
+    // For mobile, try mobile service first
+    if (isMobile) {
+      try {
+        console.log('📱 Mobile: Using mobile recipe service...');
+        const mobileRecipes = await mobileRecipeService.getAllRecipes();
+        
+        if (mobileRecipes.length > 0) {
+          console.log(`📱 Mobile: Found ${mobileRecipes.length} recipes in mobile storage`);
+          return mobileRecipes;
+        }
+      } catch (error) {
+        console.warn('⚠️ Mobile service failed, falling back to standard service:', error);
+      }
+    }
+    
     // Check cache first for faster initial load
     const cached = cacheManager.get(CACHE_KEYS.ALL_RECIPES);
     if (cached && Array.isArray(cached) && cached.length > 0) {
@@ -280,11 +299,28 @@ export const recipeService = {
 
   // Add new recipe
   async addRecipe(recipe: RecipeInsert): Promise<Recipe> {
-    console.log('➕ Adding new recipe:', recipe.title);
+    console.log('➕ SERVICE: Adding new recipe:', recipe.title);
+    console.log('➕ SERVICE: Images count:', recipe.images?.length || 0);
     
-    // Detect platform for better error handling
     const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     console.log(`📱 Platform detected: ${isMobile ? 'mobile' : 'desktop'}`);
+    
+    // For mobile, use mobile-optimized service
+    if (isMobile) {
+      try {
+        console.log('📱 Mobile: Using mobile-optimized recipe service...');
+        const mobileRecipe = await mobileRecipeService.saveRecipe(recipe);
+        
+        // Clear caches to ensure fresh data
+        cacheManager.clear();
+        
+        console.log('✅ Mobile: Recipe saved successfully via mobile service');
+        return mobileRecipe;
+      } catch (error) {
+        console.warn('⚠️ Mobile service failed, falling back to standard service:', error);
+        // Continue with standard service
+      }
+    }
     
     // Try API first with retry logic
     try {
@@ -343,6 +379,52 @@ export const recipeService = {
       // Generate unique ID for new recipe
       const newId = `fallback-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
+      // Process images for mobile storage if on mobile
+      let processedImages: string[] = [];
+      const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      if (isMobile && recipe.images && recipe.images.length > 0) {
+        try {
+          console.log('📱 Mobile: Processing images for mobile storage...');
+          
+          // Convert base64 images to mobile-optimized format
+          for (let i = 0; i < recipe.images.length; i++) {
+            const imageData = recipe.images[i];
+            
+            // If it's already base64, use mobile image service
+            if (imageData.startsWith('data:image/')) {
+              // Convert base64 to File object for mobile processing
+              const base64Data = imageData.split(',')[1];
+              const byteCharacters = atob(base64Data);
+              const byteNumbers = new Array(byteCharacters.length);
+              
+              for (let j = 0; j < byteCharacters.length; j++) {
+                byteNumbers[j] = byteCharacters.charCodeAt(j);
+              }
+              
+              const byteArray = new Uint8Array(byteNumbers);
+              const blob = new Blob([byteArray], { type: 'image/jpeg' });
+              const file = new File([blob], `image_${i}.jpg`, { type: 'image/jpeg' });
+              
+              // Save using mobile image service
+              const imageId = await mobileImageService.saveImage(file, newId);
+              if (imageId && imageId !== 'placeholder') {
+                processedImages.push(imageId);
+              }
+            } else {
+              // Keep external URLs as is
+              processedImages.push(imageData);
+            }
+          }
+          
+          console.log(`📱 Mobile: Processed ${processedImages.length} images for mobile storage`);
+        } catch (error) {
+          console.warn('⚠️ Mobile image processing failed, using original images:', error);
+          processedImages = recipe.images || [];
+        }
+      } else {
+        processedImages = recipe.images || [];
+      }
+      
       // Create new recipe with all required fields
       const newRecipe: Recipe = {
         id: newId,
@@ -355,7 +437,7 @@ export const recipeService = {
         prep_time: recipe.prep_time || '',
         difficulty: recipe.difficulty || undefined,
         is_favorite: recipe.is_favorite || false,
-        images: recipe.images || [],
+        images: processedImages,
         created_at: new Date(),
         updated_at: new Date()
       };
@@ -363,13 +445,13 @@ export const recipeService = {
       // Add new recipe to the beginning of the list
       const updatedRecipes = [newRecipe, ...currentRecipes];
       
-      // Save updated list back to localStorage
+      // Save updated list back to localStorage (only recipe metadata, not images)
       saveFallbackRecipes(updatedRecipes);
       
       // Clear caches
       cacheManager.clear();
       
-      console.log(`✅ Recipe "${recipe.title}" added to localStorage`);
+      console.log(`✅ Recipe "${recipe.title}" added to localStorage with ${processedImages.length} images`);
       return newRecipe;
     } catch (error) {
       console.error('❌ Failed to add recipe to localStorage:', error);
@@ -729,7 +811,7 @@ export const recipeService = {
           
           // For mobile, process images before sending to ensure they're properly formatted
           let processedUpdates = { ...updates };
-          if (updates.images && updates.images.length > 0) {
+          if (updates.images && Array.isArray(updates.images) && updates.images.length > 0) {
             console.log('📱 MOBILE: Processing images before update...');
             try {
               // Check if any images are base64 and need to be uploaded
@@ -760,7 +842,7 @@ export const recipeService = {
                           // Replace base64 with uploaded URL
                           const uploadedImage = uploadResult.images[0];
                           const imageIndex = updates.images.indexOf(base64Image);
-                          if (imageIndex !== -1) {
+                          if (imageIndex !== -1 && processedUpdates.images && Array.isArray(processedUpdates.images)) {
                             processedUpdates.images[imageIndex] = uploadedImage.url;
                           }
                           
@@ -832,9 +914,9 @@ export const recipeService = {
           };
           
           // Verify that the update was successful, especially for images
-          if (processedUpdates.images && processedUpdates.images.length > 0) {
+          if (processedUpdates.images && Array.isArray(processedUpdates.images) && processedUpdates.images.length > 0) {
             console.log('🔍 VERIFY: Verifying image update...');
-            const verification = await this.verifyRecipeUpdate(id, processedUpdates.images);
+            const verification = await this.verifyRecipeUpdate(id, processedUpdates.images as string[]);
             
             if (!verification.success) {
               console.warn('⚠️ VERIFY: Image update verification failed:', verification.message);
