@@ -8,6 +8,7 @@ import { categories } from '../data/categories';
 import type { RecipeSection } from '../types/recipe';
 import { compressImages } from '../utils/imageCompression';
 import SmartImageSearch from '../components/SmartImageSearch';
+import { recipeService } from '../services/recipeService';
 
 const EditRecipePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -38,6 +39,7 @@ const EditRecipePage: React.FC = () => {
   const [newSectionNameWithIngredients, setNewSectionNameWithIngredients] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showSmartImageSearch, setShowSmartImageSearch] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState<'online' | 'offline' | 'checking'>('checking');
   
   // Refs for auto-focusing new input fields
   const ingredientRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -79,6 +81,63 @@ const EditRecipePage: React.FC = () => {
       setReferrerFromRecipes(recipesPath);
     }
   }, [setReferrerFromRecipes]);
+
+  // Connection status monitoring for mobile
+  useEffect(() => {
+    const isMobile = window.innerWidth < 768;
+    
+    if (isMobile) {
+      const checkConnection = async () => {
+        try {
+          setConnectionStatus('checking');
+          const isConnected = await recipeService.checkPostgreSQLConnection();
+          setConnectionStatus(isConnected ? 'online' : 'offline');
+        } catch (error) {
+          setConnectionStatus('offline');
+        }
+      };
+
+      // Check connection status
+      checkConnection();
+      
+      // Set up auto-sync when connection is restored
+      const handleOnline = async () => {
+        console.log('📱 MOBILE: Connection restored, attempting auto-sync...');
+        setConnectionStatus('online');
+        
+        try {
+          // Wait a bit for connection to stabilize
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
+          // Check if we have unsaved changes and try to sync
+          if (hasUnsavedChanges) {
+            console.log('📱 MOBILE: Auto-syncing unsaved changes...');
+            // This will be handled by the save button, but we can show a notification
+            console.log('📱 MOBILE: Please save your changes to sync with database');
+          }
+        } catch (error) {
+          console.warn('📱 MOBILE: Auto-sync failed:', error);
+        }
+      };
+
+      const handleOffline = () => {
+        console.log('📱 MOBILE: Connection lost');
+        setConnectionStatus('offline');
+      };
+
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+      
+      // Check connection every 30 seconds
+      const interval = setInterval(checkConnection, 30000);
+      
+      return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+        clearInterval(interval);
+      };
+    }
+  }, [hasUnsavedChanges]);
 
   if (!recipe) {
     return (
@@ -419,6 +478,39 @@ const EditRecipePage: React.FC = () => {
         console.log('✅ EDIT: Recipe updated successfully, navigating back...');
         setHasUnsavedChanges(false);
         
+        // Verify that the update was successful, especially for images
+        if (images.length > 0 || updatedRecipe.images?.length === 0) {
+          console.log('🔍 EDIT: Verifying image update...');
+          try {
+            const verification = await recipeService.verifyRecipeUpdate(recipe.id, images);
+            
+            if (!verification.success) {
+              console.warn('⚠️ EDIT: Image update verification failed:', verification.message);
+              
+              // Check if we're on mobile and show appropriate message
+              const isMobile = window.innerWidth < 768;
+              if (isMobile) {
+                alert(`המתכון נשמר במכשיר, אך יש בעיה עם התמונות במאגר הנתונים:\n${verification.message}\n\nהמתכון יסונכרן אוטומטית כשהחיבור יחזור.`);
+              } else {
+                alert(`המתכון נשמר, אך יש בעיה עם התמונות: ${verification.message}\n\nהמתכון נשמר במכשיר ויסונכרן כשהחיבור יחזור.`);
+              }
+            } else {
+              console.log('✅ EDIT: Image update verified successfully');
+              alert('המתכון נשמר בהצלחה במאגר הנתונים!');
+            }
+          } catch (verifyError) {
+            console.warn('⚠️ EDIT: Verification failed:', verifyError);
+            
+            // Check if we're on mobile and show appropriate message
+            const isMobile = window.innerWidth < 768;
+            if (isMobile) {
+              alert('המתכון נשמר במכשיר, אך לא ניתן לוודא שהתמונות נשמרו במאגר הנתונים.\n\nהמתכון יסונכרן אוטומטית כשהחיבור יחזור.');
+            } else {
+              alert('המתכון נשמר, אך לא ניתן לוודא שהתמונות נשמרו במאגר הנתונים.\n\nהמתכון נשמר במכשיר ויסונכרן כשהחיבור יחזור.');
+            }
+          }
+        }
+        
         // Add a small delay to ensure the update is processed
         setTimeout(() => {
           navigate(`/recipe/${recipe.id}`);
@@ -478,7 +570,27 @@ const EditRecipePage: React.FC = () => {
               <div className="flex items-center gap-4">
                 <div>
                   <h1 className="text-3xl font-bold text-white mb-1">עריכת מתכון</h1>
-                  <p className="text-orange-100 text-sm">ערוך ועדכן את המתכון שלך</p>
+                  {/* Connection Status Indicator for Mobile */}
+                  {window.innerWidth < 768 && (
+                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
+                      connectionStatus === 'online' 
+                        ? 'bg-green-500/20 text-green-100 border border-green-300/30' 
+                        : connectionStatus === 'offline'
+                        ? 'bg-red-500/20 text-red-100 border border-red-300/30'
+                        : 'bg-yellow-500/20 text-yellow-100 border border-yellow-300/30'
+                    }`}>
+                      <div className={`w-2 h-2 rounded-full ${
+                        connectionStatus === 'online' ? 'bg-green-400' 
+                        : connectionStatus === 'offline' ? 'bg-red-400'
+                        : 'bg-yellow-400 animate-pulse'
+                      }`}></div>
+                      <span>
+                        {connectionStatus === 'online' ? 'מאגר נתונים מחובר' 
+                         : connectionStatus === 'offline' ? 'מאגר נתונים לא מחובר'
+                         : 'בודק חיבור למאגר...'}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
               <button

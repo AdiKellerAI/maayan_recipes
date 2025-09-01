@@ -358,7 +358,69 @@ export const recipeService = {
     }
   },
 
-  // Update recipe
+  // Verify that recipe was saved to database
+  async verifyRecipeUpdate(id: string, expectedImages: string[]): Promise<{ success: boolean; message: string; savedImages?: string[] }> {
+    try {
+      console.log('🔍 VERIFY: Checking if recipe was saved to database...');
+      
+      const response = await fetch(`/api/recipes/${id}`, {
+        method: 'GET',
+        signal: AbortSignal.timeout(10000)
+      });
+      
+      if (!response.ok) {
+        return { 
+          success: false, 
+          message: 'לא ניתן לבדוק אם המתכון נשמר במאגר הנתונים' 
+        };
+      }
+      
+      const savedRecipe = await response.json();
+      const savedImages = savedRecipe.images || [];
+      
+      console.log('🔍 VERIFY: Expected images:', expectedImages.length);
+      console.log('🔍 VERIFY: Saved images:', savedImages.length);
+      
+      // Check if images were saved correctly
+      if (expectedImages.length !== savedImages.length) {
+        return {
+          success: false,
+          message: `התמונות לא נשמרו כראוי במאגר הנתונים. צפוי: ${expectedImages.length}, נשמר: ${savedImages.length}`,
+          savedImages
+        };
+      }
+      
+      // Check if image content matches (basic check)
+      const imagesMatch = expectedImages.every((expectedImg, index) => {
+        const savedImg = savedImages[index];
+        return savedImg && savedImg.length > 0;
+      });
+      
+      if (!imagesMatch) {
+        return {
+          success: false,
+          message: 'חלק מהתמונות לא נשמרו כראוי במאגר הנתונים',
+          savedImages
+        };
+      }
+      
+      console.log('✅ VERIFY: Recipe successfully saved to database');
+      return { 
+        success: true, 
+        message: 'המתכון נשמר בהצלחה במאגר הנתונים',
+        savedImages
+      };
+      
+    } catch (error) {
+      console.error('❌ VERIFY: Error verifying recipe update:', error);
+      return { 
+        success: false, 
+        message: 'שגיאה בבדיקת שמירת המתכון במאגר הנתונים' 
+      };
+    }
+  },
+
+  // Update recipe with retry mechanism
   async updateRecipe(id: string, updates: RecipeUpdate): Promise<Recipe> {
     console.log('🔄 SERVICE: Updating recipe with ID:', id);
     console.log('🔄 SERVICE: Images in update:', updates.images?.length || 0);
@@ -366,49 +428,85 @@ export const recipeService = {
     const isAvailable = await isAPIAvailable();
     
     if (isAvailable) {
-      try {
-        console.log('🔄 SERVICE: Updating recipe via API');
-        console.log('🔄 SERVICE: Update payload:', JSON.stringify({...updates, images: updates.images ? `[${updates.images.length} images]` : 'none'}));
-        
-        const response = await fetch(`/api/recipes/${id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(updates),
-          signal: AbortSignal.timeout(15000)
-        });
-        
-        if (response.status === 404) {
-          throw new Error('Recipe not found');
+      // Try API update with retry mechanism
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          console.log(`🔄 SERVICE: Updating recipe via API (attempt ${attempt}/3)`);
+          console.log('🔄 SERVICE: Update payload:', JSON.stringify({...updates, images: updates.images ? `[${updates.images.length} images]` : 'none'}));
+          
+          const response = await fetch(`/api/recipes/${id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(updates),
+            signal: AbortSignal.timeout(15000)
+          });
+          
+          if (response.status === 404) {
+            throw new Error('Recipe not found');
+          }
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorData.error || ''}`);
+          }
+          
+          const updatedRecipe = await response.json();
+          const processedRecipe = {
+            ...updatedRecipe,
+            created_at: new Date(updatedRecipe.created_at),
+            updated_at: new Date(updatedRecipe.updated_at)
+          };
+          
+          // Verify that the update was successful, especially for images
+          if (updates.images !== undefined) {
+            console.log('🔍 VERIFY: Verifying image update...');
+            const verification = await this.verifyRecipeUpdate(id, updates.images);
+            
+            if (!verification.success) {
+              console.warn('⚠️ VERIFY: Image update verification failed:', verification.message);
+              
+              // If this is the last attempt, throw an error to trigger fallback
+              if (attempt === 3) {
+                throw new Error(`Image verification failed after ${attempt} attempts: ${verification.message}`);
+              }
+              
+              // Wait before retry
+              await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
+              continue;
+            } else {
+              console.log('✅ VERIFY: Image update verified successfully');
+            }
+          }
+          
+          cacheManager.delete(CACHE_KEYS.ALL_RECIPES);
+          cacheManager.delete(CACHE_KEYS.RECIPE_BY_ID(id));
+          if (updates.category) {
+            cacheManager.delete(CACHE_KEYS.RECIPES_BY_CATEGORY(updates.category));
+          }
+          
+          console.log(`✅ SERVICE: Recipe updated successfully on attempt ${attempt}`);
+          return processedRecipe;
+          
+        } catch (error) {
+          console.warn(`❌ SERVICE: API update attempt ${attempt} failed:`, error);
+          
+          if (attempt === 3) {
+            console.log('📦 All API attempts failed, falling back to localStorage...');
+            return this.updateRecipeInLocalStorage(id, updates);
+          }
+          
+          // Wait before retry with exponential backoff
+          await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
         }
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(`API request failed: ${response.status} ${response.statusText} - ${errorData.error || ''}`);
-        }
-        
-        const updatedRecipe = await response.json();
-        const processedRecipe = {
-          ...updatedRecipe,
-          created_at: new Date(updatedRecipe.created_at),
-          updated_at: new Date(updatedRecipe.updated_at)
-        };
-        
-        cacheManager.delete(CACHE_KEYS.ALL_RECIPES);
-        cacheManager.delete(CACHE_KEYS.RECIPE_BY_ID(id));
-        if (updates.category) {
-          cacheManager.delete(CACHE_KEYS.RECIPES_BY_CATEGORY(updates.category));
-        }
-        return processedRecipe;
-      } catch (error) {
-        console.warn('API update failed:', error);
-        console.log('📦 Falling back to localStorage...');
-        return this.updateRecipeInLocalStorage(id, updates);
       }
     } else {
       console.log('📦 API not available, using localStorage');
       return this.updateRecipeInLocalStorage(id, updates);
     }
+    
+    // This should never be reached, but just in case
+    throw new Error('Failed to update recipe after all attempts');
   },
 
   // Helper method to update recipe in localStorage
