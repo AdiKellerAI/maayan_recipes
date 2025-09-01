@@ -9,6 +9,8 @@ import type { RecipeSection } from '../types/recipe';
 import { compressImages } from '../utils/imageCompression';
 import SmartImageSearch from '../components/SmartImageSearch';
 import { recipeService } from '../services/recipeService';
+import { imageService, RecipeImage } from '../services/imageService';
+import ImageManager from '../components/ImageManager';
 
 const EditRecipePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -30,6 +32,7 @@ const EditRecipePage: React.FC = () => {
   const [images, setImages] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState<string>('');
 
   const [additionalInstructions, setAdditionalInstructions] = useState<Record<string, string[]>>({});
   const [additionalSections, setAdditionalSections] = useState<{ [key: string]: RecipeSection }>({});
@@ -55,10 +58,12 @@ const EditRecipePage: React.FC = () => {
       });
       setIngredients(recipe.ingredients);
       setDirections(recipe.directions);
+      
       setImages(recipe.images || []);
+      
       setAdditionalInstructions(recipe.additional_instructions || {});
       setAdditionalSections(recipe.additional_sections || {});
-      console.log('✅ EDIT: Recipe data loaded, images set to:', (recipe.images || []).length);
+      console.log('✅ EDIT: Recipe data loaded, images set to:', images.length);
     }
   }, [recipe]);
 
@@ -213,94 +218,6 @@ const EditRecipePage: React.FC = () => {
     setHasUnsavedChanges(true);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (files && files.length > 0) {
-      console.log('📸 Uploading images:', files.length);
-      
-      // Filter out non-image files (workaround for Android 14 compatibility)
-      const imageFiles = Array.from(files).filter(file => {
-        const isImage = file.type.startsWith('image/');
-        if (!isImage) {
-          console.log('⚠️ Skipping non-image file:', file.name, file.type);
-        }
-        return isImage;
-      });
-      
-      if (imageFiles.length === 0) {
-        alert('אנא בחר קבצי תמונה בלבד (JPG, PNG, WEBP, HEIC).');
-        e.target.value = '';
-        return;
-      }
-      
-      if (imageFiles.length !== files.length) {
-        alert(`נבחרו ${imageFiles.length} קבצי תמונה מתוך ${files.length} קבצים. רק קבצי התמונה יועלו.`);
-      }
-      
-      // Check if adding these images would exceed the 6 image limit
-      if (images.length + imageFiles.length > 6) {
-        alert(`ניתן להעלות עד 6 תמונות בלבד. כרגע יש לך ${images.length} תמונות ואתה מנסה להוסיף ${imageFiles.length} נוספות.`);
-        // Reset the input
-        e.target.value = '';
-        return;
-      }
-      
-      // Show loading indicator for mobile
-      const loadingToast = setTimeout(() => {
-        console.log('📸 Processing images...');
-      }, 500);
-      
-      // Convert Array to FileList-like object for compression
-      const fileList = imageFiles as unknown as FileList;
-      
-      compressImages(fileList) // Use HD quality compression
-        .then(compressedImages => {
-          clearTimeout(loadingToast);
-          console.log('✅ EDIT: Images compressed successfully:', compressedImages.length);
-          console.log('✅ EDIT: Compressed image sizes:', compressedImages.map(img => `${Math.round(img.length / 1024)}KB`));
-          
-          setImages(prev => {
-            const newImages = [...prev, ...compressedImages];
-            console.log('📸 EDIT: Total images after upload:', newImages.length);
-            console.log('📸 EDIT: Previous images:', prev.length, 'New images:', compressedImages.length);
-            setHasUnsavedChanges(true); // Mark as unsaved for mobile
-            return newImages.slice(0, 6); // Ensure we never exceed 6 images
-          });
-          // Reset the input to allow selecting the same file again if needed
-          e.target.value = '';
-        })
-        .catch(error => {
-          clearTimeout(loadingToast);
-          console.error('❌ Error compressing images:', error);
-          const errorMessage = error.message || 'שגיאה בדחיסת התמונות. אנא נסה שוב.';
-          
-          // Provide more specific error messages for mobile users
-          if (errorMessage.includes('timed out')) {
-            alert('עיבוד התמונה נמשך יותר מדי. אנא נסה תמונה קטנה יותר או בפורמט JPG/PNG.');
-          } else if (errorMessage.includes('Failed to load image')) {
-            alert('לא ניתן לטעון את התמונה. אנא נסה פורמט אחר (JPG, PNG) או תמונה אחרת.');
-          } else if (errorMessage.includes('גדול מדי')) {
-            alert('התמונה גדולה מדי. אנא בחר תמונה קטנה יותר (עד 10MB).');
-          } else {
-            alert(errorMessage);
-          }
-          
-          // Reset the input
-          e.target.value = '';
-        });
-    }
-  };
-
-  const removeImage = (index: number) => {
-    console.log('🗑️ EDIT: Removing image at index:', index);
-    setImages(prev => {
-      const newImages = prev.filter((_, i) => i !== index);
-      console.log('📸 EDIT: Images after removal:', newImages.length);
-      return newImages;
-    });
-    setHasUnsavedChanges(true);
-  };
-
   const handleSmartImageSelect = (imageUrl: string) => {
     if (images.length >= 6) {
       alert('ניתן להעלות עד 6 תמונות בלבד.');
@@ -444,6 +361,7 @@ const EditRecipePage: React.FC = () => {
       }
 
       setIsSaving(true);
+      setUploadStatus('שומר מתכון...');
       
       // Filter additional sections to only include non-empty ones
       const filteredAdditionalSections: { [key: string]: RecipeSection } = {};
@@ -496,7 +414,10 @@ const EditRecipePage: React.FC = () => {
               }
             } else {
               console.log('✅ EDIT: Image update verified successfully');
-              alert('המתכון נשמר בהצלחה במאגר הנתונים!');
+              setUploadStatus('המתכון נשמר בהצלחה!');
+              setTimeout(() => {
+                alert('המתכון נשמר בהצלחה במאגר הנתונים!');
+              }, 500);
             }
           } catch (verifyError) {
             console.warn('⚠️ EDIT: Verification failed:', verifyError);
@@ -509,6 +430,11 @@ const EditRecipePage: React.FC = () => {
               alert('המתכון נשמר, אך לא ניתן לוודא שהתמונות נשמרו במאגר הנתונים.\n\nהמתכון נשמר במכשיר ויסונכרן כשהחיבור יחזור.');
             }
           }
+        } else {
+          setUploadStatus('המתכון נשמר בהצלחה!');
+          setTimeout(() => {
+            alert('המתכון נשמר בהצלחה!');
+          }, 500);
         }
         
         // Add a small delay to ensure the update is processed
@@ -519,9 +445,17 @@ const EditRecipePage: React.FC = () => {
       } catch (error) {
         console.error('❌ EDIT: Failed to update recipe:', error);
         const errorMessage = error instanceof Error ? error.message : 'שגיאה לא ידועה';
-        alert(`שגיאה בעדכון המתכון: ${errorMessage}`);
+        setUploadStatus(`שגיאה: ${errorMessage}`);
+        setTimeout(() => {
+          alert(`שגיאה בעדכון המתכון: ${errorMessage}`);
+        }, 500);
       } finally {
         setIsSaving(false);
+        
+        // Clear status after a delay
+        setTimeout(() => {
+          setUploadStatus('');
+        }, 2000);
       }
     });
   };
@@ -674,75 +608,16 @@ const EditRecipePage: React.FC = () => {
               <div className="w-1.5 h-1.5 bg-pink-500 rounded-full"></div>
               תמונות (עד 6)
             </h2>
-            <div className="space-y-3">
-              <div className="flex gap-2 flex-wrap justify-center">
-                <label className="flex items-center gap-2 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg cursor-pointer transition-all duration-200 border border-gray-200 hover:border-pink-300 font-medium text-gray-700 hover:text-pink-600 text-sm">
-                  <Upload className="w-4 h-4 flex-shrink-0" />
-                  <span className="whitespace-nowrap">העלה</span>
-                  <input
-                    type="file"
-                    multiple
-                    accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                    title="העלה"
-                    key={Math.random()} // Force re-render for mobile compatibility
-                  />
-                </label>
-                <label className="flex items-center gap-2 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg cursor-pointer transition-all duration-200 border border-gray-200 hover:border-pink-300 font-medium text-gray-700 hover:text-pink-600 text-sm">
-                  <Camera className="w-4 h-4 flex-shrink-0" />
-                  <span className="whitespace-nowrap">צלם</span>
-                  <input
-                    type="file"
-                    accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif"
-                    capture="environment"
-                    onChange={handleImageUpload}
-                    className="hidden"
-                    title="צלם"
-                    key={Math.random()} // Force re-render for mobile compatibility
-                  />
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setShowSmartImageSearch(true)}
-                  className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-500 text-white px-3 py-2 rounded-lg hover:from-purple-600 hover:to-pink-600 transition-all duration-200 font-medium text-sm"
-                  title="חיפוש חכם לתמונות"
-                >
-                  <Sparkles className="w-4 h-4 flex-shrink-0" />
-                  <span className="whitespace-nowrap">חיפוש חכם</span>
-                </button>
-              </div>
-
-              {images.length > 0 && (
-                <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                  {images.map((image, index) => (
-                    <div key={index} className="relative group">
-                      <img
-                        src={image}
-                        alt={`תמונה ${index + 1}`}
-                        className="w-full h-24 object-cover rounded-lg transition-all duration-200"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeImage(index)}
-                        className="absolute top-1 right-1 bg-red-500 hover:bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center transition-all duration-200 opacity-0 group-hover:opacity-100"
-                        title="הסר תמונה"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {images.length === 0 && (
-                <div className="text-center py-4 text-gray-500">
-                  <Camera className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-                  <p className="text-sm font-medium">לא נבחרו תמונות עדיין</p>
-                  <p className="text-xs">הוסף תמונות כדי להפוך את המתכון למושך יותר</p>
-                </div>
-              )}
-            </div>
+            <ImageManager
+              recipeId={id || ''}
+              onImagesChange={(newImages) => {
+                // Convert RecipeImage objects to URLs for backward compatibility
+                const imageUrls = newImages.map(img => img.url);
+                setImages(imageUrls);
+              }}
+              maxImages={6}
+              className="space-y-3"
+            />
           </div>
 
 
@@ -1006,6 +881,20 @@ const EditRecipePage: React.FC = () => {
               הוסף חלק חדש (עם מרכיבים ושלבים)
             </button>
           </div>
+
+          {/* Upload Status */}
+          {uploadStatus && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+              <div className="flex items-center gap-3">
+                <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-600 border-t-transparent"></div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-blue-800">
+                    {uploadStatus}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Submit Section - Centered Design */}
           <div className="pt-6 border-t border-gray-100">
