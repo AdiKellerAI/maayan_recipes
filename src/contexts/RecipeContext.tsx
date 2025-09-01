@@ -301,6 +301,10 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const updateRecipe = async (id: string, updates: Partial<Recipe>) => {
     try {
+      console.log('🔄 CONTEXT: Updating recipe with ID:', id);
+      console.log('🔄 CONTEXT: Update data:', JSON.stringify(updates, null, 2));
+      console.log('🔄 CONTEXT: Images in update:', updates.images?.length || 0);
+      
       // Optimistically update local state first
       setRecipes(prev => prev.map(recipe => 
         recipe.id === id ? { ...recipe, ...updates } : recipe
@@ -308,6 +312,7 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       
       // Then update backend
       const updatedRecipe = await recipeService.updateRecipe(id, updates);
+      console.log('✅ CONTEXT: Backend update successful, images:', updatedRecipe.images?.length || 0);
       
       // Update with the actual response from backend
       setRecipes(prev => prev.map(recipe => 

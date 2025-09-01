@@ -45,6 +45,7 @@ const EditRecipePage: React.FC = () => {
 
   useEffect(() => {
     if (recipe) {
+      console.log('🔄 EDIT: Loading recipe data, images:', recipe.images?.length || 0);
       setFormData({
         title: recipe.title,
         category: recipe.category,
@@ -55,6 +56,7 @@ const EditRecipePage: React.FC = () => {
       setImages(recipe.images || []);
       setAdditionalInstructions(recipe.additional_instructions || {});
       setAdditionalSections(recipe.additional_sections || {});
+      console.log('✅ EDIT: Recipe data loaded, images set to:', (recipe.images || []).length);
     }
   }, [recipe]);
 
@@ -231,13 +233,13 @@ const EditRecipePage: React.FC = () => {
   };
 
   const removeImage = (index: number) => {
-    console.log('🗑️ Removing image at index:', index);
+    console.log('🗑️ EDIT: Removing image at index:', index);
     setImages(prev => {
       const newImages = prev.filter((_, i) => i !== index);
-      console.log('📸 Images after removal:', newImages.length);
-      setHasUnsavedChanges(true);
+      console.log('📸 EDIT: Images after removal:', newImages.length);
       return newImages;
     });
+    setHasUnsavedChanges(true);
   };
 
   const handleSmartImageSelect = (imageUrl: string) => {
@@ -248,10 +250,10 @@ const EditRecipePage: React.FC = () => {
     
     setImages(prev => {
       const newImages = [...prev, imageUrl];
-      setHasUnsavedChanges(true); // Mark as unsaved for mobile
       return newImages;
     });
-    console.log('✨ Smart image added:', imageUrl);
+    setHasUnsavedChanges(true); // Mark as unsaved for mobile
+    console.log('✨ EDIT: Smart image added:', imageUrl);
   };
 
 
@@ -401,7 +403,7 @@ const EditRecipePage: React.FC = () => {
         ...formData,
         ingredients: filteredIngredients,
         directions: filteredDirections,
-        images: images,
+        images: images, // Ensure images array is properly passed
         difficulty: formData.difficulty || undefined,
         additional_instructions: additionalInstructions,
         additional_sections: filteredAdditionalSections
@@ -410,6 +412,7 @@ const EditRecipePage: React.FC = () => {
       try {
         console.log('🔄 EDIT: Updating recipe with images:', images.length);
         console.log('🔄 EDIT: Images data:', images.map(img => `${img.substring(0, 50)}...`));
+        console.log('🔄 EDIT: Full update object:', JSON.stringify(updatedRecipe, null, 2));
         
         await updateRecipe(recipe.id, updatedRecipe);
         

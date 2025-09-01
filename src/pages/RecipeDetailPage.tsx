@@ -255,59 +255,72 @@ const RecipeDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
-      <div className="max-w-5xl mx-auto px-2 sm:px-6 lg:px-8 py-6">
-        {/* Navigation */}
-        <div className="flex items-center justify-between mb-6">
-          <button
-            onClick={() => navigate(navigateToLastRecipesPage())}
-            className="group flex items-center space-x-2 rtl:space-x-reverse text-slate-600 hover:text-slate-900 transition-all duration-200"
-          >
-            <div className="p-2 rounded-xl bg-white/80 backdrop-blur-sm shadow-sm group-hover:shadow-md transition-all duration-200 border border-slate-200/50">
-              <ArrowRight className="h-5 w-5" />
-            </div>
-            <span className="font-medium">חזור</span>
-          </button>
-          
-          <div className="flex items-center space-x-3 rtl:space-x-reverse">
+      {/* Sticky Navigation Bar */}
+      <div className="sticky top-0 z-50 bg-gradient-to-br from-slate-50/95 via-white/95 to-slate-50/95 backdrop-blur-md border-b border-slate-200/50">
+        <div className="max-w-5xl mx-auto px-2 sm:px-6 lg:px-8 py-4">
+          <div className="flex items-center justify-between">
             <button
               onClick={() => {
-                const timerEvent = new CustomEvent('showTimer', {
-                  detail: { recipeName: recipe.title }
-                });
-                window.dispatchEvent(timerEvent);
+                // On mobile, always go back to the main recipes page to ensure proper navigation
+                const isMobile = window.innerWidth < 768;
+                if (isMobile) {
+                  navigate('/recipes', { replace: true });
+                } else {
+                  navigate(navigateToLastRecipesPage());
+                }
               }}
-              className="p-3 rounded-xl bg-white/80 backdrop-blur-sm text-slate-600 hover:text-orange-600 hover:bg-orange-50/80 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50"
-              title="טיימר בישול"
+              className="group flex items-center space-x-2 rtl:space-x-reverse text-slate-600 hover:text-slate-900 transition-all duration-200"
             >
-              <span className="text-lg">⏰</span>
+              <div className="p-2 rounded-xl bg-white/80 backdrop-blur-sm shadow-sm group-hover:shadow-md transition-all duration-200 border border-slate-200/50">
+                <ArrowRight className="h-5 w-5" />
+              </div>
+              <span className="font-medium">חזור</span>
             </button>
-            <button
-              onClick={resetProgress}
-              className="p-3 rounded-xl bg-white/80 backdrop-blur-sm text-slate-600 hover:text-blue-600 hover:bg-blue-50/80 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50"
-              title="איפוס התקדמות"
-            >
-              <RotateCcw className="h-5 w-5" />
-            </button>
-            <button
-              onClick={handleShare}
-              className="p-3 rounded-xl bg-white/80 backdrop-blur-sm text-slate-600 hover:text-slate-900 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50"
-            >
-              <Share2 className="h-5 w-5" />
-            </button>
-            <button
-              onClick={handleDelete}
-              className="p-3 rounded-xl bg-white/80 backdrop-blur-sm text-red-500 hover:text-red-600 hover:bg-red-50/80 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50"
-            >
-              <Trash2 className="h-5 w-5" />
-            </button>
-            <button
-              onClick={handleEdit}
-              className="p-3 rounded-xl bg-white/80 backdrop-blur-sm text-slate-600 hover:text-slate-900 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50"
-            >
-              <Edit className="h-5 w-5" />
-            </button>
+            
+            <div className="flex items-center space-x-2 sm:space-x-3 rtl:space-x-reverse">
+              <button
+                onClick={() => {
+                  const timerEvent = new CustomEvent('showTimer', {
+                    detail: { recipeName: recipe.title }
+                  });
+                  window.dispatchEvent(timerEvent);
+                }}
+                className="p-2 sm:p-3 rounded-xl bg-white/80 backdrop-blur-sm text-slate-600 hover:text-orange-600 hover:bg-orange-50/80 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50"
+                title="טיימר בישול"
+              >
+                <span className="text-base sm:text-lg">⏰</span>
+              </button>
+              <button
+                onClick={resetProgress}
+                className="p-2 sm:p-3 rounded-xl bg-white/80 backdrop-blur-sm text-slate-600 hover:text-blue-600 hover:bg-blue-50/80 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50"
+                title="איפוס התקדמות"
+              >
+                <RotateCcw className="h-4 w-4 sm:h-5 sm:w-5" />
+              </button>
+              <button
+                onClick={handleShare}
+                className="p-2 sm:p-3 rounded-xl bg-white/80 backdrop-blur-sm text-slate-600 hover:text-slate-900 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50"
+              >
+                <Share2 className="h-4 w-4 sm:h-5 sm:w-5" />
+              </button>
+              <button
+                onClick={handleDelete}
+                className="p-2 sm:p-3 rounded-xl bg-white/80 backdrop-blur-sm text-red-500 hover:text-red-600 hover:bg-red-50/80 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50"
+              >
+                <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
+              </button>
+              <button
+                onClick={handleEdit}
+                className="p-2 sm:p-3 rounded-xl bg-white/80 backdrop-blur-sm text-slate-600 hover:text-slate-900 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50"
+              >
+                <Edit className="h-4 w-4 sm:h-5 sm:w-5" />
+              </button>
+            </div>
           </div>
         </div>
+      </div>
+      
+      <div className="max-w-5xl mx-auto px-2 sm:px-6 lg:px-8 py-6">
 
         {/* Recipe Card */}
         <div className="bg-white/90 backdrop-blur-sm rounded-2xl shadow-xl overflow-hidden border border-slate-200/50">
@@ -609,7 +622,7 @@ const RecipeDetailPage: React.FC = () => {
             )}
           </div>
         </div>
-      </div>
+        </div>
 
       {/* Delete Confirmation Modal */}
       <DeleteConfirmationModal

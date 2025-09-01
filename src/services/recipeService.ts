@@ -360,11 +360,16 @@ export const recipeService = {
 
   // Update recipe
   async updateRecipe(id: string, updates: RecipeUpdate): Promise<Recipe> {
+    console.log('🔄 SERVICE: Updating recipe with ID:', id);
+    console.log('🔄 SERVICE: Images in update:', updates.images?.length || 0);
+    
     const isAvailable = await isAPIAvailable();
     
     if (isAvailable) {
       try {
-        console.log('Updating recipe via API');
+        console.log('🔄 SERVICE: Updating recipe via API');
+        console.log('🔄 SERVICE: Update payload:', JSON.stringify({...updates, images: updates.images ? `[${updates.images.length} images]` : 'none'}));
+        
         const response = await fetch(`/api/recipes/${id}`, {
           method: 'PUT',
           headers: {
@@ -410,7 +415,8 @@ export const recipeService = {
   async updateRecipeInLocalStorage(id: string, updates: RecipeUpdate): Promise<Recipe> {
     try {
       console.log(`🔍 UPDATE DEBUG: Starting update for recipe ID: "${id}"`);
-      console.log(`🔍 UPDATE DEBUG: Updates:`, JSON.stringify(updates));
+      console.log(`🔍 UPDATE DEBUG: Images in updates:`, updates.images?.length || 0);
+      console.log(`🔍 UPDATE DEBUG: Updates:`, JSON.stringify({...updates, images: updates.images ? `[${updates.images.length} images]` : 'none'}));
       
       // Get current recipes from localStorage
       let currentRecipes: Recipe[] = [];
@@ -471,6 +477,8 @@ export const recipeService = {
       
       console.log(`🔍 Recipe updated successfully: "${updatedRecipe.title}"`);
       console.log(`🔍 New favorite status: ${updatedRecipe.is_favorite}`);
+      console.log(`🔍 Images before update: ${existingRecipe.images?.length || 0}`);
+      console.log(`🔍 Images after update: ${updatedRecipe.images?.length || 0}`);
       
       // Replace the recipe in the array
       currentRecipes[recipeIndex] = updatedRecipe;
