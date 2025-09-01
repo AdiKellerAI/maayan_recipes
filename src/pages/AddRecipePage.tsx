@@ -8,6 +8,7 @@ import { Plus, X, Upload, Camera, Sparkles, Link } from 'lucide-react';
 import { compressImages } from '../utils/imageCompression';
 import SmartImageSearch from '../components/SmartImageSearch';
 import { recipeService } from '../services/recipeService';
+import { imageService, RecipeImage } from '../services/imageService';
 
 const AddRecipePage: React.FC = () => {
   const navigate = useNavigate();
@@ -20,7 +21,8 @@ const AddRecipePage: React.FC = () => {
   const [difficulty, setDifficulty] = useState<"קל" | "בינוני" | "קשה" | "">('');
   const [ingredients, setIngredients] = useState(['']);
   const [directions, setDirections] = useState(['']);
-  const [images, setImages] = useState<string[]>([]);
+  const [images, setImages] = useState<RecipeImage[]>([]);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [additionalInstructions, setAdditionalInstructions] = useState<{ [key: string]: string[] }>({});
   const [additionalSections, setAdditionalSections] = useState<{ [key: string]: RecipeSection }>({});
 
@@ -34,6 +36,11 @@ const AddRecipePage: React.FC = () => {
   const [showNewSectionModal, setShowNewSectionModal] = useState(false);
   const [newSectionNameWithIngredients, setNewSectionNameWithIngredients] = useState('');
   const [showSmartImageSearch, setShowSmartImageSearch] = useState(false);
+  
+  // Image upload states
+  const [isUploadingImages, setIsUploadingImages] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{ [key: string]: number }>({});
+  const [uploadStatus, setUploadStatus] = useState<string>('');
   
   // Refs for auto-focusing new input fields
   const ingredientRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -110,10 +117,10 @@ const AddRecipePage: React.FC = () => {
     setDirections(newDirections);
   };
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (files && files.length > 0) {
-      console.log('📸 Uploading images:', files.length);
+      console.log('📸 Processing images:', files.length);
       
       // Filter out non-image files (workaround for Android 14 compatibility)
       const imageFiles = Array.from(files).filter(file => {
@@ -137,55 +144,75 @@ const AddRecipePage: React.FC = () => {
       // Check if adding these images would exceed the 6 image limit
       if (images.length + imageFiles.length > 6) {
         alert(`ניתן להעלות עד 6 תמונות בלבד. כרגע יש לך ${images.length} תמונות ואתה מנסה להוסיף ${imageFiles.length} נוספות.`);
-        // Reset the input
         e.target.value = '';
         return;
       }
+
+      // Validate files
+      const validFiles: File[] = [];
+      const errors: string[] = [];
+
+      for (const file of imageFiles) {
+        const validation = imageService.validateFile(file);
+        if (validation.isValid) {
+          validFiles.push(file);
+        } else {
+          errors.push(`${file.name}: ${validation.errors.join(', ')}`);
+        }
+      }
+
+      if (errors.length > 0) {
+        alert(`Some files were invalid:\n${errors.join('\n')}`);
+      }
+
+      if (validFiles.length === 0) {
+        e.target.value = '';
+        return;
+      }
+
+      // Add files to state for later upload
+      setImageFiles(prev => [...prev, ...validFiles]);
       
-      // Show loading indicator for mobile
-      const loadingToast = setTimeout(() => {
-        console.log('📸 Processing images...');
-      }, 500);
+      // Create temporary preview images
+      const tempImages: RecipeImage[] = [];
+      for (const file of validFiles) {
+        const tempImage: RecipeImage = {
+          id: `temp-${Date.now()}-${Math.random()}`,
+          recipe_id: '',
+          filename: file.name,
+          file_path: '',
+          url: URL.createObjectURL(file),
+          image_type: 'gallery',
+          file_size: file.size,
+          mime_type: file.type,
+          alt_text: `תמונה זמנית: ${file.name}`,
+          width: 0,
+          height: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        };
+        tempImages.push(tempImage);
+      }
+
+      setImages(prev => [...prev, ...tempImages]);
       
-      // Convert Array to FileList-like object for compression
-      const fileList = imageFiles as unknown as FileList;
-      
-      compressImages(fileList) // Use HD quality compression
-        .then(compressedImages => {
-          clearTimeout(loadingToast);
-          console.log('✅ Images compressed successfully:', compressedImages.length);
-          setImages(prev => {
-            const newImages = [...prev, ...compressedImages];
-            console.log('📸 Total images after upload:', newImages.length);
-            return newImages.slice(0, 6); // Ensure we never exceed 6 images
-          });
-          // Reset the input to allow selecting the same file again if needed
-          e.target.value = '';
-        })
-        .catch(error => {
-          clearTimeout(loadingToast);
-          console.error('❌ Error compressing images:', error);
-          const errorMessage = error.message || 'שגיאה בדחיסת התמונות. אנא נסה שוב.';
-          
-          // Provide more specific error messages for mobile users
-          if (errorMessage.includes('timed out')) {
-            alert('עיבוד התמונה נמשך יותר מדי. אנא נסה תמונה קטנה יותר או בפורמט JPG/PNG.');
-          } else if (errorMessage.includes('Failed to load image')) {
-            alert('לא ניתן לטעון את התמונה. אנא נסה פורמט אחר (JPG, PNG) או תמונה אחרת.');
-          } else if (errorMessage.includes('גדול מדי')) {
-            alert('התמונה גדולה מדי. אנא בחר תמונה קטנה יותר (עד 10MB).');
-          } else {
-            alert(errorMessage);
-          }
-          
-          // Reset the input
-          e.target.value = '';
-        });
+      // Reset the input
+      e.target.value = '';
     }
   };
 
   const removeImage = (index: number) => {
     console.log('🗑️ Removing image at index:', index);
+    const imageToRemove = images[index];
+    
+    // If it's a temporary image, remove from imageFiles as well
+    if (imageToRemove.id.startsWith('temp-')) {
+      const tempIndex = imageFiles.findIndex(file => file.name === imageToRemove.filename);
+      if (tempIndex !== -1) {
+        setImageFiles(prev => prev.filter((_, i) => i !== tempIndex));
+      }
+    }
+    
     setImages(prev => {
       const newImages = prev.filter((_, i) => i !== index);
       console.log('📸 Images after removal:', newImages.length);
@@ -199,8 +226,94 @@ const AddRecipePage: React.FC = () => {
       return;
     }
     
-    setImages(prev => [...prev, imageUrl]);
+    // Create a temporary image from URL
+    const tempImage: RecipeImage = {
+      id: `temp-url-${Date.now()}`,
+      recipe_id: '',
+      filename: 'smart-image.jpg',
+      file_path: '',
+      url: imageUrl,
+      image_type: 'gallery',
+      file_size: 0,
+      mime_type: 'image/jpeg',
+      alt_text: 'תמונה מחפש חכם',
+      width: 0,
+      height: 0,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    };
+    
+    setImages(prev => [...prev, tempImage]);
     console.log('✨ Smart image added:', imageUrl);
+  };
+
+  // Upload images to server
+  const uploadImagesToServer = async (recipeId: string): Promise<RecipeImage[]> => {
+    if (imageFiles.length === 0) {
+      return images.filter(img => !img.id.startsWith('temp-'));
+    }
+
+    setIsUploadingImages(true);
+    setUploadStatus('מעלה תמונות...');
+    
+    // Initialize progress for each file
+    const progress: { [key: string]: number } = {};
+    imageFiles.forEach(file => {
+      progress[file.name] = 0;
+    });
+    setUploadProgress(progress);
+    
+    try {
+      // Simulate progress updates
+      const progressInterval = setInterval(() => {
+        setUploadProgress(prev => {
+          const newProgress = { ...prev };
+          Object.keys(newProgress).forEach(filename => {
+            if (newProgress[filename] < 90) {
+              newProgress[filename] += Math.random() * 10;
+            }
+          });
+          return newProgress;
+        });
+      }, 200);
+
+      const response = await imageService.uploadImages(recipeId, imageFiles, 'gallery');
+      
+      clearInterval(progressInterval);
+      
+      // Set all progress to 100%
+      setUploadProgress(prev => {
+        const newProgress = { ...prev };
+        Object.keys(newProgress).forEach(filename => {
+          newProgress[filename] = 100;
+        });
+        return newProgress;
+      });
+      
+      if (response.success) {
+        setUploadStatus(`הועלו ${response.uploaded_count} תמונות בהצלחה`);
+        
+        // Replace temporary images with uploaded ones
+        const uploadedImages = response.images;
+        const existingImages = images.filter(img => !img.id.startsWith('temp-'));
+        
+        return [...existingImages, ...uploadedImages];
+      } else {
+        throw new Error('Failed to upload images');
+      }
+    } catch (error) {
+      console.error('Error uploading images:', error);
+      setUploadStatus('שגיאה בהעלאת התמונות');
+      throw error;
+    } finally {
+      setIsUploadingImages(false);
+      setImageFiles([]);
+      // Clear progress after a delay
+      setTimeout(() => {
+        setUploadProgress({});
+        setUploadStatus('');
+      }, 2000);
+    }
   };
 
 
@@ -610,6 +723,7 @@ const AddRecipePage: React.FC = () => {
       }
 
       setIsSaving(true);
+      setUploadStatus('שומר מתכון...');
       
       try {
         // Filter additional sections to only include non-empty ones
@@ -631,7 +745,7 @@ const AddRecipePage: React.FC = () => {
           difficulty: difficulty || undefined,
           ingredients: filteredIngredients,
           directions: filteredDirections,
-          images,
+          images: [], // We'll handle images separately
           additional_instructions: Object.keys(additionalInstructions).length > 0 ? additionalInstructions : undefined,
           additional_sections: filteredAdditionalSections,
           is_favorite: false
@@ -642,39 +756,35 @@ const AddRecipePage: React.FC = () => {
         const savedRecipe = await addRecipe(newRecipe);
         console.log('✅ Recipe saved successfully:', savedRecipe);
         
-        // Verify that the recipe was saved correctly, especially images
-        if (images.length > 0) {
-          console.log('🔍 ADD: Verifying image save...');
+        // Upload images after recipe is saved
+        if (imageFiles.length > 0) {
           try {
-            const verification = await recipeService.verifyRecipeUpdate(savedRecipe.id, images);
+            const uploadedImages = await uploadImagesToServer(savedRecipe.id);
+            console.log('✅ Images uploaded successfully:', uploadedImages.length);
+            setUploadStatus(`הועלו ${uploadedImages.length} תמונות בהצלחה`);
             
-            if (!verification.success) {
-              console.warn('⚠️ ADD: Image save verification failed:', verification.message);
-              
-              // Check if we're on mobile and show appropriate message
-              const isMobile = window.innerWidth < 768;
-              if (isMobile) {
-                alert(`המתכון נשמר במכשיר, אך יש בעיה עם התמונות במאגר הנתונים.\n\nהמתכון יסונכרן אוטומטית כשהחיבור יחזור.`);
-              } else {
-                alert(`המתכון נשמר, אך יש בעיה עם התמונות במאגר הנתונים.\n\nהמתכון נשמר במכשיר ויסונכרן כשהחיבור יחזור.`);
-              }
-            } else {
-              console.log('✅ ADD: Image save verified successfully');
+            // Show success message
+            setUploadStatus('המתכון נשמר בהצלחה!');
+            setTimeout(() => {
               alert('המתכון נשמר בהצלחה!');
-            }
-          } catch (verifyError) {
-            console.warn('⚠️ ADD: Verification failed:', verifyError);
+            }, 500);
+          } catch (uploadError) {
+            console.error('❌ Error uploading images:', uploadError);
+            setUploadStatus('שגיאה בהעלאת התמונות');
             
-            // Check if we're on mobile and show appropriate message
+            // Show warning but continue
             const isMobile = window.innerWidth < 768;
             if (isMobile) {
-              alert('המתכון נשמר במכשיר, אך לא ניתן לוודא שהתמונות נשמרו במאגר הנתונים.\n\nהמתכון יסונכרן אוטומטית כשהחיבור יחזור.');
+              alert('המתכון נשמר במכשיר, אך יש בעיה עם התמונות במאגר הנתונים.\n\nהמתכון יסונכרן אוטומטית כשהחיבור יחזור.');
             } else {
-              alert('המתכון נשמר, אך לא ניתן לוודא שהתמונות נשמרו במאגר הנתונים.\n\nהמתכון נשמר במכשיר ויסונכרן כשהחיבור יחזור.');
+              alert('המתכון נשמר, אך יש בעיה עם התמונות במאגר הנתונים.\n\nהמתכון נשמר במכשיר ויסונכרן כשהחיבור יחזור.');
             }
           }
         } else {
-          alert('המתכון נשמר בהצלחה!');
+          setUploadStatus('המתכון נשמר בהצלחה!');
+          setTimeout(() => {
+            alert('המתכון נשמר בהצלחה!');
+          }, 500);
         }
         
         // Force refresh recipes in context to ensure the new recipe is visible
@@ -684,6 +794,15 @@ const AddRecipePage: React.FC = () => {
         navigate(`/recipe/${savedRecipe.id}`);
         
         console.log('✅ Recipe submission completed successfully');
+        
+        // Reset saving state
+        setIsSaving(false);
+        
+        // Clear status after navigation
+        setTimeout(() => {
+          setUploadStatus('');
+          setUploadProgress({});
+        }, 1000);
         
       } catch (error) {
         console.error('❌ Error adding recipe:', error);
@@ -700,10 +819,19 @@ const AddRecipePage: React.FC = () => {
           }
         }
         
-        alert(errorMessage);
+        setUploadStatus(`שגיאה: ${errorMessage}`);
+        setTimeout(() => {
+          alert(errorMessage);
+        }, 500);
         
         // Reset saving state
         setIsSaving(false);
+        
+        // Clear status
+        setTimeout(() => {
+          setUploadStatus('');
+          setUploadProgress({});
+        }, 2000);
       }
     });
   };
@@ -1187,7 +1315,7 @@ const AddRecipePage: React.FC = () => {
                     {images.map((image, index) => (
                       <div key={index} className="relative group">
                         <img
-                          src={image}
+                          src={image.url}
                           alt={`תמונה ${index + 1}`}
                           className="w-full h-24 object-cover rounded-lg transition-all duration-200"
                         />
@@ -1226,18 +1354,49 @@ const AddRecipePage: React.FC = () => {
               </button>
             </div>
 
+            {/* Upload Status */}
+            {(isUploadingImages || uploadStatus) && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center gap-3">
+                  {isUploadingImages && (
+                    <div className="animate-spin rounded-full h-5 w-5 border-2 border-blue-600 border-t-transparent"></div>
+                  )}
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-blue-800">
+                      {uploadStatus || 'מעבד תמונות...'}
+                    </p>
+                    {Object.keys(uploadProgress).length > 0 && (
+                      <div className="mt-2 space-y-1">
+                        {Object.entries(uploadProgress).map(([filename, progress]) => (
+                          <div key={filename} className="flex items-center gap-2">
+                            <div className="flex-1 bg-blue-200 rounded-full h-2">
+                              <div 
+                                className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                                style={{ width: `${progress}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-blue-600">{filename}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Submit Section */}
             <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-lg border border-gray-200">
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   type="submit"
-                  disabled={isSaving}
+                  disabled={isSaving || isUploadingImages}
                   className="flex-1 bg-gradient-to-r from-orange-500 to-rose-500 text-white py-3 px-6 rounded-lg hover:from-orange-600 hover:to-rose-600 transition-all duration-200 font-semibold disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
                 >
-                  {isSaving ? (
+                  {isSaving || isUploadingImages ? (
                     <>
                       <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                      <span>שומר מתכון...</span>
+                      <span>{isUploadingImages ? 'מעלה תמונות...' : 'שומר מתכון...'}</span>
                     </>
                   ) : (
                     <>
