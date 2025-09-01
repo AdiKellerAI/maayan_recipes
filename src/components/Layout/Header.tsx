@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Heart, Plus, Filter, Menu, X, ChefHat, Database, Shield, ShieldCheck } from 'lucide-react';
+import { Search, Heart, Plus, Filter, Menu, X, ChefHat, Database, Shield, ShieldCheck, Trash2 } from 'lucide-react';
 import { useRecipes } from '../../contexts/RecipeContext';
 import { useProtectedAction } from '../../hooks/useProtectedAction';
 import { useAuth } from '../../contexts/AuthContext';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { clearAllMemory } from '../../utils/storage';
 
 const Header: React.FC = () => {
   const { 
@@ -27,6 +28,8 @@ const Header: React.FC = () => {
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isClearingMemory, setIsClearingMemory] = useState(false);
+  const [memoryCleanupMessage, setMemoryCleanupMessage] = useState<string | null>(null);
   const navigate = useNavigate();
   const { executeProtectedAction } = useProtectedAction();
   const { isAuthenticated } = useAuth();
@@ -175,9 +178,40 @@ const Header: React.FC = () => {
     }
   };
 
+  const handleMemoryCleanup = async () => {
+    if (!window.confirm('האם אתה בטוח שברצונך לנקות את כל הזיכרון? פעולה זו תמחק את כל הנתונים השמורים מקומית ותאפס את האתר.')) {
+      return;
+    }
+
+    setIsClearingMemory(true);
+    setMemoryCleanupMessage(null);
+    
+    try {
+      const result = await clearAllMemory();
+      
+      if (result.success) {
+        setMemoryCleanupMessage(result.message);
+        console.log('🧹 Memory cleanup completed:', result.clearedItems);
+        
+        // Refresh the page after a short delay to ensure all caches are cleared
+        setTimeout(() => {
+          window.location.reload();
+        }, 2000);
+      } else {
+        setMemoryCleanupMessage(result.message);
+        console.error('❌ Memory cleanup failed');
+      }
+    } catch (error) {
+      console.error('❌ Error during memory cleanup:', error);
+      setMemoryCleanupMessage('שגיאה בניקוי הזיכרון. נסה שוב.');
+    } finally {
+      setIsClearingMemory(false);
+    }
+  };
+
   return (
     <>
-      <header className="bg-white shadow-sm sticky top-0 z-50 border-b border-gray-200">
+      <header className="bg-white shadow-sm sticky top-0 z-[9997] border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Menu Button - Left side for both mobile and desktop */}
@@ -297,12 +331,12 @@ const Header: React.FC = () => {
           <>
             {/* Backdrop */}
             <div 
-              className="fixed inset-0 bg-black bg-opacity-50 z-40"
+              className="fixed inset-0 bg-black bg-opacity-50 z-[99998]"
               onClick={() => setIsMenuOpen(false)}
             />
             
             {/* Sidebar */}
-            <div className="fixed top-0 right-0 w-56 bg-gradient-to-b from-white via-gray-50 to-white shadow-xl z-50 transform transition-transform duration-300 ease-in-out rounded-l-2xl border-l border-gray-200">
+            <div className="fixed top-0 right-0 w-56 bg-gradient-to-b from-white via-gray-50 to-white shadow-xl z-[99999] transform transition-transform duration-300 ease-in-out rounded-l-2xl border-l border-gray-200">
               {/* Header */}
               <div className="flex items-center justify-between p-2 border-b border-gray-200">
                 <h2 className="text-base font-bold text-black">תפריט</h2>
@@ -496,6 +530,49 @@ const Header: React.FC = () => {
                         </button>
                       )}
                     </div>
+                    
+                    {/* Memory Cleanup Button */}
+                    <div className="w-full flex items-center justify-between py-1.5 px-2.5">
+                      <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                        <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
+                          isClearingMemory 
+                            ? 'bg-gray-400' 
+                            : 'bg-gradient-to-br from-gray-500 to-slate-600'
+                        }`}>
+                          <Trash2 className="h-2.5 w-2.5 text-white" />
+                        </div>
+                        <span className="text-xs font-medium text-black">
+                          {isClearingMemory ? 'מנקה...' : 'ניקוי זיכרון'}
+                        </span>
+                      </div>
+                      
+                      {/* Memory Cleanup Button */}
+                      <button
+                        onClick={handleMemoryCleanup}
+                        disabled={isClearingMemory}
+                        className={`${
+                          isClearingMemory
+                            ? 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'
+                            : 'bg-gradient-to-br from-gray-500/80 to-slate-600/80 border border-gray-400/80 text-white hover:from-gray-600/80 hover:to-slate-700/80 transition-all duration-300 shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95'
+                        } px-3 py-0 rounded-md font-medium flex items-center justify-center`}
+                        style={{
+                          height: '24px',
+                          fontSize: '0.75rem',
+                          lineHeight: '1.2',
+                          minHeight: '24px'
+                        }}
+                        title="נקה את כל הזיכרון המקומי"
+                      >
+                        {isClearingMemory ? 'מנקה...' : 'נקה'}
+                      </button>
+                    </div>
+                    
+                    {/* Memory Cleanup Message */}
+                    {memoryCleanupMessage && (
+                      <div className="px-2.5 py-1.5 bg-blue-50 border border-blue-200 rounded-lg mt-1">
+                        <p className="text-xs text-blue-700 font-medium">{memoryCleanupMessage}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
