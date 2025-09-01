@@ -244,6 +244,7 @@ const AddRecipePage: React.FC = () => {
     };
     
     setImages(prev => [...prev, tempImage]);
+    setShowSmartImageSearch(false); // Close the modal after selecting an image
     console.log('✨ Smart image added:', imageUrl);
   };
 

@@ -372,7 +372,8 @@ const SmartImageSearch: React.FC<SmartImageSearchProps> = ({
   const handleImageSelect = (image: RecipeImage) => {
     // Use the main URL which is optimized for web display
     onImageSelect(image.url);
-    onClose();
+    // Don't close the modal automatically - let the parent component handle it
+    // onClose(); // Removed to prevent navigation away from edit page
   };
 
   return (
@@ -431,6 +432,12 @@ const SmartImageSearch: React.FC<SmartImageSearchProps> = ({
                 className="px-4 py-2 bg-blue-100 text-blue-700 rounded-md hover:bg-blue-200 transition-colors text-sm font-medium"
               >
                 {debugInfo.showDebug ? '📖 הסתר מידע' : '📖 מידע'}
+              </button>
+              <button
+                onClick={onClose}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm font-medium"
+              >
+                סגור
               </button>
             </div>
           )}
@@ -572,7 +579,13 @@ const SmartImageSearch: React.FC<SmartImageSearchProps> = ({
           {isLoading && (
             <div className="text-center py-6">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-2"></div>
-              <p className="text-gray-600 text-sm">מחפש תמונות מתאימות...</p>
+              <p className="text-gray-600 text-sm mb-3">מחפש תמונות מתאימות...</p>
+              <button
+                onClick={onClose}
+                className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm font-medium"
+              >
+                סגור
+              </button>
             </div>
           )}
 
@@ -580,12 +593,20 @@ const SmartImageSearch: React.FC<SmartImageSearchProps> = ({
           {error && (
             <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
               <p className="text-red-800 text-sm mb-1">{error}</p>
-              <button
-                onClick={searchImages}
-                className="text-red-600 hover:text-red-700 underline text-sm"
-              >
-                נסה שוב
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={searchImages}
+                  className="text-red-600 hover:text-red-700 underline text-sm"
+                >
+                  נסה שוב
+                </button>
+                <button
+                  onClick={onClose}
+                  className="text-gray-600 hover:text-gray-700 underline text-sm"
+                >
+                  סגור
+                </button>
+              </div>
             </div>
           )}
 
@@ -650,12 +671,20 @@ const SmartImageSearch: React.FC<SmartImageSearchProps> = ({
               <p className="text-gray-600 text-sm mb-3">
                 לא נמצאו תמונות עם רלוונטיות 90%+ למתכון שלך. המערכת מציגה רק תמונות איכותיות ומתאימות במיוחד.
               </p>
-              <button
-                onClick={searchImages}
-                className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors text-sm font-medium"
-              >
-                חפש שוב
-              </button>
+              <div className="flex justify-center gap-3">
+                <button
+                  onClick={searchImages}
+                  className="px-3 py-1.5 bg-purple-100 text-purple-700 rounded-md hover:bg-purple-200 transition-colors text-sm font-medium"
+                >
+                  חפש שוב
+                </button>
+                <button
+                  onClick={onClose}
+                  className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm font-medium"
+                >
+                  סגור
+                </button>
+              </div>
             </div>
           )}
 
