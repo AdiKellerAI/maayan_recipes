@@ -673,27 +673,28 @@ const EditRecipePage: React.FC = () => {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-orange-100/50 overflow-hidden">
           {/* Header Section */}
-          <div className="bg-gradient-to-r from-orange-500 to-rose-500 px-8 py-4 relative overflow-hidden">
+          <div className="bg-gradient-to-r from-orange-500 to-rose-500 px-6 py-4 relative overflow-hidden">
             <div className="absolute inset-0 bg-white/10 backdrop-blur-sm"></div>
-            <div className="relative flex justify-between items-center">
-              <div className="flex items-center gap-4">
-                <div>
-                  <h1 className="text-3xl font-bold text-white">עריכת מתכון</h1>
-                </div>
-              </div>
+            <div className="relative">
               <button
                 type="button"
                 onClick={handleClose}
-                className="bg-white/20 backdrop-blur-sm text-white p-1.5 rounded-lg hover:bg-white/30 transition-all duration-300 border border-white/30"
+                className="absolute top-1/2 -translate-y-1/2 left-0 bg-white/20 backdrop-blur-sm text-white p-1.5 rounded-lg hover:bg-white/30 transition-all duration-300 border border-white/30"
                 title="סגור"
                 disabled={isNavigating}
               >
                 <X className="h-4 w-4" />
               </button>
+              <div className="flex flex-col gap-1">
+                <h1 className="text-lg font-medium text-white/90">עריכת מתכון</h1>
+                <h2 className="text-2xl font-bold text-white/90 leading-tight transition-all duration-300 ease-in-out">
+                  {formData.title || 'מתכון חדש'}
+                </h2>
+              </div>
             </div>
           </div>
           
-          <div className="p-6">
+          <div className="p-8">
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Basic Information Section */}
               <div className="bg-gradient-to-r from-orange-50 to-rose-50 p-4 rounded-lg border border-orange-200">
@@ -703,7 +704,9 @@ const EditRecipePage: React.FC = () => {
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1.5">
-                    <label htmlFor="title" className="block text-xs font-medium text-gray-600">
+                    <label htmlFor="title" className={`block text-xs font-medium transition-colors duration-200 ${
+                      formData.title ? 'text-orange-600' : 'text-gray-600'
+                    }`}>
                       שם המתכון
                     </label>
                     <input
@@ -713,7 +716,10 @@ const EditRecipePage: React.FC = () => {
                       value={formData.title}
                       onChange={handleInputChange}
                       required
-                      className="w-full p-2 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-orange-300 focus:border-orange-400 transition-all duration-150 text-sm"
+                      className={`w-full p-2 bg-white border rounded-md focus:ring-1 focus:ring-orange-300 focus:border-orange-400 transition-all duration-150 text-sm ${
+                        formData.title ? 'border-orange-300 bg-orange-50/30' : 'border-gray-200'
+                      }`}
+                      placeholder="הקלד את שם המתכון..."
                     />
                   </div>
 

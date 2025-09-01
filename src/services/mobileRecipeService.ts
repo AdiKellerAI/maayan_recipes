@@ -175,14 +175,21 @@ class MobileRecipeService {
               const blob = new Blob([byteArray], { type: 'image/jpeg' });
               const file = new File([blob], `recipe_${i}.jpg`, { type: 'image/jpeg' });
               
+              console.log(`📱 Mobile: Processing image ${i + 1}/${recipe.images.length} (${Math.round(file.size / 1024)}KB)`);
+              
               // Save using mobile image service
               const imageId = await mobileImageService.saveImage(file, recipeId);
               if (imageId && imageId !== 'placeholder') {
                 processedImages.push(imageId);
+                console.log(`✅ Mobile: Image ${i + 1} saved successfully`);
+              } else {
+                console.warn(`⚠️ Mobile: Image ${i + 1} failed to save, using placeholder`);
+                processedImages.push('placeholder');
               }
             } catch (error) {
               console.warn(`⚠️ Mobile: Failed to process image ${i}:`, error);
-              // Continue with other images
+              // Use placeholder for failed images
+              processedImages.push('placeholder');
             }
           } else {
             // Keep external URLs
@@ -190,7 +197,7 @@ class MobileRecipeService {
           }
         }
         
-        console.log(`📱 Mobile: Successfully processed ${processedImages.length} images`);
+        console.log(`📱 Mobile: Successfully processed ${processedImages.filter(img => img !== 'placeholder').length}/${recipe.images.length} images`);
       }
 
       // Create recipe object
@@ -443,6 +450,8 @@ class MobileRecipeService {
 
       // Handle image updates
       if (updates.images) {
+        console.log(`📱 Mobile: Updating ${updates.images.length} images for recipe ${id}...`);
+        
         // Process new images
         const processedImages: string[] = [];
         for (let i = 0; i < updates.images.length; i++) {
@@ -463,13 +472,21 @@ class MobileRecipeService {
               const blob = new Blob([byteArray], { type: 'image/jpeg' });
               const file = new File([blob], `recipe_${i}.jpg`, { type: 'image/jpeg' });
               
+              console.log(`📱 Mobile: Processing updated image ${i + 1}/${updates.images.length} (${Math.round(file.size / 1024)}KB)`);
+              
               // Save using mobile image service
               const imageId = await mobileImageService.saveImage(file, id);
               if (imageId && imageId !== 'placeholder') {
                 processedImages.push(imageId);
+                console.log(`✅ Mobile: Updated image ${i + 1} saved successfully`);
+              } else {
+                console.warn(`⚠️ Mobile: Updated image ${i + 1} failed to save, using placeholder`);
+                processedImages.push('placeholder');
               }
             } catch (error) {
               console.warn(`⚠️ Mobile: Failed to process updated image ${i}:`, error);
+              // Use placeholder for failed images
+              processedImages.push('placeholder');
             }
           } else {
             processedImages.push(imageData);
@@ -477,6 +494,7 @@ class MobileRecipeService {
         }
         
         updatedRecipe.images = processedImages;
+        console.log(`📱 Mobile: Successfully processed ${processedImages.filter(img => img !== 'placeholder').length}/${updates.images.length} updated images`);
       }
 
       // Save updated recipe

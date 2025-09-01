@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { mobileRecipeService } from '../services/mobileRecipeService';
 import { mobileImageService } from '../services/mobileImageService';
-import { Trash2, Database, HardDrive, AlertTriangle, CheckCircle, Info } from 'lucide-react';
+import { mobileRecipeService } from '../services/mobileRecipeService';
 
 interface StorageStats {
   totalRecipes: number;
@@ -11,39 +10,20 @@ interface StorageStats {
   strategy: string;
 }
 
-interface ImageStats {
-  totalImages: number;
-  indexedDBImages: number;
-  localStorageImages: number;
-  placeholderImages: number;
-}
-
 const MobileStorageStatus: React.FC = () => {
   const [storageStats, setStorageStats] = useState<StorageStats | null>(null);
-  const [imageStats, setImageStats] = useState<ImageStats | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isCleaning, setIsCleaning] = useState(false);
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  const [isLoading, setIsLoading] = useState(false);
+  const [showDetails, setShowDetails] = useState(false);
 
   useEffect(() => {
     loadStorageStats();
-    const interval = setInterval(loadStorageStats, 30000); // Update every 30 seconds
-    return () => clearInterval(interval);
   }, []);
 
   const loadStorageStats = async () => {
     try {
       setIsLoading(true);
-      
-      // Get recipe storage stats
-      const recipeStats = await mobileRecipeService.getStorageStats();
-      setStorageStats(recipeStats);
-      
-      // Get image storage stats
-      const imageStats = await getImageStorageStats();
-      setImageStats(imageStats);
-      
-      setLastUpdate(new Date());
+      const stats = await mobileRecipeService.getStorageStats();
+      setStorageStats(stats);
     } catch (error) {
       console.error('Failed to load storage stats:', error);
     } finally {
@@ -51,253 +31,164 @@ const MobileStorageStatus: React.FC = () => {
     }
   };
 
-  const getImageStorageStats = async (): Promise<ImageStats> => {
-    try {
-      const recipes = await mobileRecipeService.getAllRecipes();
-      let indexedDBImages = 0;
-      let localStorageImages = 0;
-      let placeholderImages = 0;
-
-      for (const recipe of recipes) {
-        for (const image of recipe.images) {
-          if (image === 'placeholder') {
-            placeholderImages++;
-          } else if (image.startsWith('mobile_')) {
-            indexedDBImages++;
-          } else {
-            localStorageImages++;
-          }
-        }
-      }
-
-      return {
-        totalImages: indexedDBImages + localStorageImages + placeholderImages,
-        indexedDBImages,
-        localStorageImages,
-        placeholderImages
-      };
-    } catch (error) {
-      console.error('Failed to get image stats:', error);
-      return {
-        totalImages: 0,
-        indexedDBImages: 0,
-        localStorageImages: 0,
-        placeholderImages: 0
-      };
-    }
-  };
-
   const cleanupOldData = async () => {
     try {
-      setIsCleaning(true);
+      setIsLoading(true);
       
-      // Clean up old recipes
-      const deletedRecipes = await mobileRecipeService['cleanupOldData']();
+      // Clean up old images (older than 7 days)
+      const imagesCleaned = await mobileImageService.cleanupOldImages(7 * 24 * 60 * 60 * 1000);
       
-      // Clean up old images
-      const deletedImages = await mobileImageService.cleanupOldImages();
+      // Clean up old recipes (older than 30 days)
+      const recipesCleaned = await mobileRecipeService.cleanupOldData();
       
       // Reload stats
       await loadStorageStats();
       
-      alert(`ניקוי הושלם בהצלחה!\nנמחקו ${deletedRecipes} מתכונים ו-${deletedImages} תמונות ישנות.`);
+      alert(`ניקוי הושלם בהצלחה!\nתמונות שנמחקו: ${imagesCleaned}\nמתכונים שנמחקו: ${recipesCleaned}`);
     } catch (error) {
       console.error('Failed to cleanup old data:', error);
-      alert('שגיאה בניקוי הנתונים הישנים. אנא נסה שוב.');
+      alert('שגיאה בניקוי הנתונים הישנים');
     } finally {
-      setIsCleaning(false);
+      setIsLoading(false);
     }
   };
 
-  const getStorageUsagePercentage = () => {
-    if (!storageStats) return 0;
-    return Math.round((storageStats.localStorageUsed / (storageStats.localStorageUsed + storageStats.localStorageRemaining)) * 100);
-  };
+  const clearAllData = async () => {
+    if (!confirm('האם אתה בטוח שברצונך למחוק את כל הנתונים המקומיים? פעולה זו אינה הפיכה!')) {
+      return;
+    }
 
-  const getStorageStatusColor = () => {
-    const percentage = getStorageUsagePercentage();
-    if (percentage > 80) return 'text-red-500';
-    if (percentage > 60) return 'text-yellow-500';
-    return 'text-green-500';
-  };
-
-  const getStorageStatusIcon = () => {
-    const percentage = getStorageUsagePercentage();
-    if (percentage > 80) return <AlertTriangle className="w-5 h-5 text-red-500" />;
-    if (percentage > 60) return <AlertTriangle className="w-5 h-5 text-yellow-500" />;
-    return <CheckCircle className="w-5 h-5 text-green-500" />;
-  };
-
-  const formatBytes = (bytes: number): string => {
-    if (bytes === 0) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const getStrategyDescription = (strategy: string): string => {
-    switch (strategy) {
-      case 'images_indexeddb_metadata_localstorage':
-        return 'תמונות ב-IndexedDB, מטא-דאטה ב-localStorage';
-      case 'fallback_localstorage':
-        return 'כל הנתונים ב-localStorage';
-      case 'fallback_placeholder':
-        return 'מטא-דאטה בלבד עם תמונות placeholder';
-      default:
-        return 'לא ידוע';
+    try {
+      setIsLoading(true);
+      
+      // Clear all localStorage
+      localStorage.clear();
+      
+      // Clear IndexedDB
+      if (window.indexedDB) {
+        const deleteRequest = indexedDB.deleteDatabase('MaayanRecipesImages');
+        deleteRequest.onsuccess = () => {
+          console.log('IndexedDB cleared successfully');
+        };
+      }
+      
+      // Reload stats
+      await loadStorageStats();
+      
+      alert('כל הנתונים המקומיים נמחקו בהצלחה!');
+    } catch (error) {
+      console.error('Failed to clear all data:', error);
+      alert('שגיאה במחיקת כל הנתונים');
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  if (isLoading) {
+  if (!storageStats) {
     return (
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-          <span className="ml-3 text-gray-600">טוען סטטוס אחסון...</span>
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <div className="w-4 h-4 bg-blue-500 rounded-full animate-pulse"></div>
+            <span className="text-blue-800 font-medium">טוען סטטוס אחסון...</span>
+          </div>
         </div>
       </div>
     );
   }
 
-  if (!storageStats || !imageStats) {
-    return (
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="flex items-center text-red-500">
-          <AlertTriangle className="w-5 h-5 mr-2" />
-          <span>לא ניתן לטעון סטטוס האחסון</span>
-        </div>
-      </div>
-    );
-  }
+  const localStorageUsagePercent = Math.round((storageStats.localStorageUsed / (5 * 1024 * 1024)) * 100);
+  const isStorageLow = localStorageUsagePercent > 80;
 
   return (
-    <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-semibold text-gray-800 flex items-center">
-          <HardDrive className="w-5 h-5 mr-2 text-orange-500" />
-          סטטוס אחסון במובייל
+    <div className={`border rounded-lg p-4 mb-4 ${isStorageLow ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
+      <div className="flex items-center justify-between mb-3">
+        <h3 className={`font-medium ${isStorageLow ? 'text-red-800' : 'text-green-800'}`}>
+          📱 סטטוס אחסון מובייל
         </h3>
         <button
-          onClick={loadStorageStats}
-          className="text-orange-500 hover:text-orange-600 text-sm"
+          onClick={() => setShowDetails(!showDetails)}
+          className="text-sm text-gray-600 hover:text-gray-800"
         >
-          רענן
+          {showDetails ? 'הסתר פרטים' : 'הצג פרטים'}
         </button>
       </div>
 
-      {/* Storage Usage Bar */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm text-gray-600">שימוש באחסון</span>
-          <span className={`text-sm font-medium ${getStorageStatusColor()}`}>
-            {getStorageUsagePercentage()}%
+      <div className="space-y-2">
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-gray-600">מתכונים:</span>
+          <span className="font-medium">{storageStats.totalRecipes}</span>
+        </div>
+        
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-gray-600">תמונות:</span>
+          <span className="font-medium">{storageStats.totalImages}</span>
+        </div>
+        
+        <div className="flex justify-between items-center">
+          <span className="text-sm text-gray-600">אסטרטגיה:</span>
+          <span className="font-medium text-xs bg-gray-100 px-2 py-1 rounded">
+            {storageStats.strategy === 'images_indexeddb_metadata_localstorage' ? 'IndexedDB + localStorage' :
+             storageStats.strategy === 'fallback_localstorage' ? 'localStorage בלבד' :
+             storageStats.strategy === 'fallback_placeholder' ? 'מקום מוגבל' : 'לא ידוע'}
           </span>
         </div>
-        <div className="w-full bg-gray-200 rounded-full h-2">
-          <div
-            className={`h-2 rounded-full transition-all duration-300 ${
-              getStorageUsagePercentage() > 80 ? 'bg-red-500' :
-              getStorageUsagePercentage() > 60 ? 'bg-yellow-500' : 'bg-green-500'
-            }`}
-            style={{ width: `${getStorageUsagePercentage()}%` }}
-          ></div>
-        </div>
-        <div className="flex items-center justify-between mt-1">
-          <span className="text-xs text-gray-500">
-            {formatBytes(storageStats.localStorageUsed)} בשימוש
-          </span>
-          <span className="text-xs text-gray-500">
-            {formatBytes(storageStats.localStorageRemaining)} פנוי
-          </span>
-        </div>
-      </div>
 
-      {/* Storage Strategy */}
-      <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-        <div className="flex items-center mb-2">
-          <Database className="w-4 h-4 mr-2 text-blue-500" />
-          <span className="text-sm font-medium text-gray-700">אסטרטגיית אחסון</span>
-        </div>
-        <p className="text-sm text-gray-600">
-          {getStrategyDescription(storageStats.strategy)}
-        </p>
-      </div>
-
-      {/* Statistics Grid */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <div className="text-center p-3 bg-orange-50 rounded-lg">
-          <div className="text-2xl font-bold text-orange-600">{storageStats.totalRecipes}</div>
-          <div className="text-xs text-orange-600">מתכונים</div>
-        </div>
-        <div className="text-center p-3 bg-blue-50 rounded-lg">
-          <div className="text-2xl font-bold text-blue-600">{imageStats.totalImages}</div>
-          <div className="text-xs text-blue-600">תמונות</div>
-        </div>
-      </div>
-
-      {/* Image Storage Breakdown */}
-      {imageStats.totalImages > 0 && (
-        <div className="mb-6">
-          <h4 className="text-sm font-medium text-gray-700 mb-3">פירוט אחסון תמונות</h4>
-          <div className="space-y-2">
-            {imageStats.indexedDBImages > 0 && (
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">ב-IndexedDB</span>
-                <span className="font-medium text-blue-600">{imageStats.indexedDBImages}</span>
-              </div>
-            )}
-            {imageStats.localStorageImages > 0 && (
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">ב-localStorage</span>
-                <span className="font-medium text-orange-600">{imageStats.localStorageImages}</span>
-              </div>
-            )}
-            {imageStats.placeholderImages > 0 && (
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-gray-600">Placeholder</span>
-                <span className="font-medium text-gray-500">{imageStats.placeholderImages}</span>
-              </div>
-            )}
+        {showDetails && (
+          <div className="mt-3 pt-3 border-t border-gray-200 space-y-2">
+            <div className="flex justify-between items-center">
+              <span className="text-sm text-gray-600">אחסון localStorage:</span>
+              <span className="font-medium">
+                {Math.round(storageStats.localStorageUsed / 1024)}KB / 5MB
+              </span>
+            </div>
+            
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div 
+                className={`h-2 rounded-full ${isStorageLow ? 'bg-red-500' : 'bg-green-500'}`}
+                style={{ width: `${localStorageUsagePercent}%` }}
+              ></div>
+            </div>
+            
+            <div className="flex justify-between items-center text-xs text-gray-500">
+              <span>{localStorageUsagePercent}% בשימוש</span>
+              <span>{Math.round(storageStats.localStorageRemaining / 1024)}KB פנוי</span>
+            </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* Actions */}
-      <div className="flex flex-col space-y-3">
+      <div className="mt-4 flex space-x-2 space-x-reverse">
         <button
           onClick={cleanupOldData}
-          disabled={isCleaning}
-          className="flex items-center justify-center px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          disabled={isLoading}
+          className="px-3 py-2 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 disabled:opacity-50"
         >
-          {isCleaning ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              מנקה...
-            </>
-          ) : (
-            <>
-              <Trash2 className="w-4 h-4 mr-2" />
-              נקה נתונים ישנים
-            </>
-          )}
+          {isLoading ? 'מנקה...' : 'נקה נתונים ישנים'}
+        </button>
+        
+        <button
+          onClick={clearAllData}
+          disabled={isLoading}
+          className="px-3 py-2 bg-red-500 text-white text-sm rounded hover:bg-red-600 disabled:opacity-50"
+        >
+          {isLoading ? 'מוחק...' : 'מחק הכל'}
         </button>
         
         <button
           onClick={loadStorageStats}
-          className="flex items-center justify-center px-4 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors"
+          disabled={isLoading}
+          className="px-3 py-2 bg-gray-500 text-white text-sm rounded hover:bg-gray-600 disabled:opacity-50"
         >
-          <Info className="w-4 h-4 mr-2" />
-          עדכן סטטוס
+          {isLoading ? 'מעדכן...' : 'רענן'}
         </button>
       </div>
 
-      {/* Last Update */}
-      <div className="mt-4 text-center">
-        <span className="text-xs text-gray-500">
-          עודכן לאחרונה: {lastUpdate.toLocaleTimeString('he-IL')}
-        </span>
-      </div>
+      {isStorageLow && (
+        <div className="mt-3 p-3 bg-red-100 border border-red-300 rounded text-red-800 text-sm">
+          ⚠️ האחסון המקומי כמעט מלא. מומלץ לנקות נתונים ישנים או למחוק מתכונים לא נחוצים.
+        </div>
+      )}
     </div>
   );
 };
