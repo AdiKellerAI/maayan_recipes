@@ -31,6 +31,16 @@ const Header: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isClearingMemory, setIsClearingMemory] = useState(false);
   const [memoryCleanupMessage, setMemoryCleanupMessage] = useState<string | null>(null);
+  
+  // Global flag to prevent API calls during memory cleanup
+  useEffect(() => {
+    if (isClearingMemory) {
+      // Set a global flag to prevent API calls
+      (window as any).__isClearingMemory = true;
+    } else {
+      (window as any).__isClearingMemory = false;
+    }
+  }, [isClearingMemory]);
   const navigate = useNavigate();
   const { executeProtectedAction } = useProtectedAction();
   const { isAuthenticated } = useAuth();
@@ -61,6 +71,29 @@ const Header: React.FC = () => {
   useEffect(() => {
     const checkConnectionAndSync = async () => {
       try {
+        // Check if we're in the middle of memory cleanup
+        if ((window as any).__isClearingMemory) {
+          console.log('⚠️ AUTO-SYNC: Memory cleanup in progress, skipping sync');
+          return;
+        }
+        
+        // First check if API is available
+        try {
+          const testResponse = await fetch('/api/test-connection', {
+            method: 'GET',
+            headers: { 'Content-Type': 'application/json' },
+            signal: AbortSignal.timeout(5000)
+          });
+          
+          if (!testResponse.ok) {
+            console.log('⚠️ AUTO-SYNC: API not available, skipping sync');
+            return;
+          }
+        } catch (testError) {
+          console.log('⚠️ AUTO-SYNC: API test failed, skipping sync:', testError);
+          return;
+        }
+        
         // Check if we have any fallback recipes to sync
         const fallbackRecipes = JSON.parse(localStorage.getItem('fallback_recipes') || '[]');
         const recipesToSync = fallbackRecipes.filter((recipe: any) => recipe.id?.startsWith('fallback-'));
@@ -72,9 +105,23 @@ const Header: React.FC = () => {
           const result = await recipeService.syncLocalStorageToServer();
           
           if (result.synced > 0) {
-            console.log(`✅ AUTO-SYNC: Successfully synced ${result.synced} recipes`);
+            let logMessage = `✅ AUTO-SYNC: Successfully synced ${result.synced} recipes`;
+            if (result.imagesSynced > 0) {
+              logMessage += ` and ${result.imagesSynced} images`;
+            }
+            console.log(logMessage);
             // Refresh recipes to show the synced ones
             await refreshRecipes();
+          }
+          
+          // Also sync images for existing recipes
+          try {
+            const imageResult = await recipeService.syncImagesOnly();
+            if (imageResult.synced > 0) {
+              console.log(`✅ AUTO-SYNC: Successfully synced ${imageResult.synced} additional images`);
+            }
+          } catch (imageError) {
+            console.warn('⚠️ AUTO-SYNC: Failed to sync additional images:', imageError);
           }
         }
       } catch (error) {
@@ -152,50 +199,68 @@ const Header: React.FC = () => {
   const handleDatabaseConnect = async () => {
     if (isConnecting) return;
     
+    // Check if we're in the middle of memory cleanup
+    if ((window as any).__isClearingMemory) {
+      console.log('⚠️ Database connection: Memory cleanup in progress, skipping connection attempt');
+      return;
+    }
+    
     setIsConnecting(true);
     console.log('🔄 Attempting to reconnect to database...');
     
     try {
       // Strategy 1: Use the new reconnect endpoint for force reconnection
       console.log('🔄 Strategy 1: Force reconnection...');
-      const reconnectResponse = await fetch('/api/reconnect', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: AbortSignal.timeout(10000)
-      });
-      
-      if (reconnectResponse.ok) {
-        const result = await reconnectResponse.json();
-        console.log('📊 Reconnection result:', result);
+      try {
+        const reconnectResponse = await fetch('/api/reconnect', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(10000)
+        });
         
-        if (result.connected) {
-          console.log('✅ Database reconnection successful!');
-          await refreshRecipes(true);
-          alert('חיבור למאגר המידע הושלם בהצלחה!');
-          return;
+        if (reconnectResponse.ok) {
+          const result = await reconnectResponse.json();
+          console.log('📊 Reconnection result:', result);
+          
+          if (result.connected) {
+            console.log('✅ Database reconnection successful!');
+            await refreshRecipes(true);
+            alert('חיבור למאגר המידע הושלם בהצלחה!');
+            return;
+          }
+        } else {
+          console.warn('⚠️ Reconnect endpoint returned status:', reconnectResponse.status);
         }
+      } catch (reconnectError) {
+        console.warn('⚠️ Reconnect endpoint failed:', reconnectError);
       }
       
       // Strategy 2: Test connection with extended timeout
       console.log('🔄 Strategy 2: Connection test with extended timeout...');
       await new Promise(resolve => setTimeout(resolve, 1000));
       
-      const testResponse = await fetch('/api/test-connection', {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-        signal: AbortSignal.timeout(15000)
-      });
-      
-      if (testResponse.ok) {
-        const result = await testResponse.json();
-        console.log('📊 Connection test result:', result);
+      try {
+        const testResponse = await fetch('/api/test-connection', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(15000)
+        });
         
-        if (result.connected) {
-          console.log('✅ Database connection successful via test!');
-          await refreshRecipes(true);
-          alert('חיבור למאגר המידע הושלם בהצלחה!');
-          return;
+        if (testResponse.ok) {
+          const result = await testResponse.json();
+          console.log('📊 Connection test result:', result);
+          
+          if (result.connected) {
+            console.log('✅ Database connection successful via test!');
+            await refreshRecipes(true);
+            alert('חיבור למאגר המידע הושלם בהצלחה!');
+            return;
+          }
+        } else {
+          console.warn('⚠️ Test connection endpoint returned status:', testResponse.status);
         }
+      } catch (testError) {
+        console.warn('⚠️ Test connection endpoint failed:', testError);
       }
       
       // Strategy 3: Force refresh recipes even if connection fails
@@ -229,39 +294,89 @@ const Header: React.FC = () => {
     setMemoryCleanupMessage(null);
     
     try {
+      // Close the menu first to prevent any navigation issues
+      setIsMenuOpen(false);
+      
+      // Set global flag to prevent API calls
+      (window as any).__isClearingMemory = true;
+      
       const result = await clearAllMemory();
       
       if (result.success) {
         setMemoryCleanupMessage(result.message);
         console.log('🧹 Memory cleanup completed:', result.clearedItems);
         
-        // Refresh the page after a short delay to ensure all caches are cleared
+        // Show success message briefly before reload
         setTimeout(() => {
-          window.location.reload();
-        }, 2000);
+          setMemoryCleanupMessage('מעמיס מחדש את האתר...');
+          
+          // Use a shorter delay and ensure clean reload
+          setTimeout(() => {
+            // Clear any remaining state before reload
+            setIsClearingMemory(false);
+            setMemoryCleanupMessage(null);
+            (window as any).__isClearingMemory = false;
+            
+            // Force a clean page reload with cache busting
+            const timestamp = Date.now();
+            window.location.href = `${window.location.origin}${window.location.pathname}?t=${timestamp}`;
+          }, 1000);
+        }, 1000);
       } else {
         setMemoryCleanupMessage(result.message);
         console.error('❌ Memory cleanup failed');
+        (window as any).__isClearingMemory = false;
       }
     } catch (error) {
       console.error('❌ Error during memory cleanup:', error);
       setMemoryCleanupMessage('שגיאה בניקוי הזיכרון. נסה שוב.');
+      (window as any).__isClearingMemory = false;
     } finally {
       setIsClearingMemory(false);
     }
   };
 
   const handleSyncRecipes = async () => {
+    // Check if we're in the middle of memory cleanup
+    if ((window as any).__isClearingMemory) {
+      console.log('⚠️ Manual sync: Memory cleanup in progress, skipping sync');
+      return;
+    }
+    
     setIsConnecting(true);
     setMemoryCleanupMessage(null);
     
     try {
       console.log('🔄 Manual sync initiated...');
+      
+      // Check if API is available before attempting sync
+      try {
+        const testResponse = await fetch('/api/test-connection', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(5000)
+        });
+        
+        if (!testResponse.ok) {
+          setMemoryCleanupMessage('מאגר המידע לא זמין כרגע');
+          console.warn('⚠️ API not available for sync');
+          return;
+        }
+      } catch (testError) {
+        setMemoryCleanupMessage('מאגר המידע לא זמין כרגע');
+        console.warn('⚠️ API test failed:', testError);
+        return;
+      }
+      
       const result = await recipeService.syncLocalStorageToServer();
       
       if (result.synced > 0) {
-        setMemoryCleanupMessage(`סנכרן ${result.synced} מתכונים בהצלחה!`);
-        console.log(`✅ Manual sync completed: ${result.synced} recipes synced`);
+        let message = `סנכרן ${result.synced} מתכונים בהצלחה!`;
+        if (result.imagesSynced > 0) {
+          message += ` (${result.imagesSynced} תמונות)`;
+        }
+        setMemoryCleanupMessage(message);
+        console.log(`✅ Manual sync completed: ${result.synced} recipes synced, ${result.imagesSynced} images synced`);
         
         // Refresh recipes to show the synced ones
         await refreshRecipes();
@@ -275,6 +390,90 @@ const Header: React.FC = () => {
     } catch (error) {
       console.error('❌ Error during manual sync:', error);
       setMemoryCleanupMessage('שגיאה בסנכרון המתכונים');
+    } finally {
+      setIsConnecting(false);
+      
+      // Clear message after delay
+      setTimeout(() => {
+        setMemoryCleanupMessage(null);
+      }, 3000);
+    }
+  };
+
+  const handleSyncData = async () => {
+    // Check if we're in the middle of memory cleanup
+    if ((window as any).__isClearingMemory) {
+      console.log('⚠️ Data sync: Memory cleanup in progress, skipping sync');
+      return;
+    }
+    
+    setIsConnecting(true);
+    setMemoryCleanupMessage(null);
+    
+    try {
+      console.log('🔄 Manual data sync initiated...');
+      
+      // Check if API is available before attempting sync
+      try {
+        const testResponse = await fetch('/api/test-connection', {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+          signal: AbortSignal.timeout(5000)
+        });
+        
+        if (!testResponse.ok) {
+          setMemoryCleanupMessage('מאגר המידע לא זמין כרגע');
+          console.warn('⚠️ API not available for sync');
+          return;
+        }
+      } catch (testError) {
+        setMemoryCleanupMessage('מאגר המידע לא זמין כרגע');
+        console.warn('⚠️ API test failed:', testError);
+        return;
+      }
+      
+      // Step 1: Sync recipes from localStorage
+      console.log('🔄 Step 1: Syncing recipes from localStorage...');
+      const recipeResult = await recipeService.syncLocalStorageToServer();
+      
+      let totalSynced = recipeResult.synced;
+      let totalImagesSynced = recipeResult.imagesSynced;
+      let totalErrors = recipeResult.errors;
+      
+      // Step 2: Sync images for existing recipes
+      console.log('🖼️ Step 2: Syncing images for existing recipes...');
+      const imageResult = await recipeService.syncImagesOnly();
+      
+      totalImagesSynced += imageResult.synced;
+      totalErrors += imageResult.errors;
+      
+      // Show results
+      if (totalSynced > 0 || totalImagesSynced > 0) {
+        let message = '';
+        if (totalSynced > 0) {
+          message += `סנכרן ${totalSynced} מתכונים`;
+        }
+        if (totalImagesSynced > 0) {
+          if (message) message += ' ו';
+          message += `${totalImagesSynced} תמונות`;
+        }
+        message += ' בהצלחה!';
+        
+        setMemoryCleanupMessage(message);
+        console.log(`✅ Manual data sync completed: ${totalSynced} recipes, ${totalImagesSynced} images synced`);
+        
+        // Refresh recipes to show the synced data
+        await refreshRecipes();
+      } else if (totalErrors > 0) {
+        setMemoryCleanupMessage(`שגיאה בסנכרון ${totalErrors} פריטים`);
+        console.error(`❌ Manual data sync failed: ${totalErrors} errors`);
+      } else {
+        setMemoryCleanupMessage('אין נתונים לסנכרון');
+        console.log('ℹ️ Manual data sync: No data to sync');
+      }
+    } catch (error) {
+      console.error('❌ Error during manual data sync:', error);
+      setMemoryCleanupMessage('שגיאה בסנכרון הנתונים');
     } finally {
       setIsConnecting(false);
       
@@ -599,7 +798,8 @@ const Header: React.FC = () => {
                             height: '24px',
                             fontSize: '0.75rem',
                             lineHeight: '1.2',
-                            minHeight: '24px'
+                            minHeight: '24px',
+                            width: '60px'
                           }}
                         >
                           כניסה
@@ -622,9 +822,9 @@ const Header: React.FC = () => {
                         </span>
                       </div>
                       
-                      {/* Sync Recipes Button */}
+                      {/* Sync Data Button */}
                       <button
-                        onClick={handleSyncRecipes}
+                        onClick={handleSyncData}
                         disabled={isConnecting}
                         className={`${
                           isConnecting
@@ -638,7 +838,7 @@ const Header: React.FC = () => {
                           minHeight: '24px',
                           width: '60px'
                         }}
-                        title="סנכרן מתכונים לשרת"
+                        title="סנכרן נתונים ותמונות לשרת"
                       >
                         {isConnecting ? 'מסנכרן...' : 'סנכרן'}
                       </button>

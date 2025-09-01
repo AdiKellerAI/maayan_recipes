@@ -1,6 +1,7 @@
 import { cacheManager, CACHE_KEYS } from '../lib/cache';
 import { sampleRecipes } from '../data/sampleRecipes';
 import type { Recipe, RecipeInsert, RecipeUpdate } from '../types/recipe';
+import { imageService } from './imageService';
 
 // Convert database row to Recipe type
 const mapRowToRecipe = (row: any): Recipe => ({
@@ -21,6 +22,12 @@ const mapRowToRecipe = (row: any): Recipe => ({
 
 // Check if API server and PostgreSQL are available
 const isAPIAvailable = async (): Promise<boolean> => {
+  // Check if we're in the middle of memory cleanup
+  if ((window as any).__isClearingMemory) {
+    console.log('⚠️ SERVICE: Memory cleanup in progress, skipping API check');
+    return false;
+  }
+  
   try {
     console.log('🔍 SERVICE: Testing API connection...');
     
@@ -371,22 +378,36 @@ export const recipeService = {
   },
 
   // Sync localStorage recipes to server when connection is restored
-  async syncLocalStorageToServer(): Promise<{ synced: number; errors: number }> {
+  async syncLocalStorageToServer(): Promise<{ synced: number; errors: number; imagesSynced: number }> {
     try {
       console.log('🔄 SYNC: Attempting to sync localStorage recipes to server...');
+      
+      // Check if we're in the middle of memory cleanup
+      if ((window as any).__isClearingMemory) {
+        console.log('⚠️ SYNC: Memory cleanup in progress, skipping sync');
+        return { synced: 0, errors: 0, imagesSynced: 0 };
+      }
+      
+      // First check if API is available
+      const isAvailable = await isAPIAvailable();
+      if (!isAvailable) {
+        console.log('⚠️ SYNC: API not available, skipping sync');
+        return { synced: 0, errors: 0, imagesSynced: 0 };
+      }
       
       const fallbackRecipes = getFallbackRecipes();
       const recipesToSync = fallbackRecipes.filter(recipe => recipe.id.startsWith('fallback-'));
       
       if (recipesToSync.length === 0) {
         console.log('✅ SYNC: No recipes to sync');
-        return { synced: 0, errors: 0 };
+        return { synced: 0, errors: 0, imagesSynced: 0 };
       }
       
       console.log(`🔄 SYNC: Found ${recipesToSync.length} recipes to sync`);
       
       let synced = 0;
       let errors = 0;
+      let imagesSynced = 0;
       
       for (const recipe of recipesToSync) {
         try {
@@ -404,22 +425,38 @@ export const recipeService = {
             is_favorite: recipe.is_favorite
           };
           
-          // Try to save to server
-          const response = await fetch('/api/recipes', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(recipeInsert),
-            signal: AbortSignal.timeout(10000)
-          });
-          
-          if (response.ok) {
-            const savedRecipe = await response.json();
-            console.log(`✅ SYNC: Recipe "${recipe.title}" synced with ID: ${savedRecipe.id}`);
-            synced++;
-          } else {
-            console.error(`❌ SYNC: Failed to sync recipe "${recipe.title}": ${response.status}`);
+          // Try to save to server with better error handling
+          try {
+            const response = await fetch('/api/recipes', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(recipeInsert),
+              signal: AbortSignal.timeout(10000)
+            });
+            
+            if (response.ok) {
+              const savedRecipe = await response.json();
+              console.log(`✅ SYNC: Recipe "${recipe.title}" synced with ID: ${savedRecipe.id}`);
+              synced++;
+              
+              // Sync images if the recipe has any
+              if (recipe.images && recipe.images.length > 0) {
+                try {
+                  const imageSyncResult = await this.syncRecipeImages(savedRecipe.id, recipe.images);
+                  imagesSynced += imageSyncResult.synced;
+                  console.log(`🖼️ SYNC: Synced ${imageSyncResult.synced} images for recipe "${recipe.title}"`);
+                } catch (imageError) {
+                  console.warn(`⚠️ SYNC: Failed to sync images for recipe "${recipe.title}":`, imageError);
+                }
+              }
+            } else {
+              console.error(`❌ SYNC: Failed to sync recipe "${recipe.title}": ${response.status} ${response.statusText}`);
+              errors++;
+            }
+          } catch (fetchError) {
+            console.error(`❌ SYNC: Network error syncing recipe "${recipe.title}":`, fetchError);
             errors++;
           }
         } catch (error) {
@@ -435,11 +472,135 @@ export const recipeService = {
         console.log(`✅ SYNC: Removed ${synced} synced recipes from localStorage`);
       }
       
-      console.log(`✅ SYNC: Completed - ${synced} synced, ${errors} errors`);
-      return { synced, errors };
+      console.log(`✅ SYNC: Completed - ${synced} recipes synced, ${errors} errors, ${imagesSynced} images synced`);
+      return { synced, errors, imagesSynced };
       
     } catch (error) {
       console.error('❌ SYNC: Failed to sync recipes:', error);
+      return { synced: 0, errors: 1, imagesSynced: 0 };
+    }
+  },
+
+  // Sync images for a specific recipe
+  async syncRecipeImages(recipeId: string, images: string[]): Promise<{ synced: number; errors: number }> {
+    try {
+      console.log(`🖼️ SYNC: Attempting to sync ${images.length} images for recipe ${recipeId}...`);
+      
+      let synced = 0;
+      let errors = 0;
+      
+      for (const imageData of images) {
+        try {
+          // Check if this is a base64 image that needs to be uploaded
+          if (imageData.startsWith('data:image/')) {
+            // Convert base64 to file
+            const file = this.base64ToFile(imageData, `recipe_${recipeId}_${Date.now()}.jpg`);
+            
+            // Use imageService to upload the image
+            try {
+              const uploadResult = await imageService.uploadImages(recipeId, [file], 'gallery');
+              
+              if (uploadResult.success && uploadResult.uploaded_count > 0) {
+                console.log(`✅ SYNC: Image uploaded successfully for recipe ${recipeId}`);
+                synced += uploadResult.uploaded_count;
+              } else {
+                console.error(`❌ SYNC: Failed to upload image for recipe ${recipeId}:`, uploadResult.errors);
+                errors++;
+              }
+            } catch (uploadError) {
+              console.error(`❌ SYNC: Upload error for recipe ${recipeId}:`, uploadError);
+              errors++;
+            }
+          } else {
+            // This is already a URL, no need to sync
+            console.log(`ℹ️ SYNC: Image already synced (URL): ${imageData.substring(0, 50)}...`);
+          }
+        } catch (imageError) {
+          console.error(`❌ SYNC: Error syncing image for recipe ${recipeId}:`, imageError);
+          errors++;
+        }
+      }
+      
+      console.log(`🖼️ SYNC: Image sync completed for recipe ${recipeId} - ${synced} synced, ${errors} errors`);
+      return { synced, errors };
+      
+    } catch (error) {
+      console.error(`❌ SYNC: Failed to sync images for recipe ${recipeId}:`, error);
+      return { synced: 0, errors: 1 };
+    }
+  },
+
+  // Helper function to convert base64 to file
+  base64ToFile(base64: string, filename: string): File {
+    // Remove data URL prefix if present
+    const base64String = base64.replace(/^data:image\/[a-z]+;base64,/, '');
+    
+    // Convert to blob
+    const byteCharacters = atob(base64String);
+    const byteNumbers = new Array(byteCharacters.length);
+    
+    for (let i = 0; i < byteCharacters.length; i++) {
+      byteNumbers[i] = byteCharacters.charCodeAt(i);
+    }
+    
+    const byteArray = new Uint8Array(byteNumbers);
+    const blob = new Blob([byteArray], { type: 'image/jpeg' });
+    
+    return new File([blob], filename, { type: 'image/jpeg' });
+  },
+
+  // Sync only images for existing recipes
+  async syncImagesOnly(): Promise<{ synced: number; errors: number }> {
+    try {
+      console.log('🖼️ SYNC: Attempting to sync images for existing recipes...');
+      
+      // Check if we're in the middle of memory cleanup
+      if ((window as any).__isClearingMemory) {
+        console.log('⚠️ SYNC: Memory cleanup in progress, skipping image sync');
+        return { synced: 0, errors: 0 };
+      }
+      
+      // First check if API is available
+      const isAvailable = await isAPIAvailable();
+      if (!isAvailable) {
+        console.log('⚠️ SYNC: API not available, skipping image sync');
+        return { synced: 0, errors: 0 };
+      }
+      
+      // Get all recipes from server
+      const allRecipes = await this.getAllRecipes();
+      let totalImagesSynced = 0;
+      let totalErrors = 0;
+      
+      for (const recipe of allRecipes) {
+        if (recipe.images && recipe.images.length > 0) {
+          // Check if any images are base64 (need to be synced)
+          const base64Images = recipe.images.filter(img => img.startsWith('data:image/'));
+          
+          if (base64Images.length > 0) {
+            console.log(`🖼️ SYNC: Found ${base64Images.length} base64 images for recipe "${recipe.title}"`);
+            
+            try {
+              const imageSyncResult = await this.syncRecipeImages(recipe.id, base64Images);
+              totalImagesSynced += imageSyncResult.synced;
+              totalErrors += imageSyncResult.errors;
+              
+              if (imageSyncResult.synced > 0) {
+                console.log(`✅ SYNC: Synced ${imageSyncResult.synced} images for recipe "${recipe.title}"`);
+              }
+            } catch (imageError) {
+              console.warn(`⚠️ SYNC: Failed to sync images for recipe "${recipe.title}":`, imageError);
+              totalErrors++;
+            }
+          }
+        }
+      }
+      
+      console.log(`🖼️ SYNC: Image sync completed - ${totalImagesSynced} images synced, ${totalErrors} errors`);
+      return { synced: totalImagesSynced, errors: totalErrors };
+      
+    } catch (error) {
+      console.error('❌ SYNC: Failed to sync images:', error);
       return { synced: 0, errors: 1 };
     }
   },
