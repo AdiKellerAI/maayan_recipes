@@ -47,9 +47,23 @@ const RecipeDetailPage: React.FC = () => {
   const [touchStart, setTouchStart] = React.useState<number | null>(null);
   const [touchEnd, setTouchEnd] = React.useState<number | null>(null);
   
+  // Scroll state for sticky navigation
+  const [isScrolled, setIsScrolled] = React.useState(false);
+  
   // Scroll to top when component mounts
   React.useEffect(() => {
     window.scrollTo(0, 0);
+  }, []);
+
+  // Handle scroll to show/hide compact navigation
+  React.useEffect(() => {
+    const handleScroll = () => {
+      const scrollTop = window.scrollY;
+      setIsScrolled(scrollTop > 100);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   const recipe = recipes.find(r => r.id === id);
@@ -255,24 +269,37 @@ const RecipeDetailPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
-      {/* Sticky Navigation Bar */}
-      <div className="sticky top-0 z-50 bg-gradient-to-br from-slate-50/95 via-white/95 to-slate-50/95 backdrop-blur-md border-b border-slate-200/50">
-        <div className="max-w-5xl mx-auto px-2 sm:px-6 lg:px-8 py-4">
+      {/* Sticky Navigation Bar - Dynamic based on scroll */}
+      <div className={`sticky top-16 z-[9990] bg-gradient-to-br from-slate-50/95 via-white/95 to-slate-50/95 backdrop-blur-md border-b border-slate-200/50 transition-all duration-300 ${
+        isScrolled ? 'shadow-lg' : ''
+      }`}>
+        <div className={`max-w-5xl mx-auto px-2 sm:px-6 lg:px-8 transition-all duration-300 ${
+          isScrolled ? 'py-2' : 'py-4'
+        }`}>
           <div className="flex items-center justify-between">
+            {/* Back Button - Always visible */}
             <button
               onClick={() => {
                 // Always go back to the last recipes page, regardless of device
                 navigate(navigateToLastRecipesPage());
               }}
-              className="group flex items-center space-x-2 rtl:space-x-reverse text-slate-600 hover:text-slate-900 transition-all duration-200"
+              className={`group flex items-center space-x-2 rtl:space-x-reverse text-slate-600 hover:text-slate-900 transition-all duration-200 ${
+                isScrolled ? 'space-x-1 rtl:space-x-reverse' : ''
+              }`}
             >
-              <div className="p-2 rounded-xl bg-white/80 backdrop-blur-sm shadow-sm group-hover:shadow-md transition-all duration-200 border border-slate-200/50">
-                <ArrowRight className="h-5 w-5" />
+              <div className={`rounded-xl bg-white/80 backdrop-blur-sm shadow-sm group-hover:shadow-md transition-all duration-200 border border-slate-200/50 ${
+                isScrolled ? 'p-1.5' : 'p-2'
+              }`}>
+                <ArrowRight className={`${isScrolled ? 'h-4 w-4' : 'h-5 w-5'}`} />
               </div>
-              <span className="font-medium">חזור</span>
+              {!isScrolled && <span className="font-medium">חזור</span>}
             </button>
             
-            <div className="flex items-center space-x-2 sm:space-x-3 rtl:space-x-reverse">
+            {/* Action Buttons */}
+            <div className={`flex items-center rtl:space-x-reverse transition-all duration-300 ${
+              isScrolled ? 'space-x-1 sm:space-x-2' : 'space-x-2 sm:space-x-3'
+            }`}>
+              {/* Timer Button */}
               <button
                 onClick={() => {
                   const timerEvent = new CustomEvent('showTimer', {
@@ -280,35 +307,56 @@ const RecipeDetailPage: React.FC = () => {
                   });
                   window.dispatchEvent(timerEvent);
                 }}
-                className="p-2 sm:p-3 rounded-xl bg-white/80 backdrop-blur-sm text-slate-600 hover:text-orange-600 hover:bg-orange-50/80 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50"
+                className={`rounded-xl bg-white/80 backdrop-blur-sm text-slate-600 hover:text-orange-600 hover:bg-orange-50/80 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50 ${
+                  isScrolled ? 'p-1.5' : 'p-2 sm:p-3'
+                }`}
                 title="טיימר בישול"
               >
-                <span className="text-base sm:text-lg">⏰</span>
+                <span className={`${isScrolled ? 'text-sm' : 'text-base sm:text-lg'}`}>⏰</span>
               </button>
+
+              {/* Reset Progress Button */}
               <button
                 onClick={resetProgress}
-                className="p-2 sm:p-3 rounded-xl bg-white/80 backdrop-blur-sm text-slate-600 hover:text-blue-600 hover:bg-blue-50/80 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50"
+                className={`rounded-xl bg-white/80 backdrop-blur-sm text-slate-600 hover:text-blue-600 hover:bg-blue-50/80 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50 ${
+                  isScrolled ? 'p-1.5' : 'p-2 sm:p-3'
+                }`}
                 title="איפוס התקדמות"
               >
-                <RotateCcw className="h-4 w-4 sm:h-5 sm:w-5" />
+                <RotateCcw className={`${isScrolled ? 'h-3.5 w-3.5' : 'h-4 w-4 sm:h-5 sm:w-5'}`} />
               </button>
+
+              {/* Share Button */}
               <button
                 onClick={handleShare}
-                className="p-2 sm:p-3 rounded-xl bg-white/80 backdrop-blur-sm text-slate-600 hover:text-slate-900 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50"
+                className={`rounded-xl bg-white/80 backdrop-blur-sm text-slate-600 hover:text-slate-900 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50 ${
+                  isScrolled ? 'p-1.5' : 'p-2 sm:p-3'
+                }`}
+                title="שיתוף מתכון"
               >
-                <Share2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                <Share2 className={`${isScrolled ? 'h-3.5 w-3.5' : 'h-4 w-4 sm:h-5 sm:w-5'}`} />
               </button>
+
+              {/* Delete Button */}
               <button
                 onClick={handleDelete}
-                className="p-2 sm:p-3 rounded-xl bg-white/80 backdrop-blur-sm text-red-500 hover:text-red-600 hover:bg-red-50/80 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50"
+                className={`rounded-xl bg-white/80 backdrop-blur-sm text-red-500 hover:text-red-600 hover:bg-red-50/80 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50 ${
+                  isScrolled ? 'p-1.5' : 'p-2 sm:p-3'
+                }`}
+                title="מחיקת מתכון"
               >
-                <Trash2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                <Trash2 className={`${isScrolled ? 'h-3.5 w-3.5' : 'h-4 w-4 sm:h-5 sm:w-5'}`} />
               </button>
+
+              {/* Edit Button */}
               <button
                 onClick={handleEdit}
-                className="p-2 sm:p-3 rounded-xl bg-white/80 backdrop-blur-sm text-slate-600 hover:text-slate-900 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50"
+                className={`rounded-xl bg-white/80 backdrop-blur-sm text-slate-600 hover:text-slate-900 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50 ${
+                  isScrolled ? 'p-1.5' : 'p-2 sm:p-3'
+                }`}
+                title="עריכת מתכון"
               >
-                <Edit className="h-4 w-4 sm:h-5 sm:w-5" />
+                <Edit className={`${isScrolled ? 'h-3.5 w-3.5' : 'h-4 w-4 sm:h-5 sm:w-5'}`} />
               </button>
             </div>
           </div>
