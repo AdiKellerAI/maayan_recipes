@@ -76,25 +76,25 @@ const RecipeDetailPage: React.FC = () => {
   const additionalColorSchemes = [
     {
       containerBg: 'from-rose-50/60 via-white to-pink-50/40',
-      containerBorder: 'border-rose-200/40',
+      containerBorder: 'border-rose-300/70',
       subBg: 'from-rose-50/50 to-pink-50/30',
       subBorder: 'border-rose-200/30'
     },
     {
       containerBg: 'from-blue-50/60 via-white to-sky-50/40',
-      containerBorder: 'border-blue-200/40',
+      containerBorder: 'border-blue-300/70',
       subBg: 'from-blue-50/50 to-sky-50/30',
       subBorder: 'border-blue-200/30'
     },
     {
       containerBg: 'from-emerald-50/60 via-white to-teal-50/40',
-      containerBorder: 'border-emerald-200/40',
+      containerBorder: 'border-emerald-300/70',
       subBg: 'from-emerald-50/50 to-teal-50/30',
       subBorder: 'border-emerald-200/30'
     },
     {
       containerBg: 'from-violet-50/60 via-white to-purple-50/40',
-      containerBorder: 'border-violet-200/40',
+      containerBorder: 'border-violet-300/70',
       subBg: 'from-violet-50/50 to-purple-50/30',
       subBorder: 'border-violet-200/30'
     }
@@ -372,7 +372,7 @@ const RecipeDetailPage: React.FC = () => {
           <>
           <div className="p-4 flex justify-center">
             <div 
-              className="relative group cursor-pointer overflow-hidden rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 w-full max-w-md"
+              className="relative group cursor-pointer overflow-hidden rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300 w-full max-w-sm"
               onTouchStart={onTouchStart}
               onTouchMove={onTouchMove}
               onTouchEnd={onTouchEnd}
@@ -571,30 +571,42 @@ const RecipeDetailPage: React.FC = () => {
             </div>
             {/* Additional Sections Title across full width */}
             {(recipe.additional_sections && Object.keys(recipe.additional_sections).length > 0) && (
-              <div className="mt-8">
+              <div className="mt-12">
+                {/* Enhanced separator with gradient line */}
                 <div className="relative mb-6 mt-8">
                   <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t-2 border-gradient-to-r from-transparent via-slate-300/60 to-transparent"></div>
+                    <div className="w-full h-px bg-gradient-to-r from-transparent via-slate-300/60 to-transparent"></div>
                   </div>
                   <div className="relative flex justify-center">
-                    <div className="bg-gradient-to-r from-slate-50 via-white to-slate-50 px-6 py-2 rounded-full shadow-sm border border-slate-200/50">
-                      <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                        <div className="w-2 h-2 bg-gradient-to-r from-slate-400 to-slate-500 rounded-full"></div>
-                        <h2 className="text-lg font-bold text-slate-800 tracking-wide">חלקים נוספים</h2>
-                        <div className="w-2 h-2 bg-gradient-to-r from-slate-400 to-slate-500 rounded-full"></div>
+                    <div className="bg-gradient-to-r from-white via-slate-50 to-white px-8 py-3 rounded-full shadow-md border border-slate-200/50 backdrop-blur-sm">
+                      <div className="flex items-center space-x-3 rtl:space-x-reverse">
+                        <div className="w-2 h-2 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full animate-pulse"></div>
+                        <h2 className="text-xl font-bold text-slate-800 tracking-wide">חלקים נוספים</h2>
+                        <div className="w-2 h-2 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full animate-pulse"></div>
                       </div>
                     </div>
                   </div>
+
                 </div>
 
                 {/* Render additional sections in two columns like main layout */}
-                <div className="space-y-6">
+                <div className="space-y-8">
                   {Object.entries(recipe.additional_sections || {}).map(([sectionName, section], idx) => {
                     const cs = additionalColorSchemes[idx % additionalColorSchemes.length];
                     return (
-                    <div key={sectionName} className={`bg-gradient-to-br ${cs.containerBg} px-2 py-6 md:px-4 rounded-2xl border ${cs.containerBorder} shadow-sm`}>
+                    <div key={sectionName} className={`relative bg-gradient-to-br ${cs.containerBg} px-2 py-6 md:px-4 rounded-2xl border ${cs.containerBorder} shadow-sm`}>
+                      {/* Section separator line for sections after the first */}
+                      {idx > 0 && (
+                        <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-16 h-0.5 bg-gradient-to-r from-transparent via-slate-300/40 to-transparent"></div>
+                      )}
+                      
+                      {/* Enhanced section header */}
                       <div className="mb-4">
-                        <h3 className="text-xl font-bold text-slate-900">{sectionName}</h3>
+                        <div className="flex items-center justify-center">
+                          <div className="bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full shadow-sm border border-slate-200/30">
+                            <h3 className="text-xl font-bold text-slate-900 tracking-wide">{sectionName}</h3>
+                          </div>
+                        </div>
                       </div>
                       <div className="grid md:grid-cols-2 gap-3 md:gap-4">
                         {/* Ingredients Right (desktop) */}
@@ -676,27 +688,34 @@ const RecipeDetailPage: React.FC = () => {
 
       {/* Image Modal for Full Size View */}
       {showImageModal && currentImage && (
-        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center p-2 sm:p-4 z-50">
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center p-2 sm:p-4 z-50"
+          onClick={() => setShowImageModal(false)}
+        >
           <div 
             className="relative w-full h-full flex items-center justify-center"
+            onClick={(e) => e.stopPropagation()}
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
             onTouchEnd={onTouchEnd}
           >
-            {/* Close Button */}
-            <button
-              onClick={() => setShowImageModal(false)}
-              className="absolute top-4 right-4 rtl:left-4 rtl:right-auto z-10 bg-white/20 backdrop-blur-sm text-white p-2 rounded-full hover:bg-white/30 transition-colors"
-            >
-              <X className="h-6 w-6" />
-            </button>
-            
-            {/* Image */}
-            <img
-              src={currentImage}
-              alt={recipe.title}
-              className="max-w-full max-h-full object-contain rounded-lg"
-            />
+            {/* Image Container with Close Button */}
+            <div className="relative">
+              <img
+                src={currentImage}
+                alt={recipe.title}
+                className="max-w-full max-h-full object-contain rounded-lg"
+              />
+              
+              {/* Close Button - Positioned on the image */}
+              <button
+                onClick={() => setShowImageModal(false)}
+                className="absolute top-2 right-2 rtl:left-2 rtl:right-auto z-20 bg-black/80 backdrop-blur-sm text-white p-2 rounded-full hover:bg-black/90 transition-all duration-200 shadow-xl border border-white/30 hover:scale-110"
+                title="סגור תמונה"
+              >
+                <X className="h-5 w-5 stroke-2" />
+              </button>
+            </div>
             
             {/* Navigation Arrows */}
             {images.length > 1 && (
