@@ -110,8 +110,8 @@ const Header: React.FC = () => {
               logMessage += ` and ${result.imagesSynced} images`;
             }
             console.log(logMessage);
-            // Refresh recipes to show the synced ones
-            await refreshRecipes();
+            // Refresh recipes to show the synced ones - force refresh for auto-sync
+            await refreshRecipes(true);
           }
           
           // Also sync images for existing recipes
@@ -317,9 +317,14 @@ const Header: React.FC = () => {
             setMemoryCleanupMessage(null);
             (window as any).__isClearingMemory = false;
             
-            // Force a clean page reload with cache busting
-            const timestamp = Date.now();
-            window.location.href = `${window.location.origin}${window.location.pathname}?t=${timestamp}`;
+            // Navigate to home page instead of reloading current page to avoid 404
+            // This ensures a clean state and avoids any URL parameter issues
+            navigate('/', { replace: true });
+            
+            // Force a full page reload to ensure all state is cleared
+            setTimeout(() => {
+              window.location.reload();
+            }, 100);
           }, 1000);
         }, 1000);
       } else {
@@ -333,70 +338,6 @@ const Header: React.FC = () => {
       (window as any).__isClearingMemory = false;
     } finally {
       setIsClearingMemory(false);
-    }
-  };
-
-  const handleSyncRecipes = async () => {
-    // Check if we're in the middle of memory cleanup
-    if ((window as any).__isClearingMemory) {
-      console.log('⚠️ Manual sync: Memory cleanup in progress, skipping sync');
-      return;
-    }
-    
-    setIsConnecting(true);
-    setMemoryCleanupMessage(null);
-    
-    try {
-      console.log('🔄 Manual sync initiated...');
-      
-      // Check if API is available before attempting sync
-      try {
-        const testResponse = await fetch('/api/test-connection', {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-          signal: AbortSignal.timeout(5000)
-        });
-        
-        if (!testResponse.ok) {
-          setMemoryCleanupMessage('מאגר המידע לא זמין כרגע');
-          console.warn('⚠️ API not available for sync');
-          return;
-        }
-      } catch (testError) {
-        setMemoryCleanupMessage('מאגר המידע לא זמין כרגע');
-        console.warn('⚠️ API test failed:', testError);
-        return;
-      }
-      
-      const result = await recipeService.syncLocalStorageToServer();
-      
-      if (result.synced > 0) {
-        let message = `סנכרן ${result.synced} מתכונים בהצלחה!`;
-        if (result.imagesSynced > 0) {
-          message += ` (${result.imagesSynced} תמונות)`;
-        }
-        setMemoryCleanupMessage(message);
-        console.log(`✅ Manual sync completed: ${result.synced} recipes synced, ${result.imagesSynced} images synced`);
-        
-        // Refresh recipes to show the synced ones
-        await refreshRecipes();
-      } else if (result.errors > 0) {
-        setMemoryCleanupMessage(`שגיאה בסנכרון ${result.errors} מתכונים`);
-        console.error(`❌ Manual sync failed: ${result.errors} errors`);
-      } else {
-        setMemoryCleanupMessage('אין מתכונים לסנכרון');
-        console.log('ℹ️ Manual sync: No recipes to sync');
-      }
-    } catch (error) {
-      console.error('❌ Error during manual sync:', error);
-      setMemoryCleanupMessage('שגיאה בסנכרון המתכונים');
-    } finally {
-      setIsConnecting(false);
-      
-      // Clear message after delay
-      setTimeout(() => {
-        setMemoryCleanupMessage(null);
-      }, 3000);
     }
   };
 
@@ -462,8 +403,21 @@ const Header: React.FC = () => {
         setMemoryCleanupMessage(message);
         console.log(`✅ Manual data sync completed: ${totalSynced} recipes, ${totalImagesSynced} images synced`);
         
-        // Refresh recipes to show the synced data
-        await refreshRecipes();
+        // Refresh recipes to show the synced data - force refresh to ensure UI updates
+        await refreshRecipes(true);
+        
+        // Close menu to show updated content
+        setIsMenuOpen(false);
+        
+        // If we're on a specific page, trigger a re-render by updating the location
+        if (location.pathname.startsWith('/recipe/')) {
+          // For recipe detail pages, we need to ensure the recipe data is updated
+          const currentRecipeId = location.pathname.split('/recipe/')[1];
+          if (currentRecipeId) {
+            // Trigger a navigation refresh to ensure the recipe detail page updates
+            navigate(location.pathname, { replace: true });
+          }
+        }
       } else if (totalErrors > 0) {
         setMemoryCleanupMessage(`שגיאה בסנכרון ${totalErrors} פריטים`);
         console.error(`❌ Manual data sync failed: ${totalErrors} errors`);
