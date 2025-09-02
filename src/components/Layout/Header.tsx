@@ -293,9 +293,6 @@ const Header: React.FC = () => {
     setIsClearingMemory(true);
     setMemoryCleanupMessage(null);
     
-    // Save current location before cleanup
-    const currentPath = location.pathname;
-    
     try {
       // Close the menu first to prevent any navigation issues
       setIsMenuOpen(false);
@@ -320,9 +317,10 @@ const Header: React.FC = () => {
             setMemoryCleanupMessage(null);
             (window as any).__isClearingMemory = false;
             
-            // Stay on current page instead of navigating to home
-            // This ensures user stays where they were
-            navigate(currentPath, { replace: true });
+            // Always navigate to home page after sync to prevent 404 errors
+            // Since memory cleanup clears all recipes from localStorage,
+            // staying on recipe detail pages would cause 404 errors
+            navigate('/', { replace: true });
             
             // Force a full page reload to ensure all state is cleared
             setTimeout(() => {
