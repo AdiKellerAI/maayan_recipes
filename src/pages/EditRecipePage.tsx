@@ -1,17 +1,17 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { Plus, X, Trash2, Upload, Camera, Sparkles, Image as ImageIcon } from 'lucide-react';
+import { Plus, X, Trash2, Upload, Camera, Image as ImageIcon } from 'lucide-react';
 import { useRecipes } from '../contexts/RecipeContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useProtectedAction } from '../hooks/useProtectedAction';
 import { categories } from '../data/categories';
 import type { RecipeSection } from '../types/recipe';
-import { compressImages } from '../utils/imageCompression';
 import SmartImageSearch from '../components/SmartImageSearch';
 import { recipeService } from '../services/recipeService';
 import { imageService, RecipeImage } from '../services/imageService';
 import ImageManager from '../components/ImageManager';
 import { processImagesForStorage, detectPlatform } from '../utils/imageUtils';
+import { enhancedMobileImageService } from '../services/enhancedMobileImageService';
 
 const EditRecipePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -155,53 +155,86 @@ const EditRecipePage: React.FC = () => {
     setHasUnsavedChanges(true);
   };
 
-  // Handle file selection for images
+  // Handle file selection for images with enhanced mobile optimization
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
+
+    console.log('📱 Enhanced mobile image upload started in EditRecipePage:', files.length, 'files');
+
+    // Check image limit
+    if (images.length + files.length > 6) {
+      alert(`ניתן להעלות עד 6 תמונות בלבד. כרגע יש לך ${images.length} תמונות ואתה מנסה להוסיף ${files.length} נוספות.`);
+      e.target.value = '';
+      return;
+    }
 
     try {
       setIsLoading(true);
       setUploadStatus('מעבד תמונות...');
 
-      const fileArray = Array.from(files);
-      
-      // Convert files to RecipeImage objects
-      const newImages: RecipeImage[] = await Promise.all(
-        fileArray.map(async (file, index) => {
-          const base64 = await new Promise<string>((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result as string);
-            reader.readAsDataURL(file);
-          });
+      const platform = detectPlatform();
+      console.log(`📱 Processing images on ${platform} platform for recipe ${id}`);
 
-          return {
-            id: `temp-${Date.now()}-${index}`,
-            recipe_id: id || '',
-            filename: file.name,
-            file_path: '',
-            url: base64,
-            image_type: 'gallery',
-            file_size: file.size,
-            mime_type: file.type,
-            alt_text: `תמונה ${images.length + index + 1}`,
-            width: 0,
-            height: 0,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          };
-        })
+      // Use enhanced mobile image service for recipe editing
+      const result = await enhancedMobileImageService.uploadImages(
+        Array.from(files),
+        {
+          recipeId: id, // Include recipe ID for direct server upload
+          imageType: 'gallery',
+          onProgress: (completed, total, currentFile) => {
+            const percentage = Math.round((completed / total) * 100);
+            setUploadStatus(`מעבד תמונות... ${percentage}% (${currentFile})`);
+            console.log(`📱 Progress: ${completed}/${total} - ${currentFile}`);
+          },
+          onStatusUpdate: (status) => {
+            setUploadStatus(status);
+            console.log(`📱 Status: ${status}`);
+          }
+        }
       );
 
-      setImages(prev => [...prev, ...newImages]);
-      setHasUnsavedChanges(true);
-      setUploadStatus('');
-      console.log('✅ EDIT: Added', newImages.length, 'new images');
+      if (result.success && result.images.length > 0) {
+        // Add successfully processed images
+        setImages(prev => [...prev, ...result.images]);
+        setHasUnsavedChanges(true);
+        
+        // Show success message with compression stats
+        const { compressionStats } = result;
+        const originalSizeMB = (compressionStats.totalOriginalSize / 1024 / 1024).toFixed(1);
+        const compressedSizeMB = (compressionStats.totalCompressedSize / 1024 / 1024).toFixed(1);
+        const ratio = compressionStats.averageCompressionRatio.toFixed(1);
+        
+        setUploadStatus(`הועלו ${result.images.length} תמונות בהצלחה! דחיסה: ${originalSizeMB}MB → ${compressedSizeMB}MB (${ratio}x)`);
+        
+        console.log(`✅ Enhanced edit upload complete: ${result.images.length} images processed`);
+        console.log(`📊 Compression stats:`, compressionStats);
+
+        // Show errors if any
+        if (result.errors.length > 0) {
+          const errorMessages = result.errors.map(err => `${err.filename}: ${err.error}`).join('\n');
+          setTimeout(() => {
+            alert(`חלק מהתמונות לא הועלו:\n${errorMessages}`);
+          }, 1000);
+        }
+      } else {
+        // All uploads failed
+        const errorMessages = result.errors.map(err => `${err.filename}: ${err.error}`).join('\n');
+        setUploadStatus('שגיאה בהעלאת התמונות');
+        alert(`שגיאה בהעלאת התמונות:\n${errorMessages}`);
+      }
+
     } catch (error) {
-      console.error('❌ EDIT: Error processing images:', error);
-      setUploadStatus('שגיאה בעיבוד התמונות');
+      console.error('❌ Enhanced image upload failed in EditRecipePage:', error);
+      setUploadStatus('שגיאה בהעלאת התמונות');
+      alert(`שגיאה בהעלאת התמונות: ${error instanceof Error ? error.message : 'שגיאה לא ידועה'}`);
     } finally {
       setIsLoading(false);
+      // Clear upload status after 3 seconds
+      setTimeout(() => {
+        setUploadStatus('');
+      }, 3000);
+      
       // Reset file input
       e.target.value = '';
     }

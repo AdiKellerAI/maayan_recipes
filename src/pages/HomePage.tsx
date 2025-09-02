@@ -6,7 +6,7 @@ import { useRecipes } from '../contexts/RecipeContext';
 import CategoryNav from '../components/Layout/CategoryNav';
 import ViewModeToggle from '../components/Layout/ViewModeToggle';
 import RecipeGrid from '../components/Recipe/RecipeGrid';
-import MobileStorageStatus from '../components/MobileStorageStatus';
+
 import { categories } from '../data/categories';
 
 const HomePage: React.FC = () => {
@@ -43,11 +43,6 @@ const HomePage: React.FC = () => {
   return (
     <div className="min-h-screen">
       <CategoryNav />
-      
-      {/* Mobile Storage Status - Only show on mobile */}
-      <div className="block md:hidden">
-        <MobileStorageStatus />
-      </div>
       
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         {/* Header */}

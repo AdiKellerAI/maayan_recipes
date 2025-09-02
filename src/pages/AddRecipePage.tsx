@@ -5,11 +5,11 @@ import { useProtectedAction } from '../hooks/useProtectedAction';
 import type { RecipeInsert, RecipeSection } from '../types/recipe';
 import { categories } from '../data/categories';
 import { Plus, X, Upload, Camera, Sparkles, Link } from 'lucide-react';
-import { compressImages } from '../utils/imageCompression';
 import SmartImageSearch from '../components/SmartImageSearch';
 import { recipeService } from '../services/recipeService';
 import { imageService, RecipeImage } from '../services/imageService';
-import { blobToBase64, analyzeImageUrl, processImagesForStorage, detectPlatform } from '../utils/imageUtils';
+import { processImagesForStorage, detectPlatform } from '../utils/imageUtils';
+import { enhancedMobileImageService } from '../services/enhancedMobileImageService';
 
 const AddRecipePage: React.FC = () => {
   const navigate = useNavigate();
@@ -120,82 +120,80 @@ const AddRecipePage: React.FC = () => {
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
-    if (files && files.length > 0) {
-      console.log('📸 Processing images:', files.length);
-      
-      // Filter out non-image files (workaround for Android 14 compatibility)
-      const imageFiles = Array.from(files).filter(file => {
-        const isImage = file.type.startsWith('image/');
-        if (!isImage) {
-          console.log('⚠️ Skipping non-image file:', file.name, file.type);
+    if (!files || files.length === 0) return;
+
+    console.log('📱 Enhanced mobile image upload started:', files.length, 'files');
+    
+    // Check if adding these images would exceed the 6 image limit
+    if (images.length + files.length > 6) {
+      alert(`ניתן להעלות עד 6 תמונות בלבד. כרגע יש לך ${images.length} תמונות ואתה מנסה להוסיף ${files.length} נוספות.`);
+      e.target.value = '';
+      return;
+    }
+
+    setIsUploadingImages(true);
+    setUploadStatus('מעבד תמונות...');
+
+    try {
+      const platform = detectPlatform();
+      console.log(`📱 Processing images on ${platform} platform`);
+
+      // Use enhanced mobile image service
+      const result = await enhancedMobileImageService.uploadImages(
+        Array.from(files),
+        {
+          imageType: 'gallery',
+          onProgress: (completed, total, currentFile) => {
+            const percentage = Math.round((completed / total) * 100);
+            setUploadStatus(`מעבד תמונות... ${percentage}% (${currentFile})`);
+            console.log(`📱 Progress: ${completed}/${total} - ${currentFile}`);
+          },
+          onStatusUpdate: (status) => {
+            setUploadStatus(status);
+            console.log(`📱 Status: ${status}`);
+          }
         }
-        return isImage;
-      });
-      
-      if (imageFiles.length === 0) {
-        alert('אנא בחר קבצי תמונה בלבד (JPG, PNG, WEBP, HEIC).');
-        e.target.value = '';
-        return;
-      }
-      
-      if (imageFiles.length !== files.length) {
-        alert(`נבחרו ${imageFiles.length} קבצי תמונה מתוך ${files.length} קבצים. רק קבצי התמונה יועלו.`);
-      }
-      
-      // Check if adding these images would exceed the 6 image limit
-      if (images.length + imageFiles.length > 6) {
-        alert(`ניתן להעלות עד 6 תמונות בלבד. כרגע יש לך ${images.length} תמונות ואתה מנסה להוסיף ${imageFiles.length} נוספות.`);
-        e.target.value = '';
-        return;
-      }
+      );
 
-      // Validate files
-      const validFiles: File[] = [];
-      const errors: string[] = [];
+      if (result.success && result.images.length > 0) {
+        // Add successfully processed images
+        setImages(prev => [...prev, ...result.images]);
+        
+        // Show success message with compression stats
+        const { compressionStats } = result;
+        const originalSizeMB = (compressionStats.totalOriginalSize / 1024 / 1024).toFixed(1);
+        const compressedSizeMB = (compressionStats.totalCompressedSize / 1024 / 1024).toFixed(1);
+        const ratio = compressionStats.averageCompressionRatio.toFixed(1);
+        
+        setUploadStatus(`הועלו ${result.images.length} תמונות בהצלחה! דחיסה: ${originalSizeMB}MB → ${compressedSizeMB}MB (${ratio}x)`);
+        
+        console.log(`✅ Enhanced upload complete: ${result.images.length} images processed`);
+        console.log(`📊 Compression stats:`, compressionStats);
 
-      for (const file of imageFiles) {
-        const validation = imageService.validateFile(file);
-        if (validation.isValid) {
-          validFiles.push(file);
-        } else {
-          errors.push(`${file.name}: ${validation.errors.join(', ')}`);
+        // Show errors if any
+        if (result.errors.length > 0) {
+          const errorMessages = result.errors.map(err => `${err.filename}: ${err.error}`).join('\n');
+          setTimeout(() => {
+            alert(`חלק מהתמונות לא הועלו:\n${errorMessages}`);
+          }, 1000);
         }
+      } else {
+        // All uploads failed
+        const errorMessages = result.errors.map(err => `${err.filename}: ${err.error}`).join('\n');
+        setUploadStatus('שגיאה בהעלאת התמונות');
+        alert(`שגיאה בהעלאת התמונות:\n${errorMessages}`);
       }
 
-      if (errors.length > 0) {
-        alert(`Some files were invalid:\n${errors.join('\n')}`);
-      }
-
-      if (validFiles.length === 0) {
-        e.target.value = '';
-        return;
-      }
-
-      // Add files to state for later upload
-      setImageFiles(prev => [...prev, ...validFiles]);
-      
-      // Create temporary preview images
-      const tempImages: RecipeImage[] = [];
-      for (const file of validFiles) {
-        const tempImage: RecipeImage = {
-          id: `temp-${Date.now()}-${Math.random()}`,
-          recipe_id: '',
-          filename: file.name,
-          file_path: '',
-          url: URL.createObjectURL(file),
-          image_type: 'gallery',
-          file_size: file.size,
-          mime_type: file.type,
-          alt_text: `תמונה זמנית: ${file.name}`,
-          width: 0,
-          height: 0,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
-        };
-        tempImages.push(tempImage);
-      }
-
-      setImages(prev => [...prev, ...tempImages]);
+    } catch (error) {
+      console.error('❌ Enhanced image upload failed:', error);
+      setUploadStatus('שגיאה בהעלאת התמונות');
+      alert(`שגיאה בהעלאת התמונות: ${error instanceof Error ? error.message : 'שגיאה לא ידועה'}`);
+    } finally {
+      setIsUploadingImages(false);
+      // Clear upload status after 3 seconds
+      setTimeout(() => {
+        setUploadStatus('');
+      }, 3000);
       
       // Reset the input
       e.target.value = '';
@@ -254,8 +252,25 @@ const AddRecipePage: React.FC = () => {
     const platform = detectPlatform();
     console.log(`🔄 Processing images for ${platform} platform...`);
     
-    const imageUrls = images.map(img => img.url);
-    const processedUrls = await processImagesForStorage(imageUrls, title);
+    const processedUrls: string[] = [];
+    
+    for (const image of images) {
+      try {
+        // If the image is already a data URL (from enhanced mobile service), use it directly
+        if (image.url.startsWith('data:image/')) {
+          processedUrls.push(image.url);
+          console.log(`✅ Using pre-processed data URL for ${image.filename}`);
+        } else {
+          // For other URLs (blob, external), use the original processing
+          const processedUrl = await processImagesForStorage([image.url], title);
+          processedUrls.push(...processedUrl);
+        }
+      } catch (error) {
+        console.error(`❌ Failed to process image ${image.filename}:`, error);
+        // Skip this image if processing fails
+        continue;
+      }
+    }
     
     console.log(`✅ Processed ${processedUrls.length} images for ${platform}`);
     return processedUrls;
