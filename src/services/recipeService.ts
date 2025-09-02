@@ -5,22 +5,22 @@ import { imageService } from './imageService';
 import { mobileImageService } from './mobileImageService';
 import { mobileRecipeService } from './mobileRecipeService';
 
-// Convert database row to Recipe type (currently unused but may be needed for future features)
-// const mapRowToRecipe = (row: any): Recipe => ({
-//   id: row.id,
-//   title: row.title,
-//   images: row.images || [],
-//   category: row.category,
-//   ingredients: row.ingredients,
-//   directions: row.directions,
-//   additional_instructions: row.additional_instructions || {},
-//   additional_sections: row.additional_sections || {},
-//   prep_time: row.prep_time,
-//   difficulty: row.difficulty as 'קל' | 'בינוני' | 'קשה' | undefined,
-//   is_favorite: row.is_favorite,
-//   created_at: new Date(row.created_at),
-//   updated_at: new Date(row.updated_at)
-// });
+// Convert database row to Recipe type
+const mapRowToRecipe = (row: any): Recipe => ({
+  id: row.id,
+  title: row.title,
+  images: row.images || [],
+  category: row.category,
+  ingredients: row.ingredients,
+  directions: row.directions,
+  additional_instructions: row.additional_instructions || {},
+  additional_sections: row.additional_sections || {},
+  prep_time: row.prep_time,
+  difficulty: row.difficulty as 'קל' | 'בינוני' | 'קשה' | undefined,
+  is_favorite: row.is_favorite,
+  created_at: new Date(row.created_at),
+  updated_at: new Date(row.updated_at)
+});
 
 // Check if API server and PostgreSQL are available
 const isAPIAvailable = async (): Promise<boolean> => {
@@ -749,7 +749,7 @@ export const recipeService = {
       }
       
       // Check if image content matches (basic check)
-      const imagesMatch = expectedImages.every((_, index) => {
+      const imagesMatch = expectedImages.every((expectedImg, index) => {
         const savedImg = savedImages[index];
         return savedImg && savedImg.length > 0;
       });
@@ -823,24 +823,21 @@ export const recipeService = {
           // Verify that the update was successful, especially for images
           if (processedUpdates.images && Array.isArray(processedUpdates.images) && processedUpdates.images.length > 0) {
             console.log('🔍 VERIFY: Verifying image update...');
+            const verification = await this.verifyRecipeUpdate(id, processedUpdates.images as string[]);
             
-            // Check if the returned recipe has the expected number of images
-            const returnedImageCount = processedRecipe.images?.length || 0;
-            const expectedImageCount = processedUpdates.images.length;
-            
-            if (returnedImageCount !== expectedImageCount) {
-              console.warn(`⚠️ VERIFY: Image count mismatch - expected: ${expectedImageCount}, got: ${returnedImageCount}`);
+            if (!verification.success) {
+              console.warn('⚠️ VERIFY: Image update verification failed:', verification.message);
               
               // If this is the last attempt, throw an error to trigger fallback
               if (attempt === 3) {
-                throw new Error(`Image count mismatch after ${attempt} attempts: expected ${expectedImageCount}, got ${returnedImageCount}`);
+                throw new Error(`Image verification failed after ${attempt} attempts: ${verification.message}`);
               }
               
               // Wait before retry
               await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
               continue;
             } else {
-              console.log(`✅ VERIFY: Image update verified successfully - ${returnedImageCount} images saved`);
+              console.log('✅ VERIFY: Image update verified successfully');
             }
           }
           

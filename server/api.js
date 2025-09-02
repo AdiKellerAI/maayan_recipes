@@ -1,14 +1,14 @@
 const express = require('express');
 const cors = require('cors');
-const { getPool, testConnection, reinitializePool } = require('./database');
+const { pool, testConnection } = require('./database');
 
 const app = express();
 const PORT = 3001;
 
 // Middleware
 app.use(cors());
-app.use(express.json({ limit: '100mb' })); // Increased limit for image uploads
-app.use(express.urlencoded({ extended: true, limit: '100mb' }));
+app.use(express.json({ limit: '50mb' })); // Increased limit for image uploads
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Import image routes
 const imageRoutes = require('./api/images');
@@ -49,30 +49,6 @@ app.get('/api/test-connection', async (req, res) => {
   }
 });
 
-// Helper function to execute database operations with retry
-const executeWithRetry = async (operation, retries = 2) => {
-  for (let attempt = 1; attempt <= retries; attempt++) {
-    try {
-      return await operation();
-    } catch (error) {
-      console.log(`🔄 Database operation attempt ${attempt}/${retries} failed:`, error.message);
-      
-      if (attempt === retries) {
-        throw error;
-      }
-      
-      // If connection error, try reinitializing pool
-      if (error.message.includes('timeout') || error.message.includes('connect')) {
-        console.log('🔄 Reinitializing pool due to connection error...');
-        reinitializePool();
-      }
-      
-      // Wait before retry
-      await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-    }
-  }
-};
-
 // Get paginated recipes (optimized for performance)
 app.get('/api/recipes', async (req, res) => {
   try {
@@ -103,57 +79,78 @@ app.get('/api/recipes', async (req, res) => {
       detailed: detailed === 'true'
     });
 
-    await executeWithRetry(async () => {
-      const client = await getPool().connect();
+    const client = await pool.connect();
+    
+    if (detailed === 'true') {
+      // Legacy mode: return full recipes for backward compatibility
+      const result = await client.query('SELECT * FROM recipes ORDER BY created_at DESC LIMIT $1 OFFSET $2', [parseInt(limit), offset]);
+      const countResult = await client.query('SELECT COUNT(*) FROM recipes');
+      client.release();
       
-      try {
-        if (detailed === 'true') {
-          // Legacy mode: return full recipes for backward compatibility
-          const result = await client.query('SELECT * FROM recipes ORDER BY created_at DESC LIMIT $1 OFFSET $2', [parseInt(limit), offset]);
-          const countResult = await client.query('SELECT COUNT(*) FROM recipes');
-          
-          const recipes = result.rows.map(mapRowToRecipe);
-          const totalCount = parseInt(countResult.rows[0].count);
-          
-          console.log(`✅ API: Retrieved ${recipes.length} detailed recipes (${totalCount} total)`);
-          
-          res.json({
-            recipes,
-            pagination: {
-              page: parseInt(page),
-              limit: parseInt(limit),
-              total: totalCount,
-              totalPages: Math.ceil(totalCount / parseInt(limit)),
-              hasNext: offset + recipes.length < totalCount,
-              hasPrev: parseInt(page) > 1
-            }
-          });
-        } else {
-          // Simplified mode: just get all recipes for now
-          const result = await client.query('SELECT * FROM recipes ORDER BY created_at DESC LIMIT $1 OFFSET $2', [parseInt(limit), offset]);
-          const countResult = await client.query('SELECT COUNT(*) FROM recipes');
-          
-          const recipes = result.rows.map(mapRowToRecipe);
-          const totalCount = parseInt(countResult.rows[0].count);
-          
-          console.log(`✅ API: Retrieved ${recipes.length} recipes (${totalCount} total)`);
-          
-          res.json({
-            recipes,
-            pagination: {
-              page: parseInt(page),
-              limit: parseInt(limit),
-              total: totalCount,
-              totalPages: Math.ceil(totalCount / parseInt(limit)),
-              hasNext: offset + recipes.length < totalCount,
-              hasPrev: parseInt(page) > 1
-            }
-          });
+      const recipes = result.rows.map(mapRowToRecipe);
+      const totalCount = parseInt(countResult.rows[0].count);
+      
+      console.log(`✅ API: Retrieved ${recipes.length} detailed recipes (${totalCount} total)`);
+      
+      res.json({
+        recipes,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: totalCount,
+          totalPages: Math.ceil(totalCount / parseInt(limit)),
+          hasNext: offset + recipes.length < totalCount,
+          hasPrev: parseInt(page) > 1
         }
-      } finally {
-        client.release();
-      }
-    });
+      });
+    } else {
+      // Optimized mode: use materialized view for better performance
+      const result = await client.query(
+        `SELECT * FROM get_recipes_paginated($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          parseInt(limit),
+          offset,
+          category || null,
+          favorites === 'true',
+          search || null,
+          difficulty || null,
+          hasImages ? hasImages === 'true' : null,
+          sortBy
+        ]
+      );
+      client.release();
+      
+      const recipes = result.rows.map(row => ({
+        id: row.id,
+        title: row.title,
+        category: row.category,
+        difficulty: row.difficulty,
+        prep_time: row.prep_time,
+        is_favorite: row.is_favorite,
+        created_at: row.created_at,
+        updated_at: row.updated_at,
+        first_image: row.first_image,
+        image_count: parseInt(row.image_count),
+        ingredient_count: parseInt(row.ingredient_count),
+        step_count: parseInt(row.step_count)
+      }));
+      
+      const totalCount = result.rows.length > 0 ? parseInt(result.rows[0].total_count) : 0;
+      
+      console.log(`✅ API: Retrieved ${recipes.length} recipe summaries (${totalCount} total)`);
+      
+      res.json({
+        recipes,
+        pagination: {
+          page: parseInt(page),
+          limit: parseInt(limit),
+          total: totalCount,
+          totalPages: Math.ceil(totalCount / parseInt(limit)),
+          hasNext: offset + recipes.length < totalCount,
+          hasPrev: parseInt(page) > 1
+        }
+      });
+    }
   } catch (error) {
     console.error('❌ API: Error fetching recipes:', error);
     res.status(500).json({ error: 'Failed to fetch recipes', message: error.message });
@@ -168,7 +165,7 @@ app.get('/api/recipes/:id', async (req, res) => {
     
     console.log(`📊 API: Fetching recipe ${id} (detailed: ${detailed})`);
     
-    const client = await getPool().connect();
+    const client = await pool.connect();
     
     if (detailed === 'false') {
       // Return summary data only
@@ -240,7 +237,7 @@ app.post('/api/recipes', async (req, res) => {
     
     console.log('➕ API: Adding new recipe:', title);
     
-    const client = await getPool().connect();
+    const client = await pool.connect();
     const result = await client.query(
       `INSERT INTO recipes (
         title, description, category, ingredients, directions, 
@@ -330,14 +327,6 @@ app.put('/api/recipes/:id', async (req, res) => {
       updateFields.push(`images = $${paramCount++}`);
       const imageData = JSON.stringify(updates.images);
       console.log('🖼️ API: Updating images, count:', updates.images.length, 'data size:', Math.round(imageData.length / 1024) + 'KB');
-      
-      // Log details about each image
-      if (Array.isArray(updates.images)) {
-        updates.images.forEach((img, index) => {
-          console.log(`🖼️ API: Image ${index + 1}: ${Math.round(img.length / 1024)}KB, type: ${img.startsWith('data:image/') ? 'base64' : 'url'}`);
-        });
-      }
-      
       values.push(imageData);
     }
     
@@ -352,38 +341,19 @@ app.put('/api/recipes/:id', async (req, res) => {
       RETURNING *
     `;
     
-    const client = await getPool().connect();
+    const client = await pool.connect();
+    const result = await client.query(query, values);
+    client.release();
     
-    try {
-      const result = await client.query(query, values);
-      
-      if (result.rows.length === 0) {
-        client.release();
-        return res.status(404).json({ error: 'Recipe not found' });
-      }
-      
-      const recipe = mapRowToRecipe(result.rows[0]);
-      console.log('✅ API: Recipe updated:', id);
-      console.log('✅ API: Updated recipe images count:', recipe.images ? recipe.images.length : 0);
-      
-      // Verify that images were saved correctly
-      if (updates.images && Array.isArray(updates.images) && updates.images.length > 0) {
-        const savedImageCount = recipe.images ? recipe.images.length : 0;
-        if (savedImageCount !== updates.images.length) {
-          console.error('❌ API: Image count mismatch!', { expected: updates.images.length, saved: savedImageCount });
-        } else {
-          console.log('✅ API: All images saved successfully');
-        }
-      }
-      
-      client.release();
-      res.json(recipe);
-      
-    } catch (queryError) {
-      client.release();
-      console.error('❌ API: Database query error:', queryError);
-      throw queryError;
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Recipe not found' });
     }
+    
+    const recipe = mapRowToRecipe(result.rows[0]);
+    console.log('✅ API: Recipe updated:', id);
+    console.log('✅ API: Updated recipe images count:', recipe.images ? recipe.images.length : 0);
+    
+    res.json(recipe);
   } catch (error) {
     console.error('❌ API: Error updating recipe:', error);
     res.status(500).json({ error: 'Failed to update recipe', message: error.message });
@@ -397,7 +367,7 @@ app.delete('/api/recipes/:id', async (req, res) => {
     
     console.log('🗑️ API: Deleting recipe:', id);
     
-    const client = await getPool().connect();
+    const client = await pool.connect();
     const result = await client.query('DELETE FROM recipes WHERE id = $1 RETURNING id', [id]);
     client.release();
     
@@ -417,7 +387,7 @@ app.delete('/api/recipes/:id', async (req, res) => {
 app.get('/api/categories', async (req, res) => {
   try {
     console.log('📊 API: Fetching category counts...');
-    const client = await getPool().connect();
+    const client = await pool.connect();
     const result = await client.query(`
       SELECT 
         category,
@@ -445,7 +415,7 @@ app.get('/api/categories', async (req, res) => {
 // Get performance stats
 app.get('/api/stats', async (req, res) => {
   try {
-    const client = await getPool().connect();
+    const client = await pool.connect();
     const result = await client.query(`
       SELECT 
         COUNT(*) as total_recipes,
@@ -479,7 +449,7 @@ app.get('/api/stats', async (req, res) => {
 app.get('/api/health', async (req, res) => {
   try {
     const startTime = Date.now();
-    const client = await getPool().connect();
+    const client = await pool.connect();
     await client.query('SELECT 1');
     client.release();
     const dbResponseTime = Date.now() - startTime;

@@ -113,9 +113,9 @@ const AddRecipePage: React.FC = () => {
       }
 
       img.onload = () => {
-        // Calculate new dimensions - more aggressive sizing for base64
+        // Calculate new dimensions - more aggressive sizing for base64 with 4 image limit
         let { width, height } = img;
-        const maxDimension = 800; // Smaller max dimension for base64
+        const maxDimension = 600; // Reduced from 800 to 600 for better PostgreSQL compatibility
         
         if (width > maxDimension || height > maxDimension) {
           const ratio = Math.min(maxDimension / width, maxDimension / height);
@@ -124,8 +124,8 @@ const AddRecipePage: React.FC = () => {
         }
         
         // Additional aggressive resizing for very large images
-        if (file.size > 5 * 1024 * 1024) { // If original > 5MB
-          const aggressiveMaxDimension = 600;
+        if (file.size > 3 * 1024 * 1024) { // If original > 3MB (reduced from 5MB)
+          const aggressiveMaxDimension = 500; // Reduced from 600 to 500
           if (width > aggressiveMaxDimension || height > aggressiveMaxDimension) {
             const ratio = Math.min(aggressiveMaxDimension / width, aggressiveMaxDimension / height);
             width = Math.floor(width * ratio);
@@ -155,7 +155,7 @@ const AddRecipePage: React.FC = () => {
             }
           },
           'image/jpeg',
-          0.4 // More aggressive compression for base64 conversion
+          0.3 // More aggressive compression for base64 conversion with 4 image limit
         );
       };
 
@@ -208,9 +208,9 @@ const AddRecipePage: React.FC = () => {
       return;
     }
     
-    // Check if adding these images would exceed the 6 image limit
-    if (images.length + imageFiles.length > 6) {
-      alert(`ניתן להעלות עד 6 תמונות בלבד. כרגע יש לך ${images.length} תמונות ואתה מנסה להוסיף ${imageFiles.length} נוספות.`);
+    // Check if adding these images would exceed the 4 image limit
+    if (images.length + imageFiles.length > 4) {
+      alert(`ניתן להעלות עד 4 תמונות בלבד. כרגע יש לך ${images.length} תמונות ואתה מנסה להוסיף ${imageFiles.length} נוספות.`);
       e.target.value = '';
       return;
     }
@@ -389,8 +389,8 @@ const AddRecipePage: React.FC = () => {
   };
 
   const handleSmartImageSelect = (imageUrl: string) => {
-    if (images.length >= 6) {
-      alert('ניתן להעלות עד 6 תמונות בלבד.');
+    if (images.length >= 4) {
+      alert('ניתן להעלות עד 4 תמונות בלבד.');
       return;
     }
     
@@ -1424,7 +1424,7 @@ const AddRecipePage: React.FC = () => {
             <div className="bg-gradient-to-r from-pink-50 to-purple-50 p-4 rounded-lg border border-pink-200">
               <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
                 <div className="w-1.5 h-1.5 bg-pink-500 rounded-full"></div>
-                תמונות (עד 6)
+                תמונות (עד 4)
               </h2>
               <div className="space-y-3">
                 <div className="flex gap-2 flex-wrap justify-center">

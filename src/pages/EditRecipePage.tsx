@@ -155,24 +155,24 @@ const EditRecipePage: React.FC = () => {
       }
 
       img.onload = () => {
-        // Calculate new dimensions - very aggressive sizing for base64 to avoid 413 errors
+        // Calculate new dimensions - more aggressive sizing for base64 with 4 image limit
         let { width, height } = img;
-        
-        // Much smaller max dimension for recipe editing to prevent 413 errors
-        let maxDimension = 600;
-        
-        // Even more aggressive for large files
-        if (file.size > 2 * 1024 * 1024) { // If original > 2MB
-          maxDimension = 400;
-        }
-        if (file.size > 5 * 1024 * 1024) { // If original > 5MB
-          maxDimension = 300;
-        }
+        const maxDimension = 600; // Reduced from 800 to 600 for better PostgreSQL compatibility
         
         if (width > maxDimension || height > maxDimension) {
           const ratio = Math.min(maxDimension / width, maxDimension / height);
           width = Math.floor(width * ratio);
           height = Math.floor(height * ratio);
+        }
+        
+        // Additional aggressive resizing for very large images
+        if (file.size > 3 * 1024 * 1024) { // If original > 3MB (reduced from 5MB)
+          const aggressiveMaxDimension = 500; // Reduced from 600 to 500
+          if (width > aggressiveMaxDimension || height > aggressiveMaxDimension) {
+            const ratio = Math.min(aggressiveMaxDimension / width, aggressiveMaxDimension / height);
+            width = Math.floor(width * ratio);
+            height = Math.floor(height * ratio);
+          }
         }
 
         canvas.width = width;
@@ -191,21 +191,13 @@ const EditRecipePage: React.FC = () => {
                 lastModified: Date.now(),
               });
               console.log(`✅ Compressed ${file.name}: ${(file.size / 1024).toFixed(0)}KB → ${(compressedFile.size / 1024).toFixed(0)}KB`);
-              
-              // Additional check - if still too large, reject
-              if (compressedFile.size > 500 * 1024) { // 500KB limit per image
-                console.warn(`⚠️ Image still too large after compression: ${(compressedFile.size / 1024).toFixed(0)}KB`);
-                reject(new Error(`Image too large: ${(compressedFile.size / 1024).toFixed(0)}KB. Please use a smaller image.`));
-                return;
-              }
-              
               resolve(compressedFile);
             } else {
               reject(new Error('Failed to compress image'));
             }
           },
           'image/jpeg',
-          0.3 // Even more aggressive compression for base64 conversion
+          0.3 // More aggressive compression for base64 conversion with 4 image limit
         );
       };
 
@@ -224,8 +216,8 @@ const EditRecipePage: React.FC = () => {
     console.log('📸 Processing images in EditRecipePage:', files.length, 'files');
 
     // Check image limit
-    if (images.length + files.length > 6) {
-      alert(`ניתן להעלות עד 6 תמונות בלבד. כרגע יש לך ${images.length} תמונות ואתה מנסה להוסיף ${files.length} נוספות.`);
+    if (images.length + files.length > 4) {
+      alert(`ניתן להעלות עד 4 תמונות בלבד. כרגע יש לך ${images.length} תמונות ואתה מנסה להוסיף ${files.length} נוספות.`);
       e.target.value = '';
       return;
     }
@@ -251,11 +243,9 @@ const EditRecipePage: React.FC = () => {
               const sizeInKB = Math.round(result.length / 1024);
               console.log(`📸 Base64 size for ${file.name}: ${sizeInKB}KB`);
               
-              // Strict limit to prevent 413 errors
-              if (sizeInKB > 600) {
-                console.error(`❌ Base64 image too large: ${file.name} (${sizeInKB}KB)`);
-                reject(new Error(`התמונה גדולה מדי: ${sizeInKB}KB. נא להשתמש בתמונה קטנה יותר (מקסימום 600KB).`));
-                return;
+              // Warn if still too large
+              if (sizeInKB > 800) {
+                console.warn(`⚠️ Large base64 image: ${file.name} (${sizeInKB}KB)`);
               }
               
               resolve(result);
@@ -494,15 +484,6 @@ const EditRecipePage: React.FC = () => {
               // Use images directly without complex processing
         const finalImageUrls: string[] = images.map(img => img.url);
         console.log(`📸 Using ${finalImageUrls.length} images directly:`, finalImageUrls.map(url => url.substring(0, 50) + '...'));
-        
-        // Check total payload size to prevent 413 errors
-        const totalPayloadSize = JSON.stringify({ images: finalImageUrls }).length;
-        const totalPayloadMB = (totalPayloadSize / 1024 / 1024).toFixed(2);
-        console.log(`📦 Total payload size: ${totalPayloadMB}MB`);
-        
-        if (totalPayloadSize > 50 * 1024 * 1024) { // 50MB limit
-          throw new Error(`הנתונים גדולים מדי לשליחה (${totalPayloadMB}MB). נא להקטין את התמונות או להוריד חלק מהן.`);
-        }
       
               const updatedRecipe = {
           ...formData,
@@ -532,19 +513,8 @@ const EditRecipePage: React.FC = () => {
         // Only show success if the update actually succeeded
         if (updateResult) {
           console.log('✅ EDIT: Recipe updated successfully');
-          console.log('✅ EDIT: Final image count in update:', finalImageUrls.length);
           setHasUnsavedChanges(false);
           setUploadStatus('המתכון עודכן בהצלחה!');
-          
-          // Verify that images were actually saved by checking the updated recipe
-          const updatedRecipeFromContext = recipes.find(r => r.id === recipe!.id);
-          if (updatedRecipeFromContext) {
-            console.log('✅ EDIT: Images in updated recipe from context:', updatedRecipeFromContext.images?.length || 0);
-            if (finalImageUrls.length > 0 && (!updatedRecipeFromContext.images || updatedRecipeFromContext.images.length !== finalImageUrls.length)) {
-              console.warn('⚠️ EDIT: Image count mismatch detected after update');
-              setUploadStatus('המתכון עודכן, אך ייתכן שחלק מהתמונות לא נשמרו');
-            }
-          }
           
           setTimeout(() => {
             alert('המתכון עודכן בהצלחה!');
@@ -574,7 +544,7 @@ const EditRecipePage: React.FC = () => {
           
           // Handle specific payload too large error
           if (error.message.includes('413') || error.message.includes('Payload Too Large')) {
-            errorMessage = 'התמונות גדולות מדי לשמירה. נא להוריד חלק מהתמונות או להשתמש בתמונות קטנות יותר.';
+            errorMessage = 'התמונה גדולה מדי. נא לנסות תמונה קטנה יותר או לדחוס אותה.';
           }
           
           if (error.message.includes('network') || error.message.includes('fetch')) {
@@ -821,7 +791,7 @@ const EditRecipePage: React.FC = () => {
                   <div className="flex items-center justify-between mb-3">
                     <h2 className="text-base font-semibold text-gray-800 flex items-center gap-2">
                       <div className="w-2 h-2 bg-gradient-to-r from-pink-500 to-purple-500 rounded-full"></div>
-                      תמונות המתכון ({images.length}/6)
+                      תמונות המתכון ({images.length}/4)
                     </h2>
                   </div>
                   
@@ -902,7 +872,7 @@ const EditRecipePage: React.FC = () => {
                     {/* Add More Images and Manage Images Buttons */}
                     <div className="pt-2">
                       <div className="flex gap-2">
-                        {images.length < 6 && (
+                        {images.length < 4 && (
                           <>
                             <input
                               type="file"
@@ -945,7 +915,7 @@ const EditRecipePage: React.FC = () => {
                   <div className="flex items-center justify-between mb-3">
                     <h2 className="text-sm font-medium text-gray-800 flex items-center gap-2">
                       <div className="w-1.5 h-1.5 bg-pink-500 rounded-full"></div>
-                      תמונות (0/6)
+                      תמונות (0/4)
                     </h2>
                   </div>
                   
@@ -959,7 +929,7 @@ const EditRecipePage: React.FC = () => {
                       onChange={handleFileSelect}
                       className="hidden"
                       id="mobile-camera-input"
-                      disabled={isLoading || images.length >= 6}
+                      disabled={isLoading || images.length >= 4}
                     />
                     <input
                       type="file"
@@ -968,12 +938,12 @@ const EditRecipePage: React.FC = () => {
                       onChange={handleFileSelect}
                       className="hidden"
                       id="mobile-gallery-input"
-                      disabled={isLoading || images.length >= 6}
+                      disabled={isLoading || images.length >= 4}
                     />
                     <button
                       type="button"
                       onClick={() => document.getElementById('mobile-gallery-input')?.click()}
-                      disabled={isLoading || images.length >= 6}
+                      disabled={isLoading || images.length >= 4}
                       className="flex-1 flex items-center justify-center gap-2 bg-blue-500/90 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                     >
                       <Upload className="w-4 h-4" />
@@ -982,7 +952,7 @@ const EditRecipePage: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => document.getElementById('mobile-camera-input')?.click()}
-                      disabled={isLoading || images.length >= 6}
+                      disabled={isLoading || images.length >= 4}
                       className="flex-1 flex items-center justify-center gap-2 bg-green-500/90 text-white px-3 py-2 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                     >
                       <Camera className="w-4 h-4" />
@@ -999,12 +969,12 @@ const EditRecipePage: React.FC = () => {
                       onChange={handleFileSelect}
                       className="hidden"
                       id="desktop-gallery-input"
-                      disabled={isLoading || images.length >= 6}
+                      disabled={isLoading || images.length >= 4}
                     />
                     <button
                       type="button"
                       onClick={() => document.getElementById('desktop-gallery-input')?.click()}
-                      disabled={isLoading || images.length >= 6}
+                      disabled={isLoading || images.length >= 4}
                       className="w-full flex items-center justify-center gap-2 bg-blue-500/90 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                     >
                       <Upload className="w-4 h-4" />
@@ -1372,7 +1342,7 @@ const EditRecipePage: React.FC = () => {
                       recipeId={id || ''}
                       initialImages={images}
                       onImagesChange={handleImagesChange}
-                      maxImages={6}
+                      maxImages={4}
                       className="space-y-3"
                     />
                   </div>

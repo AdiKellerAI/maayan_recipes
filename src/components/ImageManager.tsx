@@ -13,7 +13,7 @@ interface ImageManagerProps {
 const ImageManager: React.FC<ImageManagerProps> = ({
   recipeId,
   onImagesChange,
-  maxImages = 6,
+  maxImages = 4,
   className = '',
   initialImages = []
 }) => {
