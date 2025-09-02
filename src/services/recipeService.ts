@@ -792,85 +792,9 @@ export const recipeService = {
           console.log(`🔄 SERVICE: Updating recipe via API (attempt ${attempt}/3)`);
           console.log('🔄 SERVICE: Update payload:', JSON.stringify({...updates, images: updates.images ? `[${updates.images.length} images]` : 'none'}));
           
-          // For mobile, process images before sending to ensure they're properly formatted
+          // Send images directly without complex processing
           let processedUpdates = { ...updates };
-          if (updates.images && Array.isArray(updates.images) && updates.images.length > 0) {
-            console.log('📱 MOBILE: Processing images before update...');
-            try {
-              // Check if any images are base64 and need to be uploaded
-              const base64Images = updates.images.filter(img => img.startsWith('data:image/'));
-              if (base64Images.length > 0) {
-                console.log(`📱 MOBILE: Found ${base64Images.length} base64 images to upload`);
-                
-                // Upload base64 images first
-                for (let i = 0; i < base64Images.length; i++) {
-                  const base64Image = base64Images[i];
-                  try {
-                    // Convert base64 to file
-                    const file = this.base64ToFile(base64Image, `recipe_${id}_${Date.now()}_${i}.jpg`);
-                    
-                    // Upload image with retry
-                    let uploadSuccess = false;
-                    for (let uploadAttempt = 1; uploadAttempt <= 3; uploadAttempt++) {
-                      try {
-                        console.log(`📱 MOBILE: Uploading image ${i + 1}/${base64Images.length} (attempt ${uploadAttempt}/3)`);
-                        
-                        // Import imageService dynamically to avoid circular dependencies
-                        const { imageService } = await import('./imageService');
-                        const uploadResult = await imageService.uploadImages(id, [file], 'gallery');
-                        
-                        if (uploadResult.success && uploadResult.images.length > 0) {
-                          console.log(`✅ MOBILE: Image ${i + 1} uploaded successfully`);
-                          
-                          // Replace base64 with uploaded URL
-                          const uploadedImage = uploadResult.images[0];
-                          const imageIndex = updates.images.indexOf(base64Image);
-                          if (imageIndex !== -1 && processedUpdates.images && Array.isArray(processedUpdates.images)) {
-                            processedUpdates.images[imageIndex] = uploadedImage.url;
-                          }
-                          
-                          uploadSuccess = true;
-                          break;
-                        } else {
-                          throw new Error(`Upload failed: ${uploadResult.errors?.map(e => e.error).join(', ')}`);
-                        }
-                      } catch (uploadError) {
-                        console.warn(`⚠️ MOBILE: Image upload attempt ${uploadAttempt} failed:`, uploadError);
-                        
-                        if (uploadAttempt === 3) {
-                          console.error(`❌ MOBILE: Failed to upload image ${i + 1} after 3 attempts`);
-                          throw uploadError;
-                        }
-                        
-                        // Wait before retry
-                        await new Promise(resolve => setTimeout(resolve, 1000 * uploadAttempt));
-                      }
-                    }
-                    
-                    if (!uploadSuccess) {
-                      throw new Error(`Failed to upload image ${i + 1} after 3 attempts`);
-                    }
-                  } catch (imageError) {
-                    console.error(`❌ MOBILE: Failed to process image ${i + 1}:`, imageError);
-                    throw imageError;
-                  }
-                }
-                
-                console.log('✅ MOBILE: All images processed and uploaded successfully');
-              }
-            } catch (imageProcessingError) {
-              console.error('❌ MOBILE: Failed to process images:', imageProcessingError);
-              
-              // If this is the last attempt, throw an error to trigger fallback
-              if (attempt === 3) {
-                throw new Error(`Image processing failed after ${attempt} attempts: ${imageProcessingError instanceof Error ? imageProcessingError.message : 'Unknown error'}`);
-              }
-              
-              // Wait before retry
-              await new Promise(resolve => setTimeout(resolve, 1000 * attempt));
-              continue;
-            }
-          }
+          console.log('📸 Sending images directly to API without processing');
           
           const response = await fetch(`/api/recipes/${id}`, {
             method: 'PUT',

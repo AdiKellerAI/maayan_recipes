@@ -8,7 +8,7 @@ import { categories } from '../data/categories';
 import type { RecipeSection } from '../types/recipe';
 import { RecipeImage } from '../services/imageService';
 import ImageManager from '../components/ImageManager';
-import { detectPlatform } from '../utils/imageUtils';
+
 
 const EditRecipePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -46,17 +46,7 @@ const EditRecipePage: React.FC = () => {
   const ingredientRefs = useRef<(HTMLInputElement | null)[]>([]);
   const directionRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
 
-  // Universal image processing for all platforms
-  const processImagesForRecipe = async (images: RecipeImage[]): Promise<string[]> => {
-    const platform = detectPlatform();
-    console.log(`🔄 Processing images for ${platform} platform...`);
-    
-    const imageUrls = images.map(img => img.url);
-    const processedUrls = await processImagesForStorage(imageUrls, formData.title);
-    
-    console.log(`✅ Processed ${processedUrls.length} images for ${platform}`);
-    return processedUrls;
-  };
+
 
   // Initialize form data when recipe loads
   useEffect(() => {
@@ -338,37 +328,7 @@ const EditRecipePage: React.FC = () => {
     setHasUnsavedChanges(true);
   };
 
-  // Image management
-  const handleSmartImageSelect = (imageUrl: string) => {
-    if (images.length >= 6) {
-      alert('ניתן להעלות עד 6 תמונות בלבד.');
-      return;
-    }
-    
-    // Create a temporary RecipeImage object for the smart image
-    const tempImage: RecipeImage = {
-      id: `temp-smart-${Date.now()}`,
-      recipe_id: recipe?.id || '',
-      filename: `smart-image-${Date.now()}.jpg`,
-      file_path: '',
-      url: imageUrl,
-      image_type: 'gallery',
-      file_size: 0,
-      mime_type: 'image/jpeg',
-      alt_text: 'תמונה מחפש חכם',
-      width: 0,
-      height: 0,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    };
-    
-    // Add the temporary image to the images array
-    setImages(prev => [...prev, tempImage]);
-    setHasUnsavedChanges(true);
-    // Don't close the modal automatically - let the user stay in edit mode
-    // setShowSmartImageSearch(false); // Removed to prevent navigation away from edit page
-    console.log('✨ EDIT: Smart image added:', imageUrl);
-  };
+
 
   // Additional sections management
   const addNewSection = () => {
@@ -502,19 +462,9 @@ const EditRecipePage: React.FC = () => {
         }
       });
 
-              // Process images for storage (universal for all platforms)
-        let finalImageUrls: string[] = [];
-        if (images.length > 0) {
-          try {
-            console.log('🔄 Processing images before saving...');
-            finalImageUrls = await processImagesForRecipe(images);
-            console.log(`✅ Processed ${finalImageUrls.length} images`);
-          } catch (error) {
-            console.error('❌ Error processing images:', error);
-            // Use original URLs if processing fails
-            finalImageUrls = images.map(img => img.url);
-          }
-        }
+              // Use images directly without complex processing
+        const finalImageUrls: string[] = images.map(img => img.url);
+        console.log(`📸 Using ${finalImageUrls.length} images directly:`, finalImageUrls.map(url => url.substring(0, 50) + '...'));
       
               const updatedRecipe = {
           ...formData,
@@ -529,41 +479,7 @@ const EditRecipePage: React.FC = () => {
         console.log('🔄 EDIT: Updating recipe with images:', images.length);
         
         // Handle temporary images from SmartImageSearch
-        const tempSmartImages = images.filter(img => img.id.startsWith('temp-smart-'));
-        const tempUploadImages = images.filter(img => img.id.startsWith('temp-upload-'));
-        
-        if (tempSmartImages.length > 0 || tempUploadImages.length > 0) {
-          console.log('📸 EDIT: Processing temporary images...');
-          
-          // Save temporary smart images to the recipe
-          for (const tempImage of tempSmartImages) {
-            try {
-              // Download and save the smart image
-              const response = await fetch(tempImage.url);
-              const blob = await response.blob();
-              const file = new File([blob], tempImage.filename, { type: tempImage.mime_type });
-              
-              // Upload the image to the server
-              const uploadResponse = await imageService.uploadImages(recipe!.id, [file], 'gallery');
-              if (uploadResponse.success && uploadResponse.images.length > 0) {
-                // Replace the temporary image with the uploaded one
-                const uploadedImage = uploadResponse.images[0];
-                setImages(prev => prev.map(img => 
-                  img.id === tempImage.id ? uploadedImage : img
-                ));
-              }
-            } catch (uploadError) {
-              console.error('Error uploading smart image:', uploadError);
-              // Keep the temporary image for now
-            }
-          }
-          
-          // Handle temp upload images (these were already processed as files)
-          for (const tempImage of tempUploadImages) {
-            // These images will be handled by the normal save process
-            console.log('📸 EDIT: Temp upload image will be saved:', tempImage.filename);
-          }
-        }
+        console.log('📸 EDIT: Skipping temporary image processing - using direct save');
         
         // Save the recipe directly
         setUploadStatus('מעדכן מתכון...');

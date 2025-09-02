@@ -7,7 +7,7 @@ import { categories } from '../data/categories';
 import { Plus, X, Upload, Camera, Sparkles, Link } from 'lucide-react';
 import SmartImageSearch from '../components/SmartImageSearch';
 import { RecipeImage } from '../services/imageService';
-import { detectPlatform } from '../utils/imageUtils';
+
 
 const AddRecipePage: React.FC = () => {
   const navigate = useNavigate();
@@ -317,107 +317,11 @@ const AddRecipePage: React.FC = () => {
     console.log('✨ Smart image added:', imageUrl);
   };
 
-  // Universal image processing for all platforms
-  const processImagesForRecipe = async (images: RecipeImage[]): Promise<string[]> => {
-    const platform = detectPlatform();
-    console.log(`🔄 Processing images for ${platform} platform...`);
-    
-    const processedUrls: string[] = [];
-    
-    for (const image of images) {
-      try {
-        // Since we're now using base64 directly, just use the URL as is
-        if (image.url.startsWith('data:image/')) {
-          processedUrls.push(image.url);
-          console.log(`✅ Using base64 data URL for ${image.filename}`);
-        } else if (image.url.startsWith('http')) {
-          // External URLs (like from smart search)
-          processedUrls.push(image.url);
-          console.log(`✅ Using external URL for ${image.filename}`);
-        } else {
-          console.warn(`⚠️ Skipping unknown URL format for ${image.filename}:`, image.url.substring(0, 50));
-        }
-      } catch (error) {
-        console.error(`❌ Failed to process image ${image.filename}:`, error);
-        // Skip this image if processing fails
-        continue;
-      }
-    }
-    
-    console.log(`✅ Processed ${processedUrls.length} images for ${platform}`);
-    return processedUrls;
-  };
 
 
 
-  // Upload images to server
-  const uploadImagesToServer = async (recipeId: string): Promise<RecipeImage[]> => {
-    if (imageFiles.length === 0) {
-      return images.filter(img => !img.id.startsWith('temp-'));
-    }
 
-    setIsUploadingImages(true);
-    setUploadStatus('מעלה תמונות...');
-    
-    // Initialize progress for each file
-    const progress: { [key: string]: number } = {};
-    imageFiles.forEach(file => {
-      progress[file.name] = 0;
-    });
-    setUploadProgress(progress);
-    
-    try {
-      // Simulate progress updates
-      const progressInterval = setInterval(() => {
-        setUploadProgress(prev => {
-          const newProgress = { ...prev };
-          Object.keys(newProgress).forEach(filename => {
-            if (newProgress[filename] < 90) {
-              newProgress[filename] += Math.random() * 10;
-            }
-          });
-          return newProgress;
-        });
-      }, 200);
 
-      const response = await imageService.uploadImages(recipeId, imageFiles, 'gallery');
-      
-      clearInterval(progressInterval);
-      
-      // Set all progress to 100%
-      setUploadProgress(prev => {
-        const newProgress = { ...prev };
-        Object.keys(newProgress).forEach(filename => {
-          newProgress[filename] = 100;
-        });
-        return newProgress;
-      });
-      
-      if (response.success) {
-        setUploadStatus(`הועלו ${response.uploaded_count} תמונות בהצלחה`);
-        
-        // Replace temporary images with uploaded ones
-        const uploadedImages = response.images;
-        const existingImages = images.filter(img => !img.id.startsWith('temp-'));
-        
-        return [...existingImages, ...uploadedImages];
-      } else {
-        throw new Error('Failed to upload images');
-      }
-    } catch (error) {
-      console.error('Error uploading images:', error);
-      setUploadStatus('שגיאה בהעלאת התמונות');
-      throw error;
-    } finally {
-      setIsUploadingImages(false);
-      setImageFiles([]);
-      // Clear progress after a delay
-      setTimeout(() => {
-        setUploadProgress({});
-        setUploadStatus('');
-      }, 2000);
-    }
-  };
 
 
 
@@ -843,18 +747,9 @@ const AddRecipePage: React.FC = () => {
         });
 
         // Process images for storage (universal for all platforms)
-        let processedImages: string[] = [];
-        if (images.length > 0) {
-          try {
-            console.log('🔄 Processing images before saving...');
-            processedImages = await processImagesForRecipe(images);
-            console.log(`✅ Processed ${processedImages.length} images`);
-          } catch (error) {
-            console.error('❌ Error processing images:', error);
-            // Continue without images if processing fails
-            processedImages = [];
-          }
-        }
+        // Use images directly without complex processing
+        const processedImages: string[] = images.map(img => img.url);
+        console.log(`📸 Using ${processedImages.length} images directly:`, processedImages.map(url => url.substring(0, 50) + '...'));
 
         const newRecipe: RecipeInsert = {
           title: title.trim(),
