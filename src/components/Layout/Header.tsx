@@ -293,6 +293,29 @@ const Header: React.FC = () => {
     setIsClearingMemory(true);
     setMemoryCleanupMessage(null);
     
+    // Save current location and determine where to navigate after sync
+    const currentPath = location.pathname;
+    const isRecipeDetailPage = currentPath.startsWith('/recipe/');
+    const isAddRecipePage = currentPath === '/add';
+    const isEditRecipePage = currentPath.startsWith('/edit/');
+    
+    // Determine target navigation after sync
+    let targetPath = currentPath; // Default: stay on current page
+    
+    if (isRecipeDetailPage || isEditRecipePage) {
+      // For recipe detail or edit pages, go to recipes list to avoid 404
+      // since the specific recipe might not exist after memory cleanup
+      targetPath = '/recipes';
+      console.log('🔄 SYNC: Recipe-specific page detected, will navigate to recipes list');
+    } else if (isAddRecipePage) {
+      // For add recipe page, stay there since it doesn't depend on existing recipes
+      targetPath = '/add';
+      console.log('🔄 SYNC: Add recipe page detected, will stay on add page');
+    } else {
+      // For other pages (home, recipes list, search), stay on current page
+      console.log('🔄 SYNC: General page detected, will stay on current page');
+    }
+    
     try {
       // Close the menu first to prevent any navigation issues
       setIsMenuOpen(false);
@@ -317,10 +340,9 @@ const Header: React.FC = () => {
             setMemoryCleanupMessage(null);
             (window as any).__isClearingMemory = false;
             
-            // Always navigate to home page after sync to prevent 404 errors
-            // Since memory cleanup clears all recipes from localStorage,
-            // staying on recipe detail pages would cause 404 errors
-            navigate('/', { replace: true });
+            // Smart navigation based on current page type
+            console.log(`🔄 SYNC: Navigating to ${targetPath} after sync`);
+            navigate(targetPath, { replace: true });
             
             // Force a full page reload to ensure all state is cleared
             setTimeout(() => {
