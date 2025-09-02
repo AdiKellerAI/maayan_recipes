@@ -15,9 +15,9 @@ const PORT = process.env.PORT || 3001;
 
 // Middleware
 app.use(cors());
-// Increase payload limit for image uploads (50MB limit)
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+// Increase payload limit for image uploads (100MB limit for large compressed images)
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ limit: '100mb', extended: true }));
 app.use(express.static(join(__dirname, '../dist')));
 
 // Use image routes

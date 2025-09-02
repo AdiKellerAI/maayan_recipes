@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Heart, Plus, Filter, Menu, X, ChefHat, Database, Shield, ShieldCheck, Trash2 } from 'lucide-react';
+import { Search, Heart, Plus, Filter, Menu, X, ChefHat, Database, Shield, ShieldCheck, RefreshCw } from 'lucide-react';
 import { useRecipes } from '../../contexts/RecipeContext';
 import { useProtectedAction } from '../../hooks/useProtectedAction';
 import { useAuth } from '../../contexts/AuthContext';
@@ -286,12 +286,15 @@ const Header: React.FC = () => {
   };
 
   const handleMemoryCleanup = async () => {
-    if (!window.confirm('האם אתה בטוח שברצונך לנקות את כל הזיכרון? פעולה זו תמחק את כל הנתונים השמורים מקומית ותאפס את האתר.')) {
+    if (!window.confirm('בסיום הפעולה יתבצע Logout ויהיה צורך להירשם מחדש. האם להמשיך?')) {
       return;
     }
 
     setIsClearingMemory(true);
     setMemoryCleanupMessage(null);
+    
+    // Save current location before cleanup
+    const currentPath = location.pathname;
     
     try {
       // Close the menu first to prevent any navigation issues
@@ -317,9 +320,9 @@ const Header: React.FC = () => {
             setMemoryCleanupMessage(null);
             (window as any).__isClearingMemory = false;
             
-            // Navigate to home page instead of reloading current page to avoid 404
-            // This ensures a clean state and avoids any URL parameter issues
-            navigate('/', { replace: true });
+            // Stay on current page instead of navigating to home
+            // This ensures user stays where they were
+            navigate(currentPath, { replace: true });
             
             // Force a full page reload to ensure all state is cleared
             setTimeout(() => {
@@ -341,102 +344,7 @@ const Header: React.FC = () => {
     }
   };
 
-  const handleSyncData = async () => {
-    // Check if we're in the middle of memory cleanup
-    if ((window as any).__isClearingMemory) {
-      console.log('⚠️ Data sync: Memory cleanup in progress, skipping sync');
-      return;
-    }
-    
-    setIsConnecting(true);
-    setMemoryCleanupMessage(null);
-    
-    try {
-      console.log('🔄 Manual data sync initiated...');
-      
-      // Check if API is available before attempting sync
-      try {
-        const testResponse = await fetch('/api/test-connection', {
-          method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
-          signal: AbortSignal.timeout(5000)
-        });
-        
-        if (!testResponse.ok) {
-          setMemoryCleanupMessage('מאגר המידע לא זמין כרגע');
-          console.warn('⚠️ API not available for sync');
-          return;
-        }
-      } catch (testError) {
-        setMemoryCleanupMessage('מאגר המידע לא זמין כרגע');
-        console.warn('⚠️ API test failed:', testError);
-        return;
-      }
-      
-      // Step 1: Sync recipes from localStorage
-      console.log('🔄 Step 1: Syncing recipes from localStorage...');
-      const recipeResult = await recipeService.syncLocalStorageToServer();
-      
-      let totalSynced = recipeResult.synced;
-      let totalImagesSynced = recipeResult.imagesSynced;
-      let totalErrors = recipeResult.errors;
-      
-      // Step 2: Sync images for existing recipes
-      console.log('🖼️ Step 2: Syncing images for existing recipes...');
-      const imageResult = await recipeService.syncImagesOnly();
-      
-      totalImagesSynced += imageResult.synced;
-      totalErrors += imageResult.errors;
-      
-      // Show results
-      if (totalSynced > 0 || totalImagesSynced > 0) {
-        let message = '';
-        if (totalSynced > 0) {
-          message += `סנכרן ${totalSynced} מתכונים`;
-        }
-        if (totalImagesSynced > 0) {
-          if (message) message += ' ו';
-          message += `${totalImagesSynced} תמונות`;
-        }
-        message += ' בהצלחה!';
-        
-        setMemoryCleanupMessage(message);
-        console.log(`✅ Manual data sync completed: ${totalSynced} recipes, ${totalImagesSynced} images synced`);
-        
-        // Refresh recipes to show the synced data - force refresh to ensure UI updates
-        await refreshRecipes(true);
-        
-        // Close menu to show updated content
-        setIsMenuOpen(false);
-        
-        // If we're on a specific page, trigger a re-render by updating the location
-        if (location.pathname.startsWith('/recipe/')) {
-          // For recipe detail pages, we need to ensure the recipe data is updated
-          const currentRecipeId = location.pathname.split('/recipe/')[1];
-          if (currentRecipeId) {
-            // Trigger a navigation refresh to ensure the recipe detail page updates
-            navigate(location.pathname, { replace: true });
-          }
-        }
-      } else if (totalErrors > 0) {
-        setMemoryCleanupMessage(`שגיאה בסנכרון ${totalErrors} פריטים`);
-        console.error(`❌ Manual data sync failed: ${totalErrors} errors`);
-      } else {
-        setMemoryCleanupMessage('אין נתונים לסנכרון');
-        console.log('ℹ️ Manual data sync: No data to sync');
-      }
-    } catch (error) {
-      console.error('❌ Error during manual data sync:', error);
-      setMemoryCleanupMessage('שגיאה בסנכרון הנתונים');
-    } finally {
-      setIsConnecting(false);
-      
-      // Clear message after delay
-      setTimeout(() => {
-        setMemoryCleanupMessage(null);
-      }, 3000);
-    }
-  };
+
 
   return (
     <>
@@ -761,42 +669,7 @@ const Header: React.FC = () => {
                       )}
                     </div>
                     
-                    {/* Sync Data Section */}
-                    <div className="w-full flex items-center justify-between py-1.5 px-2.5">
-                      <div className="flex items-center space-x-2 rtl:space-x-reverse">
-                        <div className={`w-5 h-5 rounded-full flex items-center justify-center ${
-                          isConnecting 
-                            ? 'bg-blue-400' 
-                            : 'bg-gradient-to-br from-blue-500 to-indigo-600'
-                        }`}>
-                          <Database className="h-2.5 w-2.5 text-white" />
-                        </div>
-                        <span className="text-xs font-medium text-black">
-                          {isConnecting ? 'מסנכרן...' : 'סנכרון נתונים'}
-                        </span>
-                      </div>
-                      
-                      {/* Sync Data Button */}
-                      <button
-                        onClick={handleSyncData}
-                        disabled={isConnecting}
-                        className={`${
-                          isConnecting
-                            ? 'bg-blue-100 text-blue-400 border-blue-200 cursor-not-allowed'
-                            : 'bg-gradient-to-br from-blue-500/80 to-indigo-600/80 border border-blue-400/80 text-white hover:from-blue-600/80 hover:to-indigo-700/80 transition-all duration-300 shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95'
-                        } px-3 py-0 rounded-md font-medium flex items-center justify-center`}
-                        style={{
-                          height: '24px',
-                          fontSize: '0.75rem',
-                          lineHeight: '1.2',
-                          minHeight: '24px',
-                          width: '60px'
-                        }}
-                        title="סנכרן נתונים ותמונות לשרת"
-                      >
-                        {isConnecting ? 'מסנכרן...' : 'סנכרן'}
-                      </button>
-                    </div>
+
 
                     {/* Memory Cleanup Section */}
                     <div className="w-full flex items-center justify-between py-1.5 px-2.5">
@@ -806,10 +679,10 @@ const Header: React.FC = () => {
                             ? 'bg-gray-400' 
                             : 'bg-gradient-to-br from-gray-500 to-slate-600'
                         }`}>
-                          <Trash2 className="h-2.5 w-2.5 text-white" />
+                          <RefreshCw className="h-2.5 w-2.5 text-white" />
                         </div>
                         <span className="text-xs font-medium text-black">
-                          {isClearingMemory ? 'מנקה...' : 'ניקוי זיכרון'}
+                          {isClearingMemory ? 'מסנכרן...' : 'סנכרון נתונים'}
                         </span>
                       </div>
                       
@@ -829,9 +702,9 @@ const Header: React.FC = () => {
                           minHeight: '24px',
                           width: '60px'
                         }}
-                        title="נקה את כל הזיכרון המקומי"
+                        title="סנכרן נתונים עם השרת"
                       >
-                        {isClearingMemory ? 'מנקה...' : 'נקה'}
+                        {isClearingMemory ? 'מסנכרן...' : 'סנכרן'}
                       </button>
                     </div>
                     

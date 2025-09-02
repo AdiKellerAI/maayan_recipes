@@ -23,7 +23,7 @@ interface RecipeContextType {
   isInitialized: boolean;
   activeRecipeId: string | null; // ID of recipe showing action icons
   addRecipe: (recipe: RecipeInsert) => Promise<Recipe>;
-  updateRecipe: (id: string, recipe: Partial<Recipe>) => void;
+  updateRecipe: (id: string, recipe: Partial<Recipe>) => Promise<boolean>;
   deleteRecipe: (id: string) => void;
   toggleFavorite: (id: string) => void;
   setViewMode: (mode: ViewMode) => void;
@@ -327,6 +327,8 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           console.warn('Background sync after update failed:', err);
         }
       }, 100);
+      
+      return true; // Return success
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to update recipe';

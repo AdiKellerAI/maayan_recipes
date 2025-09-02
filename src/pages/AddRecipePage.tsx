@@ -112,14 +112,24 @@ const AddRecipePage: React.FC = () => {
       }
 
       img.onload = () => {
-        // Calculate new dimensions (max 1200px)
+        // Calculate new dimensions - more aggressive sizing for base64
         let { width, height } = img;
-        const maxDimension = 1200;
+        const maxDimension = 800; // Smaller max dimension for base64
         
         if (width > maxDimension || height > maxDimension) {
           const ratio = Math.min(maxDimension / width, maxDimension / height);
           width = Math.floor(width * ratio);
           height = Math.floor(height * ratio);
+        }
+        
+        // Additional aggressive resizing for very large images
+        if (file.size > 5 * 1024 * 1024) { // If original > 5MB
+          const aggressiveMaxDimension = 600;
+          if (width > aggressiveMaxDimension || height > aggressiveMaxDimension) {
+            const ratio = Math.min(aggressiveMaxDimension / width, aggressiveMaxDimension / height);
+            width = Math.floor(width * ratio);
+            height = Math.floor(height * ratio);
+          }
         }
 
         canvas.width = width;
@@ -144,7 +154,7 @@ const AddRecipePage: React.FC = () => {
             }
           },
           'image/jpeg',
-          0.8 // 80% quality
+          0.4 // More aggressive compression for base64 conversion
         );
       };
 
@@ -207,18 +217,24 @@ const AddRecipePage: React.FC = () => {
       
       for (const file of imageFiles) {
         try {
-          // Compress image if it's too large
-          let processedFile = file;
-          if (file.size > 2 * 1024 * 1024) { // If larger than 2MB, compress
-            console.log(`🔄 Compressing large image: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
-            processedFile = await compressImageSimple(file);
-          }
+          // Always compress images for better upload performance
+          console.log(`🔄 Compressing image: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+          const processedFile = await compressImageSimple(file);
           
           // Convert file to base64 directly
           const base64 = await new Promise<string>((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => {
               const result = reader.result as string;
+              // Additional check for base64 size
+              const sizeInKB = Math.round(result.length / 1024);
+              console.log(`📸 Base64 size for ${file.name}: ${sizeInKB}KB`);
+              
+              // Warn if still too large
+              if (sizeInKB > 800) {
+                console.warn(`⚠️ Large base64 image: ${file.name} (${sizeInKB}KB)`);
+              }
+              
               resolve(result);
             };
             reader.onerror = reject;
@@ -232,8 +248,8 @@ const AddRecipePage: React.FC = () => {
             file_path: '',
             url: base64, // Use base64 directly instead of blob URL
             image_type: 'gallery',
-            file_size: file.size,
-            mime_type: file.type,
+            file_size: processedFile.size, // Use compressed file size
+            mime_type: 'image/jpeg', // Always JPEG after compression,
             alt_text: `תמונה: ${file.name}`,
             width: 0,
             height: 0,
@@ -774,16 +790,22 @@ const AddRecipePage: React.FC = () => {
         // Save the recipe directly
         setUploadStatus('שומר מתכון...');
         const savedRecipe = await addRecipe(newRecipe);
-        console.log('✅ Recipe saved successfully:', {
-          id: savedRecipe.id,
-          title: savedRecipe.title,
-          imagesCount: savedRecipe.images?.length || 0
-        });
         
-        setUploadStatus('המתכון נשמר בהצלחה!');
-        setTimeout(() => {
-          alert('המתכון נשמר בהצלחה!');
-        }, 500);
+        // Only show success if the recipe was actually saved
+        if (savedRecipe && savedRecipe.id) {
+          console.log('✅ Recipe saved successfully:', {
+            id: savedRecipe.id,
+            title: savedRecipe.title,
+            imagesCount: savedRecipe.images?.length || 0
+          });
+          
+          setUploadStatus('המתכון נשמר בהצלחה!');
+          setTimeout(() => {
+            alert('המתכון נשמר בהצלחה!');
+          }, 500);
+        } else {
+          throw new Error('Failed to save recipe to database');
+        }
         
         // Force refresh recipes in context to ensure the new recipe is visible
         await refreshRecipes();
@@ -816,7 +838,9 @@ const AddRecipePage: React.FC = () => {
         if (error instanceof Error) {
           console.log('📝 Analyzing error message:', error.message);
           
-          if (error.message.includes('network') || error.message.includes('fetch')) {
+          if (error.message.includes('413') || error.message.includes('Payload Too Large')) {
+            errorMessage = 'התמונה גדולה מדי. נא לנסות תמונה קטנה יותר או לדחוס אותה.';
+          } else if (error.message.includes('network') || error.message.includes('fetch')) {
             errorMessage = 'בעיית חיבור לאינטרנט. נא לבדוק את החיבור ולנסות שוב.';
           } else if (error.message.includes('timeout')) {
             errorMessage = 'הבקשה לקחה זמן רב מדי. נא לנסות שוב.';
