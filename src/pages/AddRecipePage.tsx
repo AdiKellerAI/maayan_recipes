@@ -7,9 +7,8 @@ import { categories } from '../data/categories';
 import { Plus, X, Upload, Camera, Sparkles, Link } from 'lucide-react';
 import SmartImageSearch from '../components/SmartImageSearch';
 import { recipeService } from '../services/recipeService';
-import { imageService, RecipeImage } from '../services/imageService';
-import { processImagesForStorage, detectPlatform } from '../utils/imageUtils';
-import { enhancedMobileImageService } from '../services/enhancedMobileImageService';
+import { RecipeImage } from '../services/imageService';
+import { detectPlatform } from '../utils/imageUtils';
 
 const AddRecipePage: React.FC = () => {
   const navigate = useNavigate();
@@ -101,6 +100,60 @@ const AddRecipePage: React.FC = () => {
     }, 10); // Reduced timeout for smoother experience
   };
 
+  // Simple image compression function
+  const compressImageSimple = (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+
+      if (!ctx) {
+        reject(new Error('Cannot get canvas context'));
+        return;
+      }
+
+      img.onload = () => {
+        // Calculate new dimensions (max 1200px)
+        let { width, height } = img;
+        const maxDimension = 1200;
+        
+        if (width > maxDimension || height > maxDimension) {
+          const ratio = Math.min(maxDimension / width, maxDimension / height);
+          width = Math.floor(width * ratio);
+          height = Math.floor(height * ratio);
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        // Draw and compress
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              console.log(`✅ Compressed ${file.name}: ${(file.size / 1024).toFixed(0)}KB → ${(compressedFile.size / 1024).toFixed(0)}KB`);
+              resolve(compressedFile);
+            } else {
+              reject(new Error('Failed to compress image'));
+            }
+          },
+          'image/jpeg',
+          0.8 // 80% quality
+        );
+      };
+
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
   const removeDirection = (index: number) => {
     if (directions.length <= 1) return;
     
@@ -122,11 +175,26 @@ const AddRecipePage: React.FC = () => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    console.log('📱 Enhanced mobile image upload started:', files.length, 'files');
+    console.log('📸 Processing images:', files.length);
+    
+    // Filter out non-image files
+    const imageFiles = Array.from(files).filter(file => {
+      const isImage = file.type.startsWith('image/');
+      if (!isImage) {
+        console.log('⚠️ Skipping non-image file:', file.name, file.type);
+      }
+      return isImage;
+    });
+    
+    if (imageFiles.length === 0) {
+      alert('אנא בחר קבצי תמונה בלבד (JPG, PNG, WEBP, HEIC).');
+      e.target.value = '';
+      return;
+    }
     
     // Check if adding these images would exceed the 6 image limit
-    if (images.length + files.length > 6) {
-      alert(`ניתן להעלות עד 6 תמונות בלבד. כרגע יש לך ${images.length} תמונות ואתה מנסה להוסיף ${files.length} נוספות.`);
+    if (images.length + imageFiles.length > 6) {
+      alert(`ניתן להעלות עד 6 תמונות בלבד. כרגע יש לך ${images.length} תמונות ואתה מנסה להוסיף ${imageFiles.length} נוספות.`);
       e.target.value = '';
       return;
     }
@@ -135,57 +203,60 @@ const AddRecipePage: React.FC = () => {
     setUploadStatus('מעבד תמונות...');
 
     try {
-      const platform = detectPlatform();
-      console.log(`📱 Processing images on ${platform} platform`);
-
-      // Use enhanced mobile image service
-      const result = await enhancedMobileImageService.uploadImages(
-        Array.from(files),
-        {
-          imageType: 'gallery',
-          onProgress: (completed, total, currentFile) => {
-            const percentage = Math.round((completed / total) * 100);
-            setUploadStatus(`מעבד תמונות... ${percentage}% (${currentFile})`);
-            console.log(`📱 Progress: ${completed}/${total} - ${currentFile}`);
-          },
-          onStatusUpdate: (status) => {
-            setUploadStatus(status);
-            console.log(`📱 Status: ${status}`);
+      // Create temporary preview images with base64 conversion
+      const tempImages: RecipeImage[] = [];
+      
+      for (const file of imageFiles) {
+        try {
+          // Compress image if it's too large
+          let processedFile = file;
+          if (file.size > 2 * 1024 * 1024) { // If larger than 2MB, compress
+            console.log(`🔄 Compressing large image: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+            processedFile = await compressImageSimple(file);
           }
-        }
-      );
+          
+          // Convert file to base64 directly
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => {
+              const result = reader.result as string;
+              resolve(result);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(processedFile);
+          });
 
-      if (result.success && result.images.length > 0) {
-        // Add successfully processed images
-        setImages(prev => [...prev, ...result.images]);
-        
-        // Show success message with compression stats
-        const { compressionStats } = result;
-        const originalSizeMB = (compressionStats.totalOriginalSize / 1024 / 1024).toFixed(1);
-        const compressedSizeMB = (compressionStats.totalCompressedSize / 1024 / 1024).toFixed(1);
-        const ratio = compressionStats.averageCompressionRatio.toFixed(1);
-        
-        setUploadStatus(`הועלו ${result.images.length} תמונות בהצלחה! דחיסה: ${originalSizeMB}MB → ${compressedSizeMB}MB (${ratio}x)`);
-        
-        console.log(`✅ Enhanced upload complete: ${result.images.length} images processed`);
-        console.log(`📊 Compression stats:`, compressionStats);
-
-        // Show errors if any
-        if (result.errors.length > 0) {
-          const errorMessages = result.errors.map(err => `${err.filename}: ${err.error}`).join('\n');
-          setTimeout(() => {
-            alert(`חלק מהתמונות לא הועלו:\n${errorMessages}`);
-          }, 1000);
+          const tempImage: RecipeImage = {
+            id: `temp-${Date.now()}-${Math.random()}`,
+            recipe_id: '',
+            filename: file.name,
+            file_path: '',
+            url: base64, // Use base64 directly instead of blob URL
+            image_type: 'gallery',
+            file_size: file.size,
+            mime_type: file.type,
+            alt_text: `תמונה: ${file.name}`,
+            width: 0,
+            height: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+          tempImages.push(tempImage);
+        } catch (error) {
+          console.error(`❌ Failed to process ${file.name}:`, error);
         }
+      }
+
+      if (tempImages.length > 0) {
+        setImages(prev => [...prev, ...tempImages]);
+        setUploadStatus(`הועלו ${tempImages.length} תמונות בהצלחה!`);
+        console.log(`✅ Added ${tempImages.length} images as base64`);
       } else {
-        // All uploads failed
-        const errorMessages = result.errors.map(err => `${err.filename}: ${err.error}`).join('\n');
-        setUploadStatus('שגיאה בהעלאת התמונות');
-        alert(`שגיאה בהעלאת התמונות:\n${errorMessages}`);
+        setUploadStatus('שגיאה בעיבוד התמונות');
       }
 
     } catch (error) {
-      console.error('❌ Enhanced image upload failed:', error);
+      console.error('❌ Image upload failed:', error);
       setUploadStatus('שגיאה בהעלאת התמונות');
       alert(`שגיאה בהעלאת התמונות: ${error instanceof Error ? error.message : 'שגיאה לא ידועה'}`);
     } finally {
@@ -256,14 +327,16 @@ const AddRecipePage: React.FC = () => {
     
     for (const image of images) {
       try {
-        // If the image is already a data URL (from enhanced mobile service), use it directly
+        // Since we're now using base64 directly, just use the URL as is
         if (image.url.startsWith('data:image/')) {
           processedUrls.push(image.url);
-          console.log(`✅ Using pre-processed data URL for ${image.filename}`);
+          console.log(`✅ Using base64 data URL for ${image.filename}`);
+        } else if (image.url.startsWith('http')) {
+          // External URLs (like from smart search)
+          processedUrls.push(image.url);
+          console.log(`✅ Using external URL for ${image.filename}`);
         } else {
-          // For other URLs (blob, external), use the original processing
-          const processedUrl = await processImagesForStorage([image.url], title);
-          processedUrls.push(...processedUrl);
+          console.warn(`⚠️ Skipping unknown URL format for ${image.filename}:`, image.url.substring(0, 50));
         }
       } catch (error) {
         console.error(`❌ Failed to process image ${image.filename}:`, error);

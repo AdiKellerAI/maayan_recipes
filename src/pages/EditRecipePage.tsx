@@ -8,10 +8,9 @@ import { categories } from '../data/categories';
 import type { RecipeSection } from '../types/recipe';
 import SmartImageSearch from '../components/SmartImageSearch';
 import { recipeService } from '../services/recipeService';
-import { imageService, RecipeImage } from '../services/imageService';
+import { RecipeImage } from '../services/imageService';
 import ImageManager from '../components/ImageManager';
-import { processImagesForStorage, detectPlatform } from '../utils/imageUtils';
-import { enhancedMobileImageService } from '../services/enhancedMobileImageService';
+import { detectPlatform } from '../utils/imageUtils';
 
 const EditRecipePage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -155,12 +154,66 @@ const EditRecipePage: React.FC = () => {
     setHasUnsavedChanges(true);
   };
 
-  // Handle file selection for images with enhanced mobile optimization
+  // Simple image compression function
+  const compressImageSimple = (file: File): Promise<File> => {
+    return new Promise((resolve, reject) => {
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
+
+      if (!ctx) {
+        reject(new Error('Cannot get canvas context'));
+        return;
+      }
+
+      img.onload = () => {
+        // Calculate new dimensions (max 1200px)
+        let { width, height } = img;
+        const maxDimension = 1200;
+        
+        if (width > maxDimension || height > maxDimension) {
+          const ratio = Math.min(maxDimension / width, maxDimension / height);
+          width = Math.floor(width * ratio);
+          height = Math.floor(height * ratio);
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        // Draw and compress
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              const compressedFile = new File([blob], file.name, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              console.log(`✅ Compressed ${file.name}: ${(file.size / 1024).toFixed(0)}KB → ${(compressedFile.size / 1024).toFixed(0)}KB`);
+              resolve(compressedFile);
+            } else {
+              reject(new Error('Failed to compress image'));
+            }
+          },
+          'image/jpeg',
+          0.8 // 80% quality
+        );
+      };
+
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  // Handle file selection for images
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    console.log('📱 Enhanced mobile image upload started in EditRecipePage:', files.length, 'files');
+    console.log('📸 Processing images in EditRecipePage:', files.length, 'files');
 
     // Check image limit
     if (images.length + files.length > 6) {
@@ -173,68 +226,57 @@ const EditRecipePage: React.FC = () => {
       setIsLoading(true);
       setUploadStatus('מעבד תמונות...');
 
-      const platform = detectPlatform();
-      console.log(`📱 Processing images on ${platform} platform for recipe ${id}`);
-
-      // Use enhanced mobile image service for recipe editing
-      const result = await enhancedMobileImageService.uploadImages(
-        Array.from(files),
-        {
-          recipeId: id, // Include recipe ID for direct server upload
-          imageType: 'gallery',
-          onProgress: (completed, total, currentFile) => {
-            const percentage = Math.round((completed / total) * 100);
-            setUploadStatus(`מעבד תמונות... ${percentage}% (${currentFile})`);
-            console.log(`📱 Progress: ${completed}/${total} - ${currentFile}`);
-          },
-          onStatusUpdate: (status) => {
-            setUploadStatus(status);
-            console.log(`📱 Status: ${status}`);
+      const fileArray = Array.from(files);
+      
+      // Convert files to RecipeImage objects with base64
+      const newImages: RecipeImage[] = await Promise.all(
+        fileArray.map(async (file, index) => {
+          // Compress image if it's too large
+          let processedFile = file;
+          if (file.size > 2 * 1024 * 1024) { // If larger than 2MB, compress
+            console.log(`🔄 Compressing large image: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
+            processedFile = await compressImageSimple(file);
           }
-        }
+          
+          const base64 = await new Promise<string>((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result as string);
+            reader.onerror = reject;
+            reader.readAsDataURL(processedFile);
+          });
+
+          return {
+            id: `temp-${Date.now()}-${index}`,
+            recipe_id: id || '',
+            filename: file.name,
+            file_path: '',
+            url: base64, // Use base64 directly
+            image_type: 'gallery',
+            file_size: file.size,
+            mime_type: file.type,
+            alt_text: `תמונה ${images.length + index + 1}`,
+            width: 0,
+            height: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
+          };
+        })
       );
 
-      if (result.success && result.images.length > 0) {
-        // Add successfully processed images
-        setImages(prev => [...prev, ...result.images]);
-        setHasUnsavedChanges(true);
-        
-        // Show success message with compression stats
-        const { compressionStats } = result;
-        const originalSizeMB = (compressionStats.totalOriginalSize / 1024 / 1024).toFixed(1);
-        const compressedSizeMB = (compressionStats.totalCompressedSize / 1024 / 1024).toFixed(1);
-        const ratio = compressionStats.averageCompressionRatio.toFixed(1);
-        
-        setUploadStatus(`הועלו ${result.images.length} תמונות בהצלחה! דחיסה: ${originalSizeMB}MB → ${compressedSizeMB}MB (${ratio}x)`);
-        
-        console.log(`✅ Enhanced edit upload complete: ${result.images.length} images processed`);
-        console.log(`📊 Compression stats:`, compressionStats);
-
-        // Show errors if any
-        if (result.errors.length > 0) {
-          const errorMessages = result.errors.map(err => `${err.filename}: ${err.error}`).join('\n');
-          setTimeout(() => {
-            alert(`חלק מהתמונות לא הועלו:\n${errorMessages}`);
-          }, 1000);
-        }
-      } else {
-        // All uploads failed
-        const errorMessages = result.errors.map(err => `${err.filename}: ${err.error}`).join('\n');
-        setUploadStatus('שגיאה בהעלאת התמונות');
-        alert(`שגיאה בהעלאת התמונות:\n${errorMessages}`);
-      }
+      setImages(prev => [...prev, ...newImages]);
+      setHasUnsavedChanges(true);
+      setUploadStatus(`הועלו ${newImages.length} תמונות בהצלחה!`);
+      console.log('✅ EDIT: Added', newImages.length, 'new images as base64');
+      
+      // Clear status after 2 seconds
+      setTimeout(() => setUploadStatus(''), 2000);
 
     } catch (error) {
-      console.error('❌ Enhanced image upload failed in EditRecipePage:', error);
-      setUploadStatus('שגיאה בהעלאת התמונות');
-      alert(`שגיאה בהעלאת התמונות: ${error instanceof Error ? error.message : 'שגיאה לא ידועה'}`);
+      console.error('❌ EDIT: Error processing images:', error);
+      setUploadStatus('שגיאה בעיבוד התמונות');
+      setTimeout(() => setUploadStatus(''), 3000);
     } finally {
       setIsLoading(false);
-      // Clear upload status after 3 seconds
-      setTimeout(() => {
-        setUploadStatus('');
-      }, 3000);
-      
       // Reset file input
       e.target.value = '';
     }
