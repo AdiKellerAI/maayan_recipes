@@ -302,8 +302,11 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const updateRecipe = async (id: string, updates: Partial<Recipe>) => {
     try {
       console.log('🔄 CONTEXT: Updating recipe with ID:', id);
-      console.log('🔄 CONTEXT: Update data:', JSON.stringify(updates, null, 2));
       console.log('🔄 CONTEXT: Images in update:', updates.images?.length || 0);
+      if (updates.images && updates.images.length > 0) {
+        console.log('🔄 CONTEXT: First image preview:', updates.images[0].substring(0, 100) + '...');
+        console.log('🔄 CONTEXT: All image sizes:', updates.images.map(img => Math.round(img.length / 1024) + 'KB'));
+      }
       
       // Optimistically update local state first
       setRecipes(prev => prev.map(recipe => 
@@ -318,6 +321,15 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setRecipes(prev => prev.map(recipe => 
         recipe.id === id ? updatedRecipe : recipe
       ));
+      
+      // Verify the update was successful
+      if (updates.images && updates.images.length > 0) {
+        if (!updatedRecipe.images || updatedRecipe.images.length !== updates.images.length) {
+          console.error('❌ CONTEXT: Image count mismatch after update!');
+          console.error('❌ CONTEXT: Expected:', updates.images.length, 'Got:', updatedRecipe.images?.length || 0);
+          throw new Error(`Image saving failed: expected ${updates.images.length} images, but only ${updatedRecipe.images?.length || 0} were saved`);
+        }
+      }
       
       // Sync with database in background
       setTimeout(async () => {

@@ -155,24 +155,24 @@ const EditRecipePage: React.FC = () => {
       }
 
       img.onload = () => {
-        // Calculate new dimensions - more aggressive sizing for base64
+        // Calculate new dimensions - very aggressive sizing for base64 to avoid 413 errors
         let { width, height } = img;
-        const maxDimension = 800; // Smaller max dimension for base64
+        
+        // Much smaller max dimension for recipe editing to prevent 413 errors
+        let maxDimension = 600;
+        
+        // Even more aggressive for large files
+        if (file.size > 2 * 1024 * 1024) { // If original > 2MB
+          maxDimension = 400;
+        }
+        if (file.size > 5 * 1024 * 1024) { // If original > 5MB
+          maxDimension = 300;
+        }
         
         if (width > maxDimension || height > maxDimension) {
           const ratio = Math.min(maxDimension / width, maxDimension / height);
           width = Math.floor(width * ratio);
           height = Math.floor(height * ratio);
-        }
-        
-        // Additional aggressive resizing for very large images
-        if (file.size > 5 * 1024 * 1024) { // If original > 5MB
-          const aggressiveMaxDimension = 600;
-          if (width > aggressiveMaxDimension || height > aggressiveMaxDimension) {
-            const ratio = Math.min(aggressiveMaxDimension / width, aggressiveMaxDimension / height);
-            width = Math.floor(width * ratio);
-            height = Math.floor(height * ratio);
-          }
         }
 
         canvas.width = width;
@@ -191,13 +191,21 @@ const EditRecipePage: React.FC = () => {
                 lastModified: Date.now(),
               });
               console.log(`✅ Compressed ${file.name}: ${(file.size / 1024).toFixed(0)}KB → ${(compressedFile.size / 1024).toFixed(0)}KB`);
+              
+              // Additional check - if still too large, reject
+              if (compressedFile.size > 500 * 1024) { // 500KB limit per image
+                console.warn(`⚠️ Image still too large after compression: ${(compressedFile.size / 1024).toFixed(0)}KB`);
+                reject(new Error(`Image too large: ${(compressedFile.size / 1024).toFixed(0)}KB. Please use a smaller image.`));
+                return;
+              }
+              
               resolve(compressedFile);
             } else {
               reject(new Error('Failed to compress image'));
             }
           },
           'image/jpeg',
-          0.4 // More aggressive compression for base64 conversion
+          0.3 // Even more aggressive compression for base64 conversion
         );
       };
 
@@ -243,9 +251,11 @@ const EditRecipePage: React.FC = () => {
               const sizeInKB = Math.round(result.length / 1024);
               console.log(`📸 Base64 size for ${file.name}: ${sizeInKB}KB`);
               
-              // Warn if still too large
-              if (sizeInKB > 800) {
-                console.warn(`⚠️ Large base64 image: ${file.name} (${sizeInKB}KB)`);
+              // Strict limit to prevent 413 errors
+              if (sizeInKB > 600) {
+                console.error(`❌ Base64 image too large: ${file.name} (${sizeInKB}KB)`);
+                reject(new Error(`התמונה גדולה מדי: ${sizeInKB}KB. נא להשתמש בתמונה קטנה יותר (מקסימום 600KB).`));
+                return;
               }
               
               resolve(result);
@@ -484,6 +494,15 @@ const EditRecipePage: React.FC = () => {
               // Use images directly without complex processing
         const finalImageUrls: string[] = images.map(img => img.url);
         console.log(`📸 Using ${finalImageUrls.length} images directly:`, finalImageUrls.map(url => url.substring(0, 50) + '...'));
+        
+        // Check total payload size to prevent 413 errors
+        const totalPayloadSize = JSON.stringify({ images: finalImageUrls }).length;
+        const totalPayloadMB = (totalPayloadSize / 1024 / 1024).toFixed(2);
+        console.log(`📦 Total payload size: ${totalPayloadMB}MB`);
+        
+        if (totalPayloadSize > 50 * 1024 * 1024) { // 50MB limit
+          throw new Error(`הנתונים גדולים מדי לשליחה (${totalPayloadMB}MB). נא להקטין את התמונות או להוריד חלק מהן.`);
+        }
       
               const updatedRecipe = {
           ...formData,
@@ -513,8 +532,19 @@ const EditRecipePage: React.FC = () => {
         // Only show success if the update actually succeeded
         if (updateResult) {
           console.log('✅ EDIT: Recipe updated successfully');
+          console.log('✅ EDIT: Final image count in update:', finalImageUrls.length);
           setHasUnsavedChanges(false);
           setUploadStatus('המתכון עודכן בהצלחה!');
+          
+          // Verify that images were actually saved by checking the updated recipe
+          const updatedRecipeFromContext = recipes.find(r => r.id === recipe!.id);
+          if (updatedRecipeFromContext) {
+            console.log('✅ EDIT: Images in updated recipe from context:', updatedRecipeFromContext.images?.length || 0);
+            if (finalImageUrls.length > 0 && (!updatedRecipeFromContext.images || updatedRecipeFromContext.images.length !== finalImageUrls.length)) {
+              console.warn('⚠️ EDIT: Image count mismatch detected after update');
+              setUploadStatus('המתכון עודכן, אך ייתכן שחלק מהתמונות לא נשמרו');
+            }
+          }
           
           setTimeout(() => {
             alert('המתכון עודכן בהצלחה!');
@@ -544,7 +574,7 @@ const EditRecipePage: React.FC = () => {
           
           // Handle specific payload too large error
           if (error.message.includes('413') || error.message.includes('Payload Too Large')) {
-            errorMessage = 'התמונה גדולה מדי. נא לנסות תמונה קטנה יותר או לדחוס אותה.';
+            errorMessage = 'התמונות גדולות מדי לשמירה. נא להוריד חלק מהתמונות או להשתמש בתמונות קטנות יותר.';
           }
           
           if (error.message.includes('network') || error.message.includes('fetch')) {

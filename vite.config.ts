@@ -7,11 +7,13 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    strictPort: true, // Force use of port 5173, fail if occupied
     proxy: {
       '/api': {
         target: 'http://localhost:3001',
         changeOrigin: true,
         secure: false,
+        timeout: 30000, // Increase proxy timeout
       }
     }
   },
