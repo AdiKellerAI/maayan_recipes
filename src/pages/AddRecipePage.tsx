@@ -1445,6 +1445,7 @@ const AddRecipePage: React.FC = () => {
                     <span className="whitespace-nowrap">צלם</span>
                     <input
                       type="file"
+                      multiple
                       accept="image/*,.jpg,.jpeg,.png,.webp,.heic,.heif,text/plain"
                       capture="environment"
                       onChange={handleImageUpload}

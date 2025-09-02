@@ -575,6 +575,12 @@ const EditRecipePage: React.FC = () => {
     });
   };
 
+  // Handle image changes
+  const handleImagesChange = useCallback((newImages: RecipeImage[]) => {
+    setImages(newImages);
+    setHasUnsavedChanges(true);
+  }, []);
+
   // Delete recipe
   const handleDelete = () => {
     setShowDeleteModal(true);
@@ -870,6 +876,7 @@ const EditRecipePage: React.FC = () => {
                           <>
                             <input
                               type="file"
+                              multiple
                               accept="image/*"
                               onChange={handleFileSelect}
                               className="hidden"
@@ -916,6 +923,7 @@ const EditRecipePage: React.FC = () => {
                   <div className="flex gap-2 sm:hidden">
                     <input
                       type="file"
+                      multiple
                       accept="image/*"
                       capture="environment"
                       onChange={handleFileSelect}
@@ -925,6 +933,7 @@ const EditRecipePage: React.FC = () => {
                     />
                     <input
                       type="file"
+                      multiple
                       accept="image/*"
                       onChange={handleFileSelect}
                       className="hidden"
@@ -938,7 +947,7 @@ const EditRecipePage: React.FC = () => {
                       className="flex-1 flex items-center justify-center gap-2 bg-blue-500/90 text-white px-3 py-2 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                     >
                       <Upload className="w-4 h-4" />
-                      בחר מהגלריה
+                      בחר תמונות
                     </button>
                     <button
                       type="button"
@@ -955,6 +964,7 @@ const EditRecipePage: React.FC = () => {
                   <div className="hidden sm:block">
                     <input
                       type="file"
+                      multiple
                       accept="image/*"
                       onChange={handleFileSelect}
                       className="hidden"
@@ -968,7 +978,7 @@ const EditRecipePage: React.FC = () => {
                       className="w-full flex items-center justify-center gap-2 bg-blue-500/90 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed text-sm"
                     >
                       <Upload className="w-4 h-4" />
-                      בחר מהגלריה
+                      בחר תמונות
                     </button>
                   </div>
                 </div>
@@ -1310,14 +1320,18 @@ const EditRecipePage: React.FC = () => {
 
             {/* Image Management Modal */}
             {showSmartImageSearch && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
-                  <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                    <h3 className="text-lg font-semibold text-gray-900">ניהול תמונות המתכון</h3>
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-hidden">
+                <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden shadow-2xl mx-auto">
+                  <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
+                    <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                      <div className="w-2 h-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full"></div>
+                      ניהול תמונות המתכון
+                    </h3>
                     <button
                       type="button"
                       onClick={() => setShowSmartImageSearch(false)}
-                      className="text-gray-400 hover:text-gray-600"
+                      className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
+                      title="סגור"
                     >
                       <X className="w-5 h-5" />
                     </button>
@@ -1327,10 +1341,7 @@ const EditRecipePage: React.FC = () => {
                     <ImageManager
                       recipeId={id || ''}
                       initialImages={images}
-                      onImagesChange={useCallback((newImages: RecipeImage[]) => {
-                        setImages(newImages);
-                        setHasUnsavedChanges(true);
-                      }, [])}
+                      onImagesChange={handleImagesChange}
                       maxImages={6}
                       className="space-y-3"
                     />

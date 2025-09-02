@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Upload, X, Image as ImageIcon, Trash2, Edit3, Eye, Download } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Trash2, Edit3, Eye, Download, ArrowUp, ArrowDown } from 'lucide-react';
 import { imageService, RecipeImage, ImageUploadResponse } from '../services/imageService';
 
 interface ImageManagerProps {
@@ -287,6 +287,32 @@ const ImageManager: React.FC<ImageManagerProps> = ({
     setShowImageModal(true);
   };
 
+  // Move image up in order
+  const moveImageUp = (index: number) => {
+    if (index === 0) return; // Already at top
+    
+    setImages(prev => {
+      const newImages = [...prev];
+      [newImages[index - 1], newImages[index]] = [newImages[index], newImages[index - 1]];
+      return newImages;
+    });
+    
+    showNotification('success', `תמונה #${index + 1} הועברה למעלה`);
+  };
+
+  // Move image down in order
+  const moveImageDown = (index: number) => {
+    if (index === images.length - 1) return; // Already at bottom
+    
+    setImages(prev => {
+      const newImages = [...prev];
+      [newImages[index], newImages[index + 1]] = [newImages[index + 1], newImages[index]];
+      return newImages;
+    });
+    
+    showNotification('success', `תמונה #${index + 1} הועברה למטה`);
+  };
+
   const formatFileSize = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -322,130 +348,7 @@ const ImageManager: React.FC<ImageManagerProps> = ({
         </div>
       )}
 
-      {/* Upload Section */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-gray-800">תמונות המתכון</h3>
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-500">
-              {images.length} / {maxImages} תמונות
-            </span>
-            {hasLoaded && !isLoading && (
-              <button
-                type="button"
-                onClick={() => {
-                  setHasLoaded(false);
-                  setImages([]);
-                  loadImages();
-                }}
-                className="text-xs text-blue-600 hover:text-blue-700 underline"
-                title="רענן תמונות"
-              >
-                רענן
-              </button>
-            )}
-          </div>
-        </div>
 
-        {/* Upload Area */}
-        <div className="space-y-3">
-          {/* Desktop Upload */}
-          <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-blue-400 transition-colors">
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={handleFileSelect}
-              className="hidden"
-              disabled={isLoading || images.length >= maxImages}
-            />
-            
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isLoading || images.length >= maxImages}
-              className="flex flex-col items-center justify-center w-full h-32 space-y-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Upload className="w-8 h-8 text-gray-400" />
-              <div className="text-sm text-gray-600">
-                {images.length >= maxImages ? (
-                  'Maximum images reached'
-                ) : (
-                  <>
-                    <span className="font-medium text-blue-600">לחץ להעלאת תמונות</span>
-                    <br />
-                    <span className="text-xs">PNG, JPG, WEBP עד 10MB (מספר תמונות)</span>
-                  </>
-                )}
-              </div>
-            </button>
-          </div>
-
-          {/* Mobile Upload Buttons */}
-          <div className="flex gap-2 sm:hidden">
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              capture="environment"
-              onChange={handleFileSelect}
-              className="hidden"
-              id="mobile-camera-input"
-              disabled={isLoading || images.length >= maxImages}
-            />
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={handleFileSelect}
-              className="hidden"
-              id="mobile-gallery-input"
-              disabled={isLoading || images.length >= maxImages}
-            />
-            
-            <button
-              type="button"
-              onClick={() => document.getElementById('mobile-camera-input')?.click()}
-              disabled={isLoading || images.length >= maxImages}
-              className="flex-1 flex items-center justify-center gap-2 bg-green-500 text-white px-4 py-3 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-              </svg>
-              צלם
-            </button>
-            
-            <button
-              type="button"
-              onClick={() => document.getElementById('mobile-gallery-input')?.click()}
-              disabled={isLoading || images.length >= maxImages}
-              className="flex-1 flex items-center justify-center gap-2 bg-blue-500 text-white px-4 py-3 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <Upload className="w-5 h-5" />
-              בחר תמונות
-            </button>
-          </div>
-        </div>
-
-        {/* Upload Progress */}
-        {Object.keys(uploadProgress).length > 0 && (
-          <div className="mt-4 space-y-2">
-            {Object.entries(uploadProgress).map(([filename, progress]) => (
-              <div key={filename} className="flex items-center space-x-2">
-                <div className="flex-1 bg-gray-200 rounded-full h-2">
-                  <div 
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${progress}%` }}
-                  />
-                </div>
-                <span className="text-sm text-gray-600">{filename}</span>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
 
       {/* Images Grid */}
       {isLoading && images.length === 0 ? (
@@ -454,9 +357,9 @@ const ImageManager: React.FC<ImageManagerProps> = ({
           <p className="mt-2 text-gray-600">טוען תמונות...</p>
         </div>
       ) : images.length > 0 ? (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-          {images.map((image) => (
-            <div key={image.id} className="relative group bg-white rounded-lg shadow-md overflow-hidden">
+        <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2">
+          {images.map((image, index) => (
+            <div key={image.id} className="relative group bg-white rounded-lg shadow-sm overflow-hidden">
               {/* Image */}
               <div className="aspect-square relative">
                 <img
@@ -468,63 +371,109 @@ const ImageManager: React.FC<ImageManagerProps> = ({
                 
                 {/* Overlay with actions */}
                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all duration-200 flex items-center justify-center">
-                  <div className="flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                  <div className="flex flex-wrap gap-1 justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-2">
                     <button
                       type="button"
                       onClick={() => handleViewImage(image)}
-                      className="p-2 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors"
+                      className="p-1.5 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors"
                       title="הצג תמונה"
                     >
-                      <Eye className="w-4 h-4 text-gray-700" />
+                      <Eye className="w-3 h-3 text-gray-700" />
                     </button>
                     <button
                       type="button"
                       onClick={() => handleEditImage(image)}
-                      className="p-2 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors"
+                      className="p-1.5 bg-white rounded-full shadow-lg hover:bg-gray-100 transition-colors"
                       title="ערוך תמונה"
                     >
-                      <Edit3 className="w-4 h-4 text-gray-700" />
+                      <Edit3 className="w-3 h-3 text-gray-700" />
                     </button>
+                    {index > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => moveImageUp(index)}
+                        className="p-1.5 bg-blue-500 rounded-full shadow-lg hover:bg-blue-600 transition-colors"
+                        title="העבר למעלה"
+                      >
+                        <ArrowUp className="w-3 h-3 text-white" />
+                      </button>
+                    )}
+                    {index < images.length - 1 && (
+                      <button
+                        type="button"
+                        onClick={() => moveImageDown(index)}
+                        className="p-1.5 bg-blue-500 rounded-full shadow-lg hover:bg-blue-600 transition-colors"
+                        title="העבר למטה"
+                      >
+                        <ArrowDown className="w-3 h-3 text-white" />
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => handleDeleteImage(image)}
-                      className="p-2 bg-red-500 rounded-full shadow-lg hover:bg-red-600 transition-colors"
+                      className="p-1.5 bg-red-500 rounded-full shadow-lg hover:bg-red-600 transition-colors"
                       title="מחק תמונה"
                     >
-                      <Trash2 className="w-4 h-4 text-white" />
+                      <Trash2 className="w-3 h-3 text-white" />
                     </button>
                   </div>
                 </div>
               </div>
 
+              {/* Mobile controls */}
+              <div className="absolute top-1 left-1 flex flex-col gap-1 sm:hidden">
+                {index > 0 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      moveImageUp(index);
+                    }}
+                    className="p-1 bg-blue-500 rounded shadow-lg hover:bg-blue-600 transition-colors"
+                    title="העבר למעלה"
+                  >
+                    <ArrowUp className="w-3 h-3 text-white" />
+                  </button>
+                )}
+                {index < images.length - 1 && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      moveImageDown(index);
+                    }}
+                    className="p-1 bg-blue-500 rounded shadow-lg hover:bg-blue-600 transition-colors"
+                    title="העבר למטה"
+                  >
+                    <ArrowDown className="w-3 h-3 text-white" />
+                  </button>
+                )}
+              </div>
+
+              {/* Mobile delete button */}
+              <div className="absolute top-1 right-1 sm:hidden">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteImage(image);
+                  }}
+                  className="p-1 bg-red-500 rounded shadow-lg hover:bg-red-600 transition-colors"
+                  title="מחק תמונה"
+                >
+                  <Trash2 className="w-3 h-3 text-white" />
+                </button>
+              </div>
+
               {/* Image info */}
-              <div className="p-3">
+              <div className="p-2">
                 <div className="flex items-center justify-between text-xs text-gray-500">
-                  <span className="capitalize">{image.image_type}</span>
-                  <span>
-                    {image.file_size > 0 ? formatFileSize(image.file_size) : 
-                     (image.id.startsWith('temp-') || image.id.startsWith('existing-') || image.id.startsWith('temp-upload-')) ? 'זמני' : 'לא ידוע'}
-                  </span>
-                </div>
-                {image.alt_text && (
-                  <p className="text-xs text-gray-600 mt-1 truncate" title={image.alt_text}>
-                    {image.alt_text}
-                  </p>
-                )}
-                {(image.id.startsWith('temp-') || image.id.startsWith('existing-') || image.id.startsWith('temp-upload-')) && (
-                  <div className="mt-1">
-                    <span className={`text-xs px-1 py-0.5 rounded ${
-                      image.id.startsWith('temp-smart-') ? 'text-purple-600 bg-purple-100' : 
-                      image.id.startsWith('temp-upload-') ? 'text-orange-600 bg-orange-100' : 
-                      image.id.startsWith('existing-') ? 'text-green-600 bg-green-100' : 
-                      'text-blue-600 bg-blue-100'
-                    }`}>
-                      {image.id.startsWith('temp-smart-') ? 'חכם' : 
-                       image.id.startsWith('temp-upload-') ? 'העלאה' : 
-                       image.id.startsWith('existing-') ? 'קיים' : 'זמני'}
-                    </span>
+                  <div className="flex items-center gap-1">
+                    <span className="bg-blue-100 text-blue-800 px-1 py-0.5 rounded text-xs font-medium">#{index + 1}</span>
+                    <span className="capitalize text-xs">{image.image_type}</span>
                   </div>
-                )}
+                </div>
+
               </div>
             </div>
           ))}
