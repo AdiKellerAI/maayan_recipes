@@ -4,6 +4,8 @@ import { Heart, ChefHat, Share2, Edit, ArrowRight, ChevronLeft, ChevronRight, Tr
 import { useRecipes } from '../contexts/RecipeContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useProtectedAction } from '../hooks/useProtectedAction';
+import { recipeService } from '../services/recipeService';
+import { getRecipeShareUrl } from '../utils/sharing';
 import { categories } from '../data/categories';
 import { getCategoryColor } from '../data/categories';
 // ProgressTracker removed from main section; using inline compact layout
@@ -34,7 +36,7 @@ const getCategoryIllustration = (categoryId: string) => {
 const RecipeDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { recipes, toggleFavorite, deleteRecipe, refreshRecipes } = useRecipes();
+  const { recipes, toggleFavorite, deleteRecipe, refreshRecipes, loading } = useRecipes();
   const { navigateToLastRecipesPage, setReferrerFromRecipes } = useNavigation();
   const { executeProtectedAction } = useProtectedAction();
   const [currentImageIndex, setCurrentImageIndex] = React.useState(0);
@@ -74,30 +76,72 @@ const RecipeDetailPage: React.FC = () => {
   const images = recipe?.images || [];
   const currentImage = images.length > 0 ? images[currentImageIndex] : null;
 
+  // Debug logging
+  React.useEffect(() => {
+    console.log('🔍 RecipeDetailPage Debug:', {
+      id,
+      recipeFound: !!recipe,
+      recipeTitle: recipe?.title,
+      totalRecipes: recipes.length,
+      loading,
+      isLoadingRecipe
+    });
+  }, [id, recipe, recipes.length, loading, isLoadingRecipe]);
+
   // Handle case where recipe is not found in context (direct URL access)
   React.useEffect(() => {
-    if (id && !recipe && !isLoadingRecipe) {
+    if (id && !recipe && !isLoadingRecipe && !loading) {
       console.log('🔍 Recipe not found in context, attempting to load:', id);
       setIsLoadingRecipe(true);
       
       const loadRecipe = async () => {
         try {
-          // Try to refresh recipes to load the specific recipe
-          await refreshRecipes(true);
+          // Use the recipeService to load the specific recipe
+          const recipeData = await recipeService.getRecipeById(id);
+          
+          if (recipeData) {
+            console.log('✅ Loaded recipe directly from service:', recipeData.title);
+            // Refresh all recipes to update the context with the loaded recipe
+            await refreshRecipes(true);
+          } else {
+            console.log('❌ Recipe not found in database:', id);
+            // Recipe doesn't exist, show error message and redirect
+            setTimeout(() => {
+              alert('המתכון לא נמצא או נמחק');
+              navigate('/recipes');
+            }, 1000);
+          }
         } catch (error) {
           console.error('Failed to load recipe:', error);
-          // If still not found after refresh, navigate to 404 or home
-          setTimeout(() => {
-            navigate('/recipes');
-          }, 2000);
+          // If service fails, try refreshing all recipes as fallback
+          try {
+            await refreshRecipes(true);
+          } catch (fallbackError) {
+            console.error('Fallback refresh also failed:', fallbackError);
+            // If still not found after refresh, navigate to 404 or home
+            setTimeout(() => {
+              navigate('/recipes');
+            }, 2000);
+          }
         } finally {
           setIsLoadingRecipe(false);
         }
       };
       
+      // Add a timeout to prevent infinite loading
+      const timeoutId = setTimeout(() => {
+        if (isLoadingRecipe) {
+          console.log('⏰ Recipe loading timeout, redirecting to recipes page');
+          setIsLoadingRecipe(false);
+          navigate('/recipes');
+        }
+      }, 15000); // 15 second timeout
+      
       loadRecipe();
+      
+      return () => clearTimeout(timeoutId);
     }
-  }, [id, recipe, isLoadingRecipe, refreshRecipes, navigate]);
+  }, [id, recipe, isLoadingRecipe, loading, refreshRecipes, navigate]);
 
   // Pastel background schemes for additional sections
   const additionalColorSchemes = [
@@ -165,7 +209,7 @@ const RecipeDetailPage: React.FC = () => {
   };
 
   if (!recipe) {
-    if (isLoadingRecipe) {
+    if (isLoadingRecipe || loading) {
       return (
         <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center">
           <div className="text-center">
@@ -222,12 +266,14 @@ const RecipeDetailPage: React.FC = () => {
   // Additional sections are rendered independently; no local step tracking here
 
   const handleShare = async () => {
+    const shareUrl = getRecipeShareUrl(recipe.id);
+
     if (navigator.share) {
       try {
         await navigator.share({
           title: recipe.title,
           text: `מתכון: ${recipe.title}`,
-          url: window.location.href
+          url: shareUrl
         });
       } catch (error) {
         console.log('Share cancelled or failed:', error);
@@ -235,14 +281,14 @@ const RecipeDetailPage: React.FC = () => {
     } else {
       // Desktop fallback - copy to clipboard with feedback
       try {
-        await navigator.clipboard.writeText(window.location.href);
+        await navigator.clipboard.writeText(shareUrl);
         setShowShareFeedback(true);
         setTimeout(() => setShowShareFeedback(false), 2000);
       } catch (error) {
         console.error('Failed to copy to clipboard:', error);
         // Fallback for older browsers
         const textArea = document.createElement('textarea');
-        textArea.value = window.location.href;
+        textArea.value = shareUrl;
         document.body.appendChild(textArea);
         textArea.select();
         document.execCommand('copy');

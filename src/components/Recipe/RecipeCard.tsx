@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { categories } from '../../data/categories';
 import { useNavigation } from '../../contexts/NavigationContext';
 import DeleteConfirmationModal from '../DeleteConfirmationModal';
+import { getRecipeShareUrl } from '../../utils/sharing';
 import { getImageDisplayUrl, analyzeImageUrl } from '../../utils/imageUtils';
 
 // Category illustrations as emoji/unicode characters
@@ -198,12 +199,14 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
   };
 
   const handleShare = async () => {
+    const shareUrl = getRecipeShareUrl(recipe.id);
+
     if (navigator.share) {
       try {
         await navigator.share({
           title: recipe.title,
           text: `מתכון: ${recipe.title}`,
-          url: window.location.origin + `/recipe/${recipe.id}`
+          url: shareUrl
         });
       } catch (error) {
         console.log('Error sharing:', error);
@@ -211,14 +214,14 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
     } else {
       // Desktop fallback - copy to clipboard with feedback
       try {
-        await navigator.clipboard.writeText(window.location.origin + `/recipe/${recipe.id}`);
+        await navigator.clipboard.writeText(shareUrl);
         setShowShareFeedback(true);
         setTimeout(() => setShowShareFeedback(false), 2000);
       } catch (error) {
         console.error('Failed to copy to clipboard:', error);
         // Fallback for older browsers
         const textArea = document.createElement('textarea');
-        textArea.value = window.location.origin + `/recipe/${recipe.id}`;
+        textArea.value = shareUrl;
         document.body.appendChild(textArea);
         textArea.select();
         document.execCommand('copy');
