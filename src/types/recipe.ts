@@ -1,5 +1,6 @@
 // Interface for additional recipe sections (like sauce, dough, filling, etc.)
 export interface RecipeSection {
+  title?: string;
   ingredients: string[];
   directions: string[];
 }
