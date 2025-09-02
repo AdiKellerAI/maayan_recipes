@@ -305,24 +305,7 @@ export const recipeService = {
     const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     console.log(`📱 Platform detected: ${isMobile ? 'mobile' : 'desktop'}`);
     
-    // For mobile, use mobile-optimized service
-    if (isMobile) {
-      try {
-        console.log('📱 Mobile: Using mobile-optimized recipe service...');
-        const mobileRecipe = await mobileRecipeService.saveRecipe(recipe);
-        
-        // Clear caches to ensure fresh data
-        cacheManager.clear();
-        
-        console.log('✅ Mobile: Recipe saved successfully via mobile service');
-        return mobileRecipe;
-      } catch (error) {
-        console.warn('⚠️ Mobile service failed, falling back to standard service:', error);
-        // Continue with standard service
-      }
-    }
-    
-    // Try API first with retry logic
+    // Try API first with retry logic (same for mobile and desktop)
     try {
       console.log('💾 Attempting to save via API...');
       

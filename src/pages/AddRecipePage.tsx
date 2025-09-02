@@ -6,7 +6,6 @@ import type { RecipeInsert, RecipeSection } from '../types/recipe';
 import { categories } from '../data/categories';
 import { Plus, X, Upload, Camera, Sparkles, Link } from 'lucide-react';
 import SmartImageSearch from '../components/SmartImageSearch';
-import { recipeService } from '../services/recipeService';
 import { RecipeImage } from '../services/imageService';
 import { detectPlatform } from '../utils/imageUtils';
 
@@ -348,6 +347,8 @@ const AddRecipePage: React.FC = () => {
     console.log(`✅ Processed ${processedUrls.length} images for ${platform}`);
     return processedUrls;
   };
+
+
 
   // Upload images to server
   const uploadImagesToServer = async (recipeId: string): Promise<RecipeImage[]> => {
@@ -867,36 +868,27 @@ const AddRecipePage: React.FC = () => {
           is_favorite: false
         };
 
-        console.log('🔄 Submitting recipe:', newRecipe);
+        console.log('🔄 Submitting recipe:', {
+          title: newRecipe.title,
+          category: newRecipe.category,
+          imagesCount: newRecipe.images?.length || 0,
+          ingredientsCount: newRecipe.ingredients.length,
+          directionsCount: newRecipe.directions.length
+        });
         
+        // Save the recipe directly
+        setUploadStatus('שומר מתכון...');
         const savedRecipe = await addRecipe(newRecipe);
-        console.log('✅ Recipe saved successfully:', savedRecipe);
+        console.log('✅ Recipe saved successfully:', {
+          id: savedRecipe.id,
+          title: savedRecipe.title,
+          imagesCount: savedRecipe.images?.length || 0
+        });
         
-        // Verify that recipe and images were saved to database
-        try {
-          console.log('🔍 Verifying recipe save to database...');
-          const verification = await recipeService.verifyRecipeSave(savedRecipe.id, processedImages);
-          
-          if (verification.success) {
-            console.log('✅ Recipe and images verified in database');
-            setUploadStatus('המתכון והתמונות נשמרו בהצלחה במאגר הנתונים!');
-            setTimeout(() => {
-              alert('המתכון והתמונות נשמרו בהצלחה במאגר הנתונים!');
-            }, 500);
-          } else {
-            console.warn('⚠️ Recipe saved but verification failed:', verification.message);
-            setUploadStatus('המתכון נשמר, אך יש בעיה עם התמונות במאגר הנתונים');
-            setTimeout(() => {
-              alert('המתכון נשמר, אך יש בעיה עם התמונות במאגר הנתונים.\n\nהמתכון יסונכרן אוטומטית כשהחיבור יחזור.');
-            }, 500);
-          }
-        } catch (verifyError) {
-          console.error('❌ Error verifying recipe save:', verifyError);
-          setUploadStatus('המתכון נשמר, אך לא ניתן לוודא את השמירה במאגר הנתונים');
-          setTimeout(() => {
-            alert('המתכון נשמר, אך לא ניתן לוודא את השמירה במאגר הנתונים.\n\nהמתכון יסונכרן אוטומטית כשהחיבור יחזור.');
-          }, 500);
-        }
+        setUploadStatus('המתכון נשמר בהצלחה!');
+        setTimeout(() => {
+          alert('המתכון נשמר בהצלחה!');
+        }, 500);
         
         // Force refresh recipes in context to ensure the new recipe is visible
         await refreshRecipes();
@@ -917,14 +909,24 @@ const AddRecipePage: React.FC = () => {
         
       } catch (error) {
         console.error('❌ Error adding recipe:', error);
+        console.error('❌ Error details:', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : 'No stack trace',
+          type: typeof error,
+          errorObject: error
+        });
         
         // Better error handling for mobile
         let errorMessage = 'שגיאה בשמירת המתכון';
         if (error instanceof Error) {
+          console.log('📝 Analyzing error message:', error.message);
+          
           if (error.message.includes('network') || error.message.includes('fetch')) {
-            errorMessage = 'בעיית חיבור לאינטרנט. המתכון נשמר במכשיר ויסונכרן כשהחיבור יחזור.';
+            errorMessage = 'בעיית חיבור לאינטרנט. נא לבדוק את החיבור ולנסות שוב.';
           } else if (error.message.includes('timeout')) {
-            errorMessage = 'הבקשה לקחה זמן רב מדי. המתכון נשמר במכשיר ויסונכרן בהמשך.';
+            errorMessage = 'הבקשה לקחה זמן רב מדי. נא לנסות שוב.';
+          } else if (error.message.includes('JSON')) {
+            errorMessage = 'שגיאה בעיבוד הנתונים. נא לנסות שוב.';
           } else {
             errorMessage = `שגיאה: ${error.message}`;
           }

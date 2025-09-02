@@ -6,8 +6,6 @@ import { useNavigation } from '../contexts/NavigationContext';
 import { useProtectedAction } from '../hooks/useProtectedAction';
 import { categories } from '../data/categories';
 import type { RecipeSection } from '../types/recipe';
-import SmartImageSearch from '../components/SmartImageSearch';
-import { recipeService } from '../services/recipeService';
 import { RecipeImage } from '../services/imageService';
 import ImageManager from '../components/ImageManager';
 import { detectPlatform } from '../utils/imageUtils';
@@ -207,6 +205,8 @@ const EditRecipePage: React.FC = () => {
       img.src = URL.createObjectURL(file);
     });
   };
+
+
 
   // Handle file selection for images
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -565,58 +565,59 @@ const EditRecipePage: React.FC = () => {
           }
         }
         
+        // Save the recipe directly
+        setUploadStatus('מעדכן מתכון...');
+        console.log('🔄 Updating recipe:', {
+          id: recipe!.id,
+          title: updatedRecipe.title,
+          imagesCount: finalImageUrls?.length || 0
+        });
+        
         await updateRecipe(recipe!.id, updatedRecipe);
         
         console.log('✅ EDIT: Recipe updated successfully');
+        setHasUnsavedChanges(false);
+        setUploadStatus('המתכון עודכן בהצלחה!');
         
-        // Verify that recipe and images were saved to database
-        try {
-          console.log('🔍 Verifying recipe update to database...');
-          const verification = await recipeService.verifyRecipeSave(recipe!.id, finalImageUrls);
-          
-          if (verification.success) {
-            console.log('✅ Recipe and images verified in database');
-            setUploadStatus('המתכון והתמונות נשמרו בהצלחה במאגר הנתונים!');
-            setHasUnsavedChanges(false);
-            
-            // Navigate to recipe detail page after successful save
-            setTimeout(() => {
-              setIsNavigating(false); // Reset navigation state before navigating
-              safeNavigate(`/recipe/${recipe!.id}`);
-            }, 1000);
-          } else {
-            console.warn('⚠️ Recipe saved but verification failed:', verification.message);
-            setUploadStatus('המתכון נשמר, אך יש בעיה עם התמונות במאגר הנתונים');
-            setHasUnsavedChanges(false);
-            
-            // Still navigate but show warning
-            setTimeout(() => {
-              alert('המתכון נשמר, אך יש בעיה עם התמונות במאגר הנתונים.\n\nהמתכון יסונכרן אוטומטית כשהחיבור יחזור.');
-              setIsNavigating(false);
-              safeNavigate(`/recipe/${recipe!.id}`);
-            }, 1000);
-          }
-        } catch (verifyError) {
-          console.error('❌ Error verifying recipe update:', verifyError);
-          setUploadStatus('המתכון נשמר, אך לא ניתן לוודא את השמירה במאגר הנתונים');
-          setHasUnsavedChanges(false);
-          
-          // Still navigate but show warning
-          setTimeout(() => {
-            alert('המתכון נשמר, אך לא ניתן לוודא את השמירה במאגר הנתונים.\n\nהמתכון יסונכרן אוטומטית כשהחיבור יחזור.');
-            setIsNavigating(false);
-            safeNavigate(`/recipe/${recipe!.id}`);
-          }, 1000);
-        }
+        setTimeout(() => {
+          alert('המתכון עודכן בהצלחה!');
+        }, 500);
+        
+        // Navigate to recipe detail page after successful save
+        setTimeout(() => {
+          setIsNavigating(false);
+          safeNavigate(`/recipe/${recipe!.id}`);
+        }, 1000);
         
       } catch (error) {
         console.error('❌ EDIT: Failed to update recipe:', error);
-        const errorMessage = error instanceof Error ? error.message : 'שגיאה לא ידועה';
+        console.error('❌ EDIT: Error details:', {
+          message: error instanceof Error ? error.message : 'Unknown error',
+          stack: error instanceof Error ? error.stack : 'No stack trace',
+          type: typeof error,
+          errorObject: error
+        });
+        
+        let errorMessage = 'שגיאה בעדכון המתכון';
+        if (error instanceof Error) {
+          console.log('📝 EDIT: Analyzing error message:', error.message);
+          
+          if (error.message.includes('network') || error.message.includes('fetch')) {
+            errorMessage = 'בעיית חיבור לאינטרנט. נא לבדוק את החיבור ולנסות שוב.';
+          } else if (error.message.includes('timeout')) {
+            errorMessage = 'הבקשה לקחה זמן רב מדי. נא לנסות שוב.';
+          } else if (error.message.includes('JSON')) {
+            errorMessage = 'שגיאה בעיבוד הנתונים. נא לנסות שוב.';
+          } else {
+            errorMessage = `שגיאה: ${error.message}`;
+          }
+        }
+        
         setUploadStatus(`שגיאה: ${errorMessage}`);
         
         // Show error alert
         setTimeout(() => {
-          alert(`שגיאה בשמירת המתכון: ${errorMessage}`);
+          alert(errorMessage);
         }, 500);
       } finally {
         setIsSaving(false);
