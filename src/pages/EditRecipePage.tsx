@@ -30,21 +30,25 @@ const EditRecipePage: React.FC = () => {
   const [directions, setDirections] = useState<string[]>(['']);
   const [images, setImages] = useState<RecipeImage[]>([]);
   const [additionalSections, setAdditionalSections] = useState<{ [key: string]: RecipeSection }>({});
+  const [sectionTitles, setSectionTitles] = useState<{ [key: string]: string }>({});
   
   // UI state
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [uploadStatus, setUploadStatus] = useState<string>('');
-  const [showNewSectionModal, setShowNewSectionModal] = useState(false);
-  const [newSectionNameWithIngredients, setNewSectionNameWithIngredients] = useState('');
+
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showSmartImageSearch, setShowSmartImageSearch] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [buttonsVisible, setButtonsVisible] = useState(false);
+  const [saveButtonFilled, setSaveButtonFilled] = useState(false);
+  const [deleteButtonFilled, setDeleteButtonFilled] = useState(false);
   
   // Refs for auto-focusing
   const ingredientRefs = useRef<(HTMLInputElement | null)[]>([]);
   const directionRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
+  const buttonsRef = useRef<HTMLDivElement>(null);
 
 
 
@@ -80,6 +84,12 @@ const EditRecipePage: React.FC = () => {
       console.log('🖼️ EDIT: Converted images:', existingImages.map(img => ({ id: img.id, url: img.url.substring(0, 50) + '...' })));
       setImages(existingImages);
       setAdditionalSections(recipe.additional_sections || {});
+      // Initialize section titles with existing section names
+      const titles: { [key: string]: string } = {};
+      Object.keys(recipe.additional_sections || {}).forEach(sectionName => {
+        titles[sectionName] = sectionName;
+      });
+      setSectionTitles(titles);
       setHasUnsavedChanges(false);
       console.log('✅ EDIT: Recipe data loaded successfully');
     }
@@ -117,6 +127,38 @@ const EditRecipePage: React.FC = () => {
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
   }, [hasUnsavedChanges]);
+
+  // Intersection Observer for button animation
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            // Buttons are visible, start fill animation
+            if (!buttonsVisible) {
+              setButtonsVisible(true);
+              // Animate save button first (right to left in RTL) - faster timing
+              setTimeout(() => setSaveButtonFilled(true), 100);
+              // Then animate delete button - faster timing
+              setTimeout(() => setDeleteButtonFilled(true), 500);
+            }
+          } else {
+            // Buttons are not visible, reset them
+            setButtonsVisible(false);
+            setSaveButtonFilled(false);
+            setDeleteButtonFilled(false);
+          }
+        });
+      },
+      { threshold: 0.3 }
+    );
+
+    if (buttonsRef.current) {
+      observer.observe(buttonsRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [buttonsVisible]);
 
   // Safe navigation function
   const safeNavigate = useCallback((path: string) => {
@@ -351,27 +393,61 @@ const EditRecipePage: React.FC = () => {
 
   // Additional sections management
   const addNewSection = () => {
-    setShowNewSectionModal(true);
+    // Add a new section with empty title, ingredients and directions
+    const tempKey = `temp_${Date.now()}`;
+    setAdditionalSections(prev => ({
+      ...prev,
+      [tempKey]: {
+        ingredients: [''],
+        directions: ['']
+      }
+    }));
+    setSectionTitles(prev => ({
+      ...prev,
+      [tempKey]: ''
+    }));
+    setHasUnsavedChanges(true);
   };
 
-  const handleAddNewSection = () => {
-    if (newSectionNameWithIngredients.trim()) {
-      setAdditionalSections(prev => ({
-        ...prev,
-        [newSectionNameWithIngredients.trim()]: {
-          ingredients: [''],
-          directions: ['']
-        }
-      }));
-      setNewSectionNameWithIngredients('');
-      setShowNewSectionModal(false);
-      setHasUnsavedChanges(true);
+  const updateSectionTitle = (sectionKey: string, newTitle: string) => {
+    // Always update the temporary title state immediately
+    setSectionTitles(prev => ({
+      ...prev,
+      [sectionKey]: newTitle
+    }));
+    setHasUnsavedChanges(true);
+  };
+
+  const finalizeSectionTitle = (oldKey: string) => {
+    const newTitle = sectionTitles[oldKey]?.trim();
+    
+    if (!newTitle) {
+      return; // Keep temp key if no title
     }
-  };
-
-  const handleCancelNewSection = () => {
-    setNewSectionNameWithIngredients('');
-    setShowNewSectionModal(false);
+    
+    // If this is a temp section and we have a title, update the section key
+    if (oldKey.startsWith('temp_') && newTitle) {
+      // Check if the new title already exists
+      if (additionalSections[newTitle]) {
+        alert('כותרת זו כבר קיימת, נא לבחור כותרת אחרת');
+        return;
+      }
+      
+      setAdditionalSections(prev => {
+        const newSections = { ...prev };
+        const sectionData = newSections[oldKey];
+        delete newSections[oldKey];
+        newSections[newTitle] = sectionData;
+        return newSections;
+      });
+      
+      setSectionTitles(prev => {
+        const newTitles = { ...prev };
+        delete newTitles[oldKey];
+        newTitles[newTitle] = newTitle;
+        return newTitles;
+      });
+    }
   };
 
   const removeNewSection = (sectionName: string) => {
@@ -379,6 +455,11 @@ const EditRecipePage: React.FC = () => {
       const newSections = { ...prev };
       delete newSections[sectionName];
       return newSections;
+    });
+    setSectionTitles(prev => {
+      const newTitles = { ...prev };
+      delete newTitles[sectionName];
+      return newTitles;
     });
     setHasUnsavedChanges(true);
   };
@@ -468,18 +549,31 @@ const EditRecipePage: React.FC = () => {
       setIsSaving(true);
       setUploadStatus('שומר מתכון...');
       
-      // Filter additional sections
+      // Filter and validate additional sections
       const filteredAdditionalSections: { [key: string]: RecipeSection } = {};
-      Object.entries(additionalSections).forEach(([sectionName, section]) => {
+      for (const [sectionName, section] of Object.entries(additionalSections)) {
         const filteredIngredients = section.ingredients.filter(ing => ing.trim());
         const filteredDirections = section.directions.filter(dir => dir.trim());
+        
         if (filteredIngredients.length > 0 || filteredDirections.length > 0) {
-          filteredAdditionalSections[sectionName] = {
+          // Check if section has content but no proper title
+          const sectionTitle = sectionTitles[sectionName]?.trim();
+          if (!sectionTitle || sectionName.startsWith('temp_')) {
+            alert('נא להוסיף כותרת לחלק הנוסף שהוספת');
+            setIsSaving(false);
+            setUploadStatus('');
+            return;
+          }
+          
+          // Use the final title as the key
+          const finalKey = sectionTitle || sectionName;
+          
+          filteredAdditionalSections[finalKey] = {
             ingredients: filteredIngredients,
             directions: filteredDirections
           };
         }
-      });
+      }
 
               // Use images directly without complex processing
         const finalImageUrls: string[] = images.map(img => img.url);
@@ -524,9 +618,10 @@ const EditRecipePage: React.FC = () => {
         }
         
         // Navigate to recipe detail page after successful save
+        // Use replace: true to remove edit page from history so back button goes to recipes page
         setTimeout(() => {
           setIsNavigating(false);
-          safeNavigate(`/recipe/${recipe!.id}`);
+          navigate(`/recipe/${recipe!.id}`, { replace: true });
         }, 1000);
         
       } catch (error) {
@@ -1087,36 +1182,48 @@ const EditRecipePage: React.FC = () => {
               </div>
 
               {/* Additional Sections */}
-              {Object.keys(additionalSections).length > 0 && (
-                <div className="bg-gradient-to-r from-blue-50 to-sky-50 p-4 rounded-lg border border-blue-200">
-                  <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                    חלקים נוספים
-                  </h2>
-                  <div className="space-y-3">
-                    {Object.entries(additionalSections).map(([sectionName, section]) => (
-                      <div key={sectionName} className="bg-white p-3 rounded-lg border border-blue-200">
-                        <div className="flex items-center justify-between mb-3">
-                          <h3 className="font-medium text-blue-900 text-sm flex items-center gap-2">
-                            <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                            {sectionName}
-                          </h3>
-                          <button
-                            type="button"
-                            onClick={() => removeNewSection(sectionName)}
-                            className="text-red-500 hover:text-red-600 hover:bg-red-50 p-1 rounded-md transition-all duration-200"
-                            title={`הסר חלק ${sectionName}`}
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
+              <div className="bg-gradient-to-r from-blue-50 to-sky-50 p-4 rounded-lg border border-blue-200">
+                <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
+                  חלקים נוספים
+                </h2>
+                <div className="space-y-3">
+                  {Object.keys(additionalSections).length === 0 && (
+                    <div className="text-center py-6 text-gray-500">
+                      <p className="text-sm">אין חלקים נוספים עדיין</p>
+                      <p className="text-xs mt-1">לחץ על "הוסף חלק חדש" כדי להוסיף מלית, בצק, רוטב או חלק אחר</p>
+                    </div>
+                  )}
+                  {Object.entries(additionalSections).map(([sectionName, section]) => (
+                    <div key={sectionName} className="bg-white p-3 rounded-lg border border-blue-200">
+                      <div className="flex items-center justify-between mb-3">
+                        <div className="flex-1 mr-2">
+                          <input
+                            type="text"
+                            value={sectionTitles[sectionName] || ''}
+                            onChange={(e) => updateSectionTitle(sectionName, e.target.value)}
+                            onBlur={() => finalizeSectionTitle(sectionName)}
+                            className="w-full p-2 border border-blue-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm font-medium"
+                            placeholder="כותרת החלק (לדוגמא: מלית, בצק, רוטב...)"
+                            autoFocus={sectionName.startsWith('temp_')}
+                          />
                         </div>
+                        <button
+                          type="button"
+                          onClick={() => removeNewSection(sectionName)}
+                          className="text-red-500 hover:text-red-600 hover:bg-red-50 p-1 rounded-md transition-all duration-200"
+                          title={`הסר חלק`}
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
                       
                         <div className="grid md:grid-cols-2 gap-3">
                           {/* Section Ingredients */}
                           <div className="space-y-2">
                             <h4 className="font-medium text-blue-800 flex items-center gap-1 text-xs">
                               <div className="w-1.5 h-1.5 bg-green-400 rounded-full"></div>
-                              מרכיבים ל{sectionName}
+                              מרכיבים {sectionTitles[sectionName] ? `ל${sectionTitles[sectionName]}` : ''}
                             </h4>
                             <div className="space-y-2">
                               {section.ingredients.map((ingredient, index) => (
@@ -1157,7 +1264,7 @@ const EditRecipePage: React.FC = () => {
                           <div className="space-y-2">
                             <h4 className="font-medium text-blue-800 flex items-center gap-1 text-xs">
                               <div className="w-1.5 h-1.5 bg-blue-400 rounded-full"></div>
-                              שלבי הכנה ל{sectionName}
+                              שלבי הכנה {sectionTitles[sectionName] ? `ל${sectionTitles[sectionName]}` : ''}
                             </h4>
                             <div className="space-y-2">
                               {section.directions.map((direction, index) => (
@@ -1197,20 +1304,19 @@ const EditRecipePage: React.FC = () => {
                       </div>
                     ))}
                   </div>
+                  
+                  {/* Add New Section Button */}
+                  <div className="text-center pt-3">
+                    <button
+                      type="button"
+                      onClick={addNewSection}
+                      className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium bg-gradient-to-r from-blue-50 to-sky-50 hover:from-blue-100 hover:to-sky-100 px-4 py-3 rounded-lg transition-all duration-200 border border-dashed border-blue-300 hover:border-blue-400 mx-auto text-sm"
+                    >
+                      <Plus className="w-4 h-4" />
+                      הוסף חלק חדש
+                    </button>
+                  </div>
                 </div>
-              )}
-
-              {/* Add New Section Button */}
-              <div className="text-center">
-                <button
-                  type="button"
-                  onClick={addNewSection}
-                  className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium bg-gradient-to-r from-blue-50 to-sky-50 hover:from-blue-100 hover:to-sky-100 px-4 py-3 rounded-lg transition-all duration-200 border border-dashed border-blue-300 hover:border-blue-400 mx-auto text-sm"
-                >
-                  <Plus className="w-4 h-4" />
-                  הוסף חלק חדש (עם מרכיבים ושלבים)
-                </button>
-              </div>
 
               {/* Upload Status */}
               {uploadStatus && (
@@ -1237,13 +1343,19 @@ const EditRecipePage: React.FC = () => {
                 )}
                 
                 {/* Centered buttons */}
-                <div className="flex items-center justify-center gap-3">
+                <div ref={buttonsRef} className="flex items-center justify-center gap-3">
                   <button
                     type="submit"
                     disabled={isSaving || isNavigating}
-                    className="group relative overflow-hidden bg-white border border-green-200 text-green-700 hover:text-white active:text-white focus:text-white px-6 py-2.5 rounded-full transition-all duration-300 font-medium text-sm shadow-sm hover:shadow-md active:shadow-md focus:shadow-md hover:border-green-300 active:border-green-300 focus:border-green-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 touch-manipulation"
+                    className={`group relative overflow-hidden border px-6 py-2.5 rounded-full transition-all duration-500 font-medium text-sm shadow-sm hover:shadow-md active:shadow-md focus:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 touch-manipulation ${
+                      saveButtonFilled 
+                        ? 'bg-gradient-to-r from-green-500 to-green-600 border-green-500 text-white' 
+                        : 'bg-white border-green-200 text-green-700 hover:text-white active:text-white focus:text-white hover:border-green-300 active:border-green-300 focus:border-green-300'
+                    }`}
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-green-500 to-green-600 translate-x-full group-hover:translate-x-0 group-active:translate-x-0 group-focus:translate-x-0 transition-transform duration-300 ease-out"></div>
+                    <div className={`absolute inset-0 bg-gradient-to-r from-green-500 to-green-600 transition-transform duration-300 ease-out ${
+                      saveButtonFilled ? 'translate-x-0' : 'translate-x-full group-hover:translate-x-0 group-active:translate-x-0 group-focus:translate-x-0'
+                    }`}></div>
                     <div className="relative flex items-center gap-2">
                       {isSaving ? (
                         <>
@@ -1265,9 +1377,15 @@ const EditRecipePage: React.FC = () => {
                     type="button"
                     onClick={handleDelete}
                     disabled={isNavigating}
-                    className="group relative overflow-hidden bg-white border border-red-200 text-red-600 hover:text-white active:text-white focus:text-white px-4 py-2.5 rounded-full transition-all duration-300 font-medium text-sm shadow-sm hover:shadow-md active:shadow-md focus:shadow-md hover:border-red-300 active:border-red-300 focus:border-red-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 touch-manipulation"
+                    className={`group relative overflow-hidden border px-4 py-2.5 rounded-full transition-all duration-500 font-medium text-sm shadow-sm hover:shadow-md active:shadow-md focus:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 touch-manipulation ${
+                      deleteButtonFilled 
+                        ? 'bg-gradient-to-r from-red-500 to-red-600 border-red-500 text-white' 
+                        : 'bg-white border-red-200 text-red-600 hover:text-white active:text-white focus:text-white hover:border-red-300 active:border-red-300 focus:border-red-300'
+                    }`}
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-red-500 to-red-600 translate-x-full group-hover:translate-x-0 group-active:translate-x-0 group-focus:translate-x-0 transition-transform duration-300 ease-out"></div>
+                    <div className={`absolute inset-0 bg-gradient-to-r from-red-500 to-red-600 transition-transform duration-300 ease-out ${
+                      deleteButtonFilled ? 'translate-x-0' : 'translate-x-full group-hover:translate-x-0 group-active:translate-x-0 group-focus:translate-x-0'
+                    }`}></div>
                     <div className="relative flex items-center gap-2">
                       <Trash2 className="h-3.5 w-3.5" />
                       <span>מחק</span>
@@ -1277,46 +1395,7 @@ const EditRecipePage: React.FC = () => {
               </div>
             </form>
             
-            {/* New Section Modal (with ingredients and directions) */}
-            {showNewSectionModal && (
-              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
-                <div className="bg-white rounded-lg p-4 sm:p-6 w-full max-w-md mx-2 sm:mx-4">
-                  <h3 className="text-base sm:text-lg font-semibold text-blue-900 mb-4">הוסף חלק חדש עם מרכיבים</h3>
-                  <p className="text-gray-600 mb-4 text-sm sm:text-base">הכנס שם לחלק החדש (למשל: רוטב, בצק, מילוי, קרם):</p>
-                  <input
-                    type="text"
-                    value={newSectionNameWithIngredients}
-                    onChange={(e) => setNewSectionNameWithIngredients(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleAddNewSection()}
-                    placeholder="שם החלק..."
-                    className="w-full px-3 py-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4 text-base"
-                    autoFocus
-                  />
-                  <div className="bg-blue-50 p-3 rounded-lg mb-4">
-                    <p className="text-xs text-blue-700">
-                      חלק זה יכלול גם מרכיבים וגם שלבי הכנה נפרדים
-                    </p>
-                  </div>
-                  <div className="flex space-x-3 rtl:space-x-reverse">
-                    <button
-                      type="button"
-                      onClick={handleCancelNewSection}
-                      className="flex-1 px-4 py-3 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors text-sm sm:text-base"
-                    >
-                      ביטול
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleAddNewSection}
-                      disabled={!newSectionNameWithIngredients.trim()}
-                      className="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:bg-blue-300 disabled:cursor-not-allowed text-sm sm:text-base"
-                    >
-                      הוסף חלק
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
+
 
             {/* Image Management Modal */}
             {showSmartImageSearch && (

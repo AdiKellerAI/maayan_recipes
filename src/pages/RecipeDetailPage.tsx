@@ -594,14 +594,14 @@ const RecipeDetailPage: React.FC = () => {
                   {Object.entries(recipe.additional_sections || {}).map(([sectionName, section], idx) => {
                     const cs = additionalColorSchemes[idx % additionalColorSchemes.length];
                     return (
-                    <div key={sectionName} className={`relative bg-gradient-to-br ${cs.containerBg} px-2 py-6 md:px-4 rounded-2xl border ${cs.containerBorder} shadow-sm`}>
+                    <div key={sectionName} className={`relative bg-gradient-to-br ${cs.containerBg} px-2 py-4 md:px-4 rounded-2xl border ${cs.containerBorder} shadow-sm`}>
                       {/* Section separator line for sections after the first */}
                       {idx > 0 && (
                         <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 w-16 h-0.5 bg-gradient-to-r from-transparent via-slate-300/40 to-transparent"></div>
                       )}
                       
                       {/* Enhanced section header */}
-                      <div className="mb-4">
+                      <div className="mb-2">
                         <div className="flex items-center justify-center">
                           <div className="bg-white/60 backdrop-blur-sm px-4 py-2 rounded-full shadow-sm border border-slate-200/30">
                             <h3 className="text-xl font-bold text-slate-900 tracking-wide">{sectionName}</h3>

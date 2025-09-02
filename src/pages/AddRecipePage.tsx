@@ -36,6 +36,8 @@ const AddRecipePage: React.FC = () => {
   const [showNewSectionModal, setShowNewSectionModal] = useState(false);
   const [newSectionNameWithIngredients, setNewSectionNameWithIngredients] = useState('');
   const [showSmartImageSearch, setShowSmartImageSearch] = useState(false);
+  const [buttonsVisible, setButtonsVisible] = useState(false);
+  const [saveButtonFilled, setSaveButtonFilled] = useState(false);
   
   // Image upload states
   const [isUploadingImages, setIsUploadingImages] = useState(false);
@@ -45,6 +47,7 @@ const AddRecipePage: React.FC = () => {
   // Refs for auto-focusing new input fields
   const ingredientRefs = useRef<(HTMLInputElement | null)[]>([]);
   const directionRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
+  const buttonsRef = useRef<HTMLDivElement>(null);
   const sectionIngredientRefs = useRef<{ [key: string]: (HTMLInputElement | null)[] }>({});
   const sectionDirectionRefs = useRef<{ [key: string]: (HTMLTextAreaElement | null)[] }>({});
 
@@ -58,6 +61,35 @@ const AddRecipePage: React.FC = () => {
     // Always scroll to top when page loads
     window.scrollTo(0, 0);
   }, []);
+
+  // Intersection Observer for button animation
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            // Button is visible, start fill animation
+            if (!buttonsVisible) {
+              setButtonsVisible(true);
+              // Animate save button - faster timing
+              setTimeout(() => setSaveButtonFilled(true), 100);
+            }
+          } else {
+            // Button is not visible, reset it
+            setButtonsVisible(false);
+            setSaveButtonFilled(false);
+          }
+        });
+      },
+      { threshold: 0.3 }
+    );
+
+    if (buttonsRef.current) {
+      observer.observe(buttonsRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [buttonsVisible]);
 
   const addIngredient = () => {
     const newIndex = ingredients.length;
@@ -932,7 +964,8 @@ const AddRecipePage: React.FC = () => {
         await refreshRecipes();
         
         // Navigate to recipe detail page
-        navigate(`/recipe/${savedRecipe.id}`);
+        // Use replace: true to remove add page from history so back button goes to recipes page
+        navigate(`/recipe/${savedRecipe.id}`, { replace: true });
         
         console.log('✅ Recipe submission completed successfully');
         
@@ -1540,12 +1573,16 @@ const AddRecipePage: React.FC = () => {
             )}
 
             {/* Submit Section */}
-            <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-lg border border-gray-200">
+            <div ref={buttonsRef} className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-lg border border-gray-200">
               <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   type="submit"
                   disabled={isSaving || isUploadingImages}
-                  className="flex-1 bg-gradient-to-r from-orange-500 to-rose-500 text-white py-3 px-6 rounded-lg hover:from-orange-600 hover:to-rose-600 transition-all duration-200 font-semibold disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+                  className={`flex-1 py-3 px-6 rounded-lg transition-all duration-500 font-semibold disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md hover:shadow-lg ${
+                    saveButtonFilled
+                      ? 'bg-gradient-to-r from-orange-500 to-rose-500 text-white'
+                      : 'bg-white border border-orange-200 text-orange-600 hover:bg-gradient-to-r hover:from-orange-500 hover:to-rose-500 hover:text-white disabled:from-gray-400 disabled:to-gray-500 disabled:text-white'
+                  }`}
                 >
                   {isSaving || isUploadingImages ? (
                     <>
