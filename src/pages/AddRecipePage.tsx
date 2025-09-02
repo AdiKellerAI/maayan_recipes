@@ -7,6 +7,7 @@ import { categories } from '../data/categories';
 import { Plus, X, Upload, Camera, Sparkles, Link } from 'lucide-react';
 import SmartImageSearch from '../components/SmartImageSearch';
 import { RecipeImage } from '../services/imageService';
+import { mobileImageService } from '../services/mobileImageService';
 
 
 const AddRecipePage: React.FC = () => {
@@ -180,11 +181,17 @@ const AddRecipePage: React.FC = () => {
     setDirections(newDirections);
   };
 
+  // Helper function to detect if we're on mobile
+  const isMobile = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           (window.innerWidth <= 768);
+  };
+
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files || files.length === 0) return;
 
-    console.log('📸 Processing images:', files.length);
+    console.log('📸 Processing images:', files.length, 'Mobile:', isMobile());
     
     // Filter out non-image files
     const imageFiles = Array.from(files).filter(file => {
@@ -212,60 +219,125 @@ const AddRecipePage: React.FC = () => {
     setUploadStatus('מעבד תמונות...');
 
     try {
-      // Create temporary preview images with base64 conversion
       const tempImages: RecipeImage[] = [];
       
-      for (const file of imageFiles) {
-        try {
-          // Always compress images for better upload performance
-          console.log(`🔄 Compressing image: ${file.name} (${(file.size / 1024 / 1024).toFixed(1)}MB)`);
-          const processedFile = await compressImageSimple(file);
-          
-          // Convert file to base64 directly
-          const base64 = await new Promise<string>((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => {
-              const result = reader.result as string;
-              // Additional check for base64 size
-              const sizeInKB = Math.round(result.length / 1024);
-              console.log(`📸 Base64 size for ${file.name}: ${sizeInKB}KB`);
-              
-              // Warn if still too large
-              if (sizeInKB > 800) {
-                console.warn(`⚠️ Large base64 image: ${file.name} (${sizeInKB}KB)`);
-              }
-              
-              resolve(result);
-            };
-            reader.onerror = reject;
-            reader.readAsDataURL(processedFile);
-          });
+      // Use mobile service for mobile devices, regular processing for desktop
+      if (isMobile()) {
+        console.log('📱 Using mobile image service...');
+        
+        for (const file of imageFiles) {
+          try {
+            // Use mobile image service to save the image
+            const tempRecipeId = `temp-recipe-${Date.now()}`;
+            const imageId = await mobileImageService.saveImage(file, tempRecipeId);
+            
+            // Get the saved image data
+            const imageData = await mobileImageService.getImage(imageId);
+            
+            if (imageData) {
+              const tempImage: RecipeImage = {
+                id: `mobile-${imageId}`,
+                recipe_id: tempRecipeId,
+                filename: file.name,
+                file_path: '',
+                url: imageData,
+                image_type: 'gallery',
+                file_size: file.size,
+                mime_type: file.type,
+                alt_text: `תמונה: ${file.name}`,
+                width: 0,
+                height: 0,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              };
+              tempImages.push(tempImage);
+              console.log(`✅ Mobile: Saved ${file.name} with ID: ${imageId}`);
+            }
+          } catch (error) {
+            console.error(`❌ Mobile: Failed to process ${file.name}:`, error);
+            // Fallback to regular base64 processing
+            try {
+              const processedFile = await compressImageSimple(file);
+              const base64 = await new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result as string);
+                reader.onerror = reject;
+                reader.readAsDataURL(processedFile);
+              });
 
-          const tempImage: RecipeImage = {
-            id: `temp-${Date.now()}-${Math.random()}`,
-            recipe_id: '',
-            filename: file.name,
-            file_path: '',
-            url: base64, // Use base64 directly instead of blob URL
-            image_type: 'gallery',
-            file_size: processedFile.size, // Use compressed file size
-            mime_type: 'image/jpeg', // Always JPEG after compression,
-            alt_text: `תמונה: ${file.name}`,
-            width: 0,
-            height: 0,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          };
-          tempImages.push(tempImage);
-        } catch (error) {
-          console.error(`❌ Failed to process ${file.name}:`, error);
+              const tempImage: RecipeImage = {
+                id: `temp-fallback-${Date.now()}-${Math.random()}`,
+                recipe_id: '',
+                filename: file.name,
+                file_path: '',
+                url: base64,
+                image_type: 'gallery',
+                file_size: processedFile.size,
+                mime_type: 'image/jpeg',
+                alt_text: `תמונה: ${file.name}`,
+                width: 0,
+                height: 0,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              };
+              tempImages.push(tempImage);
+              console.log(`✅ Fallback: Added ${file.name} as base64`);
+            } catch (fallbackError) {
+              console.error(`❌ Fallback also failed for ${file.name}:`, fallbackError);
+            }
+          }
+        }
+      } else {
+        console.log('💻 Using desktop processing...');
+        
+        // Desktop processing with base64 conversion
+        for (const file of imageFiles) {
+          try {
+            const processedFile = await compressImageSimple(file);
+            
+            const base64 = await new Promise<string>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => {
+                const result = reader.result as string;
+                const sizeInKB = Math.round(result.length / 1024);
+                console.log(`📸 Base64 size for ${file.name}: ${sizeInKB}KB`);
+                
+                if (sizeInKB > 800) {
+                  console.warn(`⚠️ Large base64 image: ${file.name} (${sizeInKB}KB)`);
+                }
+                
+                resolve(result);
+              };
+              reader.onerror = reject;
+              reader.readAsDataURL(processedFile);
+            });
+
+            const tempImage: RecipeImage = {
+              id: `temp-${Date.now()}-${Math.random()}`,
+              recipe_id: '',
+              filename: file.name,
+              file_path: '',
+              url: base64,
+              image_type: 'gallery',
+              file_size: processedFile.size,
+              mime_type: 'image/jpeg',
+              alt_text: `תמונה: ${file.name}`,
+              width: 0,
+              height: 0,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            };
+            tempImages.push(tempImage);
+          } catch (error) {
+            console.error(`❌ Failed to process ${file.name}:`, error);
+          }
         }
       }
 
       if (tempImages.length > 0) {
         setImages(prev => [...prev, ...tempImages]);
         setUploadStatus(`הועלו ${tempImages.length} תמונות בהצלחה!`);
-        console.log(`✅ Added ${tempImages.length} images as base64`);
+        console.log(`✅ Added ${tempImages.length} images (Mobile: ${isMobile()})`);
       } else {
         setUploadStatus('שגיאה בעיבוד התמונות');
       }
@@ -286,9 +358,20 @@ const AddRecipePage: React.FC = () => {
     }
   };
 
-  const removeImage = (index: number) => {
+  const removeImage = async (index: number) => {
     console.log('🗑️ Removing image at index:', index);
     const imageToRemove = images[index];
+    
+    // If it's a mobile image, clean it up from mobileImageService
+    if (imageToRemove.id.startsWith('mobile-')) {
+      try {
+        const imageId = imageToRemove.id.replace('mobile-', '');
+        await mobileImageService.deleteImage(imageId);
+        console.log(`🧹 Cleaned up mobile image: ${imageToRemove.filename}`);
+      } catch (error) {
+        console.warn(`⚠️ Failed to cleanup mobile image ${imageToRemove.filename}:`, error);
+      }
+    }
     
     // If it's a temporary image, remove from imageFiles as well
     if (imageToRemove.id.startsWith('temp-')) {
@@ -763,9 +846,34 @@ const AddRecipePage: React.FC = () => {
         });
 
         // Process images for storage (universal for all platforms)
-        // Use images directly without complex processing
-        const processedImages: string[] = images.map(img => img.url);
-        console.log(`📸 Using ${processedImages.length} images directly:`, processedImages.map(url => url.substring(0, 50) + '...'));
+        const processedImages: string[] = [];
+        
+        for (const img of images) {
+          if (img.id.startsWith('mobile-')) {
+            // For mobile images, get the actual image data from mobileImageService
+            try {
+              const imageId = img.id.replace('mobile-', '');
+              const imageData = await mobileImageService.getImage(imageId);
+              if (imageData) {
+                processedImages.push(imageData);
+                console.log(`📱 Retrieved mobile image: ${img.filename}`);
+              } else {
+                console.warn(`⚠️ Failed to retrieve mobile image: ${img.filename}`);
+                // Fallback to the stored URL
+                processedImages.push(img.url);
+              }
+            } catch (error) {
+              console.error(`❌ Error retrieving mobile image ${img.filename}:`, error);
+              // Fallback to the stored URL
+              processedImages.push(img.url);
+            }
+          } else {
+            // For regular images, use the URL directly
+            processedImages.push(img.url);
+          }
+        }
+        
+        console.log(`📸 Using ${processedImages.length} images (${images.filter(img => img.id.startsWith('mobile-')).length} mobile, ${images.filter(img => !img.id.startsWith('mobile-')).length} desktop)`);
 
         const newRecipe: RecipeInsert = {
           title: title.trim(),
@@ -805,6 +913,19 @@ const AddRecipePage: React.FC = () => {
           }, 500);
         } else {
           throw new Error('Failed to save recipe to database');
+        }
+        
+        // Clean up mobile images after successful save
+        for (const img of images) {
+          if (img.id.startsWith('mobile-')) {
+            try {
+              const imageId = img.id.replace('mobile-', '');
+              await mobileImageService.deleteImage(imageId);
+              console.log(`🧹 Cleaned up mobile image: ${img.filename}`);
+            } catch (error) {
+              console.warn(`⚠️ Failed to cleanup mobile image ${img.filename}:`, error);
+            }
+          }
         }
         
         // Force refresh recipes in context to ensure the new recipe is visible
@@ -1309,7 +1430,7 @@ const AddRecipePage: React.FC = () => {
                 <div className="flex gap-2 flex-wrap justify-center">
                   <label className="flex items-center gap-2 bg-white hover:bg-gray-50 px-3 py-2 rounded-lg cursor-pointer transition-all duration-200 border border-gray-200 hover:border-pink-300 font-medium text-gray-700 hover:text-pink-600 text-sm">
                     <Upload className="w-4 h-4 flex-shrink-0" />
-                    <span className="whitespace-nowrap">העלה</span>
+                    <span className="whitespace-nowrap">העלה תמונות</span>
                     <input
                       type="file"
                       multiple

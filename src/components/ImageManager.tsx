@@ -373,9 +373,9 @@ const ImageManager: React.FC<ImageManagerProps> = ({
                   'Maximum images reached'
                 ) : (
                   <>
-                    <span className="font-medium text-blue-600">Click to upload</span>
+                    <span className="font-medium text-blue-600">לחץ להעלאת תמונות</span>
                     <br />
-                    <span className="text-xs">PNG, JPG, WEBP up to 10MB</span>
+                    <span className="text-xs">PNG, JPG, WEBP עד 10MB (מספר תמונות)</span>
                   </>
                 )}
               </div>
@@ -386,6 +386,7 @@ const ImageManager: React.FC<ImageManagerProps> = ({
           <div className="flex gap-2 sm:hidden">
             <input
               type="file"
+              multiple
               accept="image/*"
               capture="environment"
               onChange={handleFileSelect}
@@ -395,6 +396,7 @@ const ImageManager: React.FC<ImageManagerProps> = ({
             />
             <input
               type="file"
+              multiple
               accept="image/*"
               onChange={handleFileSelect}
               className="hidden"
@@ -422,7 +424,7 @@ const ImageManager: React.FC<ImageManagerProps> = ({
               className="flex-1 flex items-center justify-center gap-2 bg-blue-500 text-white px-4 py-3 rounded-lg hover:bg-blue-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Upload className="w-5 h-5" />
-              בחר מהגלריה
+              בחר תמונות
             </button>
           </div>
         </div>
