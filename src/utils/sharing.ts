@@ -10,16 +10,20 @@
 export const getCanonicalUrl = (): string => {
   const currentOrigin = window.location.origin;
   
-  // If this is a Vercel preview deployment, use the main domain
-  if (currentOrigin.includes('vercel.app') && currentOrigin.includes('-')) {
-    // Extract the project name and use the main Vercel domain
-    const projectMatch = currentOrigin.match(/https:\/\/([^-]+)-[^-]+-kellersn-gmailcoms-projects\.vercel\.app/);
-    if (projectMatch) {
-      // Use the main deployment ID (52w60q377) for consistent sharing
-      return `https://${projectMatch[1]}-52w60q377-kellersn-gmailcoms-projects.vercel.app`;
-    }
+  console.log('🔍 SHARING DEBUG: Current origin:', currentOrigin);
+  console.log('🔍 SHARING DEBUG: User agent:', navigator.userAgent);
+  
+  // Always use the main deployment URL for sharing to ensure consistency
+  // This prevents issues with preview deployments and ensures all shared links work
+  const mainDeploymentUrl = 'https://maayanrecipes-52w60q377-kellersn-gmailcoms-projects.vercel.app';
+  
+  // If we're on a Vercel deployment, always use the main deployment URL
+  if (currentOrigin.includes('vercel.app')) {
+    console.log('🔍 SHARING DEBUG: Using main deployment URL:', mainDeploymentUrl);
+    return mainDeploymentUrl;
   }
   
+  console.log('🔍 SHARING DEBUG: Using current origin:', currentOrigin);
   // For custom domains or other deployments, use the current origin
   return currentOrigin;
 };
@@ -28,7 +32,10 @@ export const getCanonicalUrl = (): string => {
  * Generate a shareable URL for a recipe
  */
 export const getRecipeShareUrl = (recipeId: string): string => {
-  return `${getCanonicalUrl()}/recipe/${recipeId}`;
+  const canonicalUrl = getCanonicalUrl();
+  const shareUrl = `${canonicalUrl}/recipe/${recipeId}`;
+  console.log('🔍 SHARING DEBUG: Generated share URL:', shareUrl);
+  return shareUrl;
 };
 
 /**

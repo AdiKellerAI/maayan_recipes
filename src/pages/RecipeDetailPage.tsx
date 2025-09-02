@@ -267,25 +267,55 @@ const RecipeDetailPage: React.FC = () => {
 
   const handleShare = async () => {
     const shareUrl = getRecipeShareUrl(recipe.id);
+    
+    console.log('🔍 RECIPE DETAIL SHARE DEBUG:');
+    console.log('  - Recipe ID:', recipe.id);
+    console.log('  - Share URL:', shareUrl);
+    console.log('  - Navigator.share available:', !!navigator.share);
+    console.log('  - User agent:', navigator.userAgent);
 
     if (navigator.share) {
       try {
+        console.log('🔍 Using native share API');
         await navigator.share({
           title: recipe.title,
           text: `מתכון: ${recipe.title}`,
           url: shareUrl
         });
+        console.log('🔍 Native share completed successfully');
       } catch (error) {
-        console.log('Share cancelled or failed:', error);
+        console.log('🔍 Native share error:', error);
+        // If native share fails, fall back to clipboard
+        console.log('🔍 Falling back to clipboard after native share failure');
+        try {
+          await navigator.clipboard.writeText(shareUrl);
+          setShowShareFeedback(true);
+          setTimeout(() => setShowShareFeedback(false), 3000); // Longer feedback for mobile
+          console.log('🔍 Clipboard fallback successful');
+        } catch (clipboardError) {
+          console.error('🔍 Clipboard fallback also failed:', clipboardError);
+          // Final fallback for older browsers
+          const textArea = document.createElement('textarea');
+          textArea.value = shareUrl;
+          document.body.appendChild(textArea);
+          textArea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textArea);
+          setShowShareFeedback(true);
+          setTimeout(() => setShowShareFeedback(false), 3000); // Longer feedback for mobile
+          console.log('🔍 Final fallback method used');
+        }
       }
     } else {
+      console.log('🔍 Using clipboard fallback');
       // Desktop fallback - copy to clipboard with feedback
       try {
         await navigator.clipboard.writeText(shareUrl);
         setShowShareFeedback(true);
-        setTimeout(() => setShowShareFeedback(false), 2000);
+        setTimeout(() => setShowShareFeedback(false), 3000); // Longer feedback for mobile
+        console.log('🔍 Clipboard copy successful');
       } catch (error) {
-        console.error('Failed to copy to clipboard:', error);
+        console.error('🔍 Clipboard copy failed:', error);
         // Fallback for older browsers
         const textArea = document.createElement('textarea');
         textArea.value = shareUrl;
@@ -294,7 +324,8 @@ const RecipeDetailPage: React.FC = () => {
         document.execCommand('copy');
         document.body.removeChild(textArea);
         setShowShareFeedback(true);
-        setTimeout(() => setShowShareFeedback(false), 2000);
+        setTimeout(() => setShowShareFeedback(false), 3000); // Longer feedback for mobile
+        console.log('🔍 Fallback copy method used');
       }
     }
   };
