@@ -548,12 +548,12 @@ const RecipeDetailPage: React.FC = () => {
                           )}
                         </button>
                         <div
-                          className={`flex-1 pt-1 cursor-pointer transition-all duration-200 ${
+                          className={`flex-1 pt-1 cursor-pointer transition-all duration-200 px-4 py-4 rounded-xl ${
                             isCompleted
-                              ? 'text-slate-500 line-through opacity-70'
+                              ? 'text-slate-500 line-through opacity-70 bg-white/40'
                               : isCurrent
-                              ? 'text-slate-900 font-medium bg-white/60 px-4 py-4 rounded-xl border border-amber-200/30'
-                              : 'text-slate-700 hover:text-slate-900 px-4 py-4 hover:bg-white/40 rounded-xl transition-colors'
+                              ? 'text-slate-900 font-medium bg-white/60 border border-amber-200/30'
+                              : 'text-slate-700 hover:text-slate-900 hover:bg-white/40 transition-colors'
                           }`}
                           onClick={() => handleStepClick(index)}
                         >
@@ -649,12 +649,12 @@ const RecipeDetailPage: React.FC = () => {
                                       <span className="text-xs">{i + 1}</span>
                                     )}
                                   </button>
-                                  <div className={`flex-1 pt-1 cursor-pointer transition-all duration-200 ${
+                                  <div className={`flex-1 pt-1 cursor-pointer transition-all duration-200 px-4 py-4 rounded-xl ${
                                       isCompleted
-                                        ? 'text-slate-500 line-through opacity-70'
+                                        ? 'text-slate-500 line-through opacity-70 bg-white/40'
                                         : isCurrent
-                                        ? 'text-slate-900 font-medium bg-white/60 px-4 py-4 rounded-xl border border-amber-200/30'
-                                        : 'text-slate-700 hover:text-slate-900 px-4 py-4 hover:bg-white/40 rounded-xl transition-colors'
+                                        ? 'text-slate-900 font-medium bg-white/60 border border-amber-200/30'
+                                        : 'text-slate-700 hover:text-slate-900 hover:bg-white/40 transition-colors'
                                     }`}
                                     onClick={() => handleAdditionalSectionStepClick(sectionName, i)}
                                   >

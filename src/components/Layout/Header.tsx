@@ -387,7 +387,7 @@ const Header: React.FC = () => {
             }}
           >
             <div 
-              className={`py-2 rounded-lg shadow-md border h-10 flex items-center justify-center transition-all duration-500 ease-in-out bg-gradient-to-br from-orange-500/80 to-yellow-600/80 border-orange-400/80 hover:from-orange-600/80 hover:to-yellow-700/80 ${
+              className={`py-2 rounded-lg shadow-md border h-10 flex items-center justify-center transition-all duration-300 ease-in-out bg-gradient-to-br from-orange-500/80 to-yellow-600/80 border-orange-400/80 active:scale-95 active:shadow-lg ${
                 location.pathname === '/' 
                   ? 'px-4 md:px-16' // 4x wider on desktop landing page
                   : 'px-4'         // normal width on other pages
