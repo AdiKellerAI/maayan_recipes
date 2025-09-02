@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Heart, Images, Edit, Trash2, Share2 } from 'lucide-react';
+import { Heart, Images, Edit, Trash2, Share2, Check } from 'lucide-react';
 import { Recipe, ViewMode } from '../../types/recipe';
 import { useRecipes } from '../../contexts/RecipeContext';
 import { useProtectedAction } from '../../hooks/useProtectedAction';
@@ -53,6 +53,7 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
   const [showDesktopOptions, setShowDesktopOptions] = useState(false);
   const [isLongPress, setIsLongPress] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showShareFeedback, setShowShareFeedback] = useState(false);
   const longPressTimer = useRef<NodeJS.Timeout | null>(null);
   // Better mobile detection - check for touch support instead of screen width
   const [isMobile, setIsMobile] = useState(() => {
@@ -208,9 +209,23 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
         console.log('Error sharing:', error);
       }
     } else {
-      // Fallback for browsers that don't support Web Share API
-      navigator.clipboard.writeText(window.location.origin + `/recipe/${recipe.id}`);
-      alert('הקישור הועתק ללוח');
+      // Desktop fallback - copy to clipboard with feedback
+      try {
+        await navigator.clipboard.writeText(window.location.origin + `/recipe/${recipe.id}`);
+        setShowShareFeedback(true);
+        setTimeout(() => setShowShareFeedback(false), 2000);
+      } catch (error) {
+        console.error('Failed to copy to clipboard:', error);
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = window.location.origin + `/recipe/${recipe.id}`;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        setShowShareFeedback(true);
+        setTimeout(() => setShowShareFeedback(false), 2000);
+      }
     }
   };
 
@@ -294,17 +309,31 @@ const RecipeCard: React.FC<RecipeCardProps> = ({
                   >
                     <Edit className="h-3.5 w-3.5 flex-shrink-0" />
                   </button>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleOptionClick('share');
-                    }}
-                    className="w-7 h-7 min-w-[28px] min-h-[28px] flex items-center justify-center rounded-full bg-green-50 text-green-600 hover:bg-green-100 transition-all duration-200 flex-shrink-0"
-                    style={{ width: '28px', height: '28px', minWidth: '28px', minHeight: '28px' }}
-                    title="שתף מתכון"
-                  >
-                    <Share2 className="h-3.5 w-3.5 flex-shrink-0" />
-                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOptionClick('share');
+                      }}
+                      className="w-7 h-7 min-w-[28px] min-h-[28px] flex items-center justify-center rounded-full bg-green-50 text-green-600 hover:bg-green-100 transition-all duration-200 flex-shrink-0"
+                      style={{ width: '28px', height: '28px', minWidth: '28px', minHeight: '28px' }}
+                      title="שתף מתכון"
+                    >
+                      <Share2 className="h-3.5 w-3.5 flex-shrink-0" />
+                    </button>
+                    
+                    {/* Copy feedback tooltip */}
+                    {showShareFeedback && (
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-green-500 text-white text-xs rounded-lg shadow-lg whitespace-nowrap z-50 animate-fadeIn">
+                        <div className="flex items-center space-x-1 rtl:space-x-reverse">
+                          <Check className="h-2.5 w-2.5" />
+                          <span>הועתק!</span>
+                        </div>
+                        {/* Arrow pointing down */}
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-green-500"></div>
+                      </div>
+                    )}
+                  </div>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();

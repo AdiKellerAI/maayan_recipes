@@ -189,28 +189,28 @@ const DatabaseStatus: React.FC<DatabaseStatusProps> = ({ isVisible = false, onSt
   };
 
   return (
-    <div className={`fixed bottom-4 right-4 z-50 max-w-sm border-2 rounded-lg p-3 shadow-lg ${getStatusColor()}`}>
-      <div className="flex items-center justify-between">
+    <div className={`fixed bottom-6 right-6 z-50 max-w-md border-2 rounded-2xl p-6 shadow-2xl backdrop-blur-sm ${getStatusColor()}`}>
+      <div className="flex items-center justify-between mb-4">
         <div 
-          className="flex items-center space-x-2 rtl:space-x-reverse cursor-pointer flex-1"
+          className="flex items-center space-x-3 rtl:space-x-reverse cursor-pointer flex-1"
           onClick={() => setIsExpanded(!isExpanded)}
         >
-          <Database className="h-4 w-4 text-gray-600" />
+          <Database className="h-5 w-5 text-gray-600" />
           {getStatusIcon()}
-          <span className="text-sm font-medium text-gray-800">
+          <span className="text-base font-semibold text-gray-800">
             {getStatusText()}
           </span>
         </div>
-        <div className="flex gap-1">
+        <div className="flex gap-2">
           <button
             onClick={(e) => {
               e.stopPropagation();
               checkConnection();
             }}
-            className="p-1 hover:bg-white/50 rounded"
+            className="p-2 hover:bg-white/60 rounded-lg transition-all duration-200 hover:scale-105"
             title="בדוק שוב"
           >
-            <RefreshCw className="h-3 w-3 text-gray-500" />
+            <RefreshCw className="h-4 w-4 text-gray-600" />
           </button>
           {(status === 'error' || status === 'disconnected') && (
             <button
@@ -218,10 +218,10 @@ const DatabaseStatus: React.FC<DatabaseStatusProps> = ({ isVisible = false, onSt
                 e.stopPropagation();
                 forceReconnect();
               }}
-              className="p-1 hover:bg-white/50 rounded"
+              className="p-2 hover:bg-white/60 rounded-lg transition-all duration-200 hover:scale-105"
               title="התחבר מחדש"
             >
-              <Wifi className="h-3 w-3 text-blue-500" />
+              <Wifi className="h-4 w-4 text-blue-600" />
             </button>
           )}
           <button
@@ -229,68 +229,120 @@ const DatabaseStatus: React.FC<DatabaseStatusProps> = ({ isVisible = false, onSt
               e.stopPropagation();
               onClose?.();
             }}
-            className="p-1 hover:bg-white/50 rounded"
+            className="p-2 hover:bg-white/60 rounded-lg transition-all duration-200 hover:scale-105"
             title="סגור"
           >
-            <X className="h-3 w-3 text-gray-500" />
+            <X className="h-4 w-4 text-gray-600" />
           </button>
         </div>
       </div>
       
       {isExpanded && details && (
-        <div className="mt-2 pt-2 border-t border-gray-200">
-          <div className="text-xs text-gray-600 space-y-1">
+        <div className="mt-4 pt-4 border-t border-gray-200/60">
+          <div className="text-sm text-gray-700 space-y-2">
             {status === 'connected' && (
               <>
-                <div>✅ שרת API: פעיל</div>
-                <div>✅ PostgreSQL: מחובר</div>
+                <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span>שרת API: פעיל</span>
+                </div>
+                <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                  <CheckCircle className="h-4 w-4 text-green-500" />
+                  <span>PostgreSQL: מחובר</span>
+                </div>
                 {details.server_time && (
-                  <div>🕒 זמן שרת: {new Date(details.server_time).toLocaleTimeString('he-IL')}</div>
+                  <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                    <span className="text-lg">🕒</span>
+                    <span>זמן שרת: {new Date(details.server_time).toLocaleTimeString('he-IL')}</span>
+                  </div>
                 )}
                 {details.pg_version && (
-                  <div>🗄️ גרסת DB: {details.pg_version}</div>
+                  <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                    <span className="text-lg">🗄️</span>
+                    <span>גרסת DB: {details.pg_version}</span>
+                  </div>
                 )}
                 {details.recipe_count !== undefined && (
-                  <div>📊 מתכונים: {details.recipe_count}</div>
+                  <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                    <span className="text-lg">📊</span>
+                    <span>מתכונים: {details.recipe_count}</span>
+                  </div>
                 )}
                 {details.connection_status && (
-                  <div>🔗 סטטוס: {details.connection_status}</div>
+                  <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                    <span className="text-lg">🔗</span>
+                    <span>סטטוס: {details.connection_status}</span>
+                  </div>
                 )}
               </>
             )}
             
             {status === 'disconnected' && (
               <>
-                <div>⚠️ שרת API: פעיל</div>
-                <div>❌ PostgreSQL: לא מחובר</div>
-                <div>📦 משתמש ב-localStorage</div>
+                <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                  <AlertCircle className="h-4 w-4 text-orange-500" />
+                  <span>שרת API: פעיל</span>
+                </div>
+                <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                  <WifiOff className="h-4 w-4 text-red-500" />
+                  <span>PostgreSQL: לא מחובר</span>
+                </div>
+                <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                  <span className="text-lg">📦</span>
+                  <span>משתמש ב-localStorage</span>
+                </div>
               </>
             )}
             
             {status === 'error' && (
               <>
-                <div>❌ שגיאה: {details.error}</div>
-                {details.type && <div>סוג: {details.type}</div>}
-                {details.error_code && <div>קוד שגיאה: {details.error_code}</div>}
+                <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                  <AlertCircle className="h-4 w-4 text-red-500" />
+                  <span>שגיאה: {details.error}</span>
+                </div>
+                {details.type && (
+                  <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                    <span className="text-lg">ℹ️</span>
+                    <span>סוג: {details.type}</span>
+                  </div>
+                )}
+                {details.error_code && (
+                  <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                    <span className="text-lg">🔢</span>
+                    <span>קוד שגיאה: {details.error_code}</span>
+                  </div>
+                )}
                 {details.retry_attempts !== undefined && (
-                  <div>🔄 ניסיונות: {details.retry_attempts}/{details.max_attempts || 5}</div>
+                  <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                    <span className="text-lg">🔄</span>
+                    <span>ניסיונות: {details.retry_attempts}/{details.max_attempts || 5}</span>
+                  </div>
                 )}
                 {details.connection_status && (
-                  <div>🔗 סטטוס: {details.connection_status}</div>
+                  <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                    <span className="text-lg">🔗</span>
+                    <span>סטטוס: {details.connection_status}</span>
+                  </div>
                 )}
                 {details.error && details.error.includes('fetch') && (
-                  <div>🚫 השרת לא פועל - יש להפעיל את השרת</div>
+                  <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                    <span className="text-lg">🚫</span>
+                    <span>השרת לא פועל - יש להפעיל את השרת</span>
+                  </div>
                 )}
-                <div>📦 משתמש ב-localStorage</div>
+                <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                  <span className="text-lg">📦</span>
+                  <span>משתמש ב-localStorage</span>
+                </div>
               </>
             )}
             
-            <div className="mt-2 pt-1 border-t border-gray-300">
-              <div className="flex flex-col space-y-1.5">
+            <div className="mt-4 pt-3 border-t border-gray-200/60">
+              <div className="flex flex-col space-y-3">
                 {(status === 'error' || status === 'disconnected') && (
                   <button
                     onClick={forceReconnect}
-                    className="px-2 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 text-xs w-full text-center"
+                    className="px-4 py-2.5 bg-blue-500 text-white rounded-xl hover:bg-blue-600 text-sm font-medium w-full text-center transition-all duration-200 hover:scale-105 shadow-md"
                     title="ניסיון התחברות מחודש למאגר המידע"
                   >
                     🔄 התחבר מחדש
@@ -298,12 +350,12 @@ const DatabaseStatus: React.FC<DatabaseStatusProps> = ({ isVisible = false, onSt
                 )}
                 <button
                   onClick={clearAllStorageAndRefresh}
-                  className="px-2 py-1 bg-orange-500 text-white rounded hover:bg-orange-600 text-xs w-full text-center"
+                  className="px-4 py-2.5 bg-orange-500 text-white rounded-xl hover:bg-orange-600 text-sm font-medium w-full text-center transition-all duration-200 hover:scale-105 shadow-md"
                   title="ניקוי קאש ורענון הדף - יטען נתונים טריים מהשרת"
                 >
                   🧹 נקה קאש ורענן
                 </button>
-                <div className="text-xs text-gray-500 text-center">
+                <div className="text-xs text-gray-500 text-center leading-relaxed">
                   {(status === 'error' || status === 'disconnected') ? 
                     'לחץ על 🔄 להתחבר מחדש • לחץ על 🧹 לרענן הדף' :
                     'לחץ כדי לרענן • לחץ על 🔄 כדי לבדוק שוב'

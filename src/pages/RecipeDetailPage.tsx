@@ -34,12 +34,14 @@ const getCategoryIllustration = (categoryId: string) => {
 const RecipeDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { recipes, toggleFavorite, deleteRecipe } = useRecipes();
+  const { recipes, toggleFavorite, deleteRecipe, refreshRecipes } = useRecipes();
   const { navigateToLastRecipesPage, setReferrerFromRecipes } = useNavigation();
   const { executeProtectedAction } = useProtectedAction();
   const [currentImageIndex, setCurrentImageIndex] = React.useState(0);
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   const [showImageModal, setShowImageModal] = React.useState(false);
+  const [isLoadingRecipe, setIsLoadingRecipe] = React.useState(false);
+  const [showShareFeedback, setShowShareFeedback] = React.useState(false);
   // Main directions current step
   const [mainCurrentStep, setMainCurrentStep] = React.useState(0);
   
@@ -71,6 +73,31 @@ const RecipeDetailPage: React.FC = () => {
   const category = recipe ? categories.find(c => c.id === recipe.category) : null;
   const images = recipe?.images || [];
   const currentImage = images.length > 0 ? images[currentImageIndex] : null;
+
+  // Handle case where recipe is not found in context (direct URL access)
+  React.useEffect(() => {
+    if (id && !recipe && !isLoadingRecipe) {
+      console.log('🔍 Recipe not found in context, attempting to load:', id);
+      setIsLoadingRecipe(true);
+      
+      const loadRecipe = async () => {
+        try {
+          // Try to refresh recipes to load the specific recipe
+          await refreshRecipes(true);
+        } catch (error) {
+          console.error('Failed to load recipe:', error);
+          // If still not found after refresh, navigate to 404 or home
+          setTimeout(() => {
+            navigate('/recipes');
+          }, 2000);
+        } finally {
+          setIsLoadingRecipe(false);
+        }
+      };
+      
+      loadRecipe();
+    }
+  }, [id, recipe, isLoadingRecipe, refreshRecipes, navigate]);
 
   // Pastel background schemes for additional sections
   const additionalColorSchemes = [
@@ -138,6 +165,21 @@ const RecipeDetailPage: React.FC = () => {
   };
 
   if (!recipe) {
+    if (isLoadingRecipe) {
+      return (
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center">
+          <div className="text-center">
+            <div className="text-6xl mb-4 animate-pulse">🍽️</div>
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">טוען מתכון...</h1>
+            <p className="text-gray-600 mb-6">אנא המתן בזמן שאנחנו טוענים את המתכון</p>
+            <div className="flex justify-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+    
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -179,15 +221,35 @@ const RecipeDetailPage: React.FC = () => {
 
   // Additional sections are rendered independently; no local step tracking here
 
-  const handleShare = () => {
+  const handleShare = async () => {
     if (navigator.share) {
-      navigator.share({
-        title: recipe.title,
-        text: `מתכון: ${recipe.title}`,
-        url: window.location.href
-      });
+      try {
+        await navigator.share({
+          title: recipe.title,
+          text: `מתכון: ${recipe.title}`,
+          url: window.location.href
+        });
+      } catch (error) {
+        console.log('Share cancelled or failed:', error);
+      }
     } else {
-      navigator.clipboard.writeText(`${recipe.title} - ${window.location.href}`);
+      // Desktop fallback - copy to clipboard with feedback
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        setShowShareFeedback(true);
+        setTimeout(() => setShowShareFeedback(false), 2000);
+      } catch (error) {
+        console.error('Failed to copy to clipboard:', error);
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = window.location.href;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        setShowShareFeedback(true);
+        setTimeout(() => setShowShareFeedback(false), 2000);
+      }
     }
   };
 
@@ -327,15 +389,29 @@ const RecipeDetailPage: React.FC = () => {
               </button>
 
               {/* Share Button */}
-              <button
-                onClick={handleShare}
-                className={`rounded-xl bg-white/80 backdrop-blur-sm text-slate-600 hover:text-slate-900 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50 ${
-                  isScrolled ? 'p-1.5' : 'p-2 sm:p-3'
-                }`}
-                title="שיתוף מתכון"
-              >
-                <Share2 className={`${isScrolled ? 'h-3.5 w-3.5' : 'h-4 w-4 sm:h-5 sm:w-5'}`} />
-              </button>
+              <div className="relative">
+                <button
+                  onClick={handleShare}
+                  className={`rounded-xl bg-white/80 backdrop-blur-sm text-slate-600 hover:text-slate-900 shadow-sm hover:shadow-md transition-all duration-200 border border-slate-200/50 ${
+                    isScrolled ? 'p-1.5' : 'p-2 sm:p-3'
+                  }`}
+                  title="שיתוף מתכון"
+                >
+                  <Share2 className={`${isScrolled ? 'h-3.5 w-3.5' : 'h-4 w-4 sm:h-5 sm:w-5'}`} />
+                </button>
+                
+                {/* Copy feedback tooltip */}
+                {showShareFeedback && (
+                  <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-3 py-1.5 bg-green-500 text-white text-sm rounded-lg shadow-lg whitespace-nowrap z-50 animate-fadeIn">
+                    <div className="flex items-center space-x-1 rtl:space-x-reverse">
+                      <Check className="h-3 w-3" />
+                      <span>הקישור הועתק!</span>
+                    </div>
+                    {/* Arrow pointing down */}
+                    <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-green-500"></div>
+                  </div>
+                )}
+              </div>
 
               {/* Delete Button */}
               <button

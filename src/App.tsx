@@ -23,23 +23,22 @@ function App() {
   const handleDatabaseStatusChange = React.useCallback((status: 'checking' | 'connected' | 'disconnected' | 'error') => {
     console.log('🔍 APP: Database status changed to:', status);
     
-    // Show status window for any non-connected status, and always show for errors
-    if (status === 'disconnected' || status === 'error' || status === 'checking') {
+    // Only show status window for errors, not for normal checking or disconnected states
+    if (status === 'error') {
       setShowDatabaseStatus(true);
     } else if (status === 'connected') {
-      // Hide status window after a short delay when connection is restored
-      setTimeout(() => {
-        setShowDatabaseStatus(false);
-      }, 3000); // Increased delay to 3 seconds for better visibility
+      // Hide status window when connection is restored
+      setShowDatabaseStatus(false);
     }
+    // For 'checking' and 'disconnected' states, keep the modal hidden by default
   }, []);
 
-  // Check database status on app load
+  // Check database status on app load (silently, without showing modal)
   React.useEffect(() => {
     // Create a hidden database status component to check connection
     const checkInitialConnection = async () => {
       console.log('🔍 APP: Checking initial database connection...');
-      handleDatabaseStatusChange('checking');
+      // Don't call handleDatabaseStatusChange('checking') to avoid showing modal
       
       try {
         const response = await fetch('/api/test-connection', {
@@ -50,7 +49,10 @@ function App() {
         
         if (!response.ok) {
           console.error('❌ APP: API server responded with error:', response.status, response.statusText);
-          handleDatabaseStatusChange('error');
+          // Only show modal for actual errors, not normal disconnections
+          if (response.status >= 500) {
+            handleDatabaseStatusChange('error');
+          }
           return;
         }
         
@@ -61,15 +63,15 @@ function App() {
           handleDatabaseStatusChange('connected');
         } else {
           console.warn('⚠️ APP: Database not connected according to API response');
-          handleDatabaseStatusChange('disconnected');
+          // Don't show modal for normal disconnected state
         }
       } catch (error) {
         console.error('❌ APP: Failed to reach API server:', error);
-        // Distinguish between network errors (server not running) and other errors
+        // Only show modal for actual network errors, not normal offline states
         if (error instanceof TypeError && error.message.includes('fetch')) {
           console.error('❌ APP: Backend server appears to be offline');
+          // Don't automatically show modal for offline server
         }
-        handleDatabaseStatusChange('error');
       }
     };
 
