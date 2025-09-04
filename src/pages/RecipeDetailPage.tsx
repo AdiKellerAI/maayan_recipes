@@ -628,27 +628,35 @@ const RecipeDetailPage: React.FC = () => {
             </div>
 
             {/* Main section compact like additional sections, desktop layout: ingredients right, directions left */}
-            <div className="grid md:grid-cols-2 gap-3 md:gap-4">
-              {/* Ingredients (right on desktop) */}
-              <div className="order-1 md:order-1 bg-gradient-to-br from-amber-50/60 via-white to-orange-50/40 px-2 py-4 md:px-3 rounded-2xl border border-amber-200/40 shadow-sm">
-                <h2 className="text-xl font-bold text-slate-900 mb-4">רכיבים</h2>
-                <ul className="space-y-2">
-                  {recipe.ingredients.map((ingredient, index) => (
-                    <li key={index} className="flex items-start space-x-3 rtl:space-x-reverse group">
-                      <div className="flex-shrink-0 w-5 h-5 bg-gradient-to-br from-amber-400 to-orange-400 rounded-full flex items-center justify-center mt-0.5 shadow-sm">
-                        <span className="text-xs font-bold text-white">{index + 1}</span>
-                      </div>
-                      <span className="text-slate-700 leading-relaxed group-hover:text-slate-900 transition-colors">{ingredient}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            {((recipe.ingredients && recipe.ingredients.length > 0) || (recipe.directions && recipe.directions.length > 0)) && (
+              <div className={`grid gap-3 md:gap-4 ${
+                (recipe.ingredients && recipe.ingredients.length > 0) && (recipe.directions && recipe.directions.length > 0)
+                  ? 'md:grid-cols-2'
+                  : 'md:grid-cols-1'
+              }`}>
+                {/* Ingredients (right on desktop) */}
+                {recipe.ingredients && recipe.ingredients.length > 0 && (
+                  <div className="order-1 md:order-1 bg-gradient-to-br from-amber-50/60 via-white to-orange-50/40 px-2 py-4 md:px-3 rounded-2xl border border-amber-200/40 shadow-sm">
+                    <h2 className="text-xl font-bold text-slate-900 mb-4">רכיבים</h2>
+                    <ul className="space-y-2">
+                      {recipe.ingredients.map((ingredient, index) => (
+                        <li key={index} className="flex items-start space-x-3 rtl:space-x-reverse group">
+                          <div className="flex-shrink-0 w-5 h-5 bg-gradient-to-br from-amber-400 to-orange-400 rounded-full flex items-center justify-center mt-0.5 shadow-sm">
+                            <span className="text-xs font-bold text-white">{index + 1}</span>
+                          </div>
+                          <span className="text-slate-700 leading-relaxed group-hover:text-slate-900 transition-colors">{ingredient}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
 
-              {/* Directions (left on desktop) with step marking preserved */}
-              <div className="order-2 md:order-2 bg-gradient-to-br from-amber-50/60 via-white to-orange-50/40 px-2 py-4 md:px-3 rounded-2xl border border-amber-200/40 shadow-sm">
-                <h2 className="text-xl font-bold text-slate-900 mb-4">הוראות הכנה</h2>
-                <ol className="space-y-2">
-                  {recipe.directions.map((direction, index) => {
+                {/* Directions (left on desktop) with step marking preserved */}
+                {recipe.directions && recipe.directions.length > 0 && (
+                  <div className="order-2 md:order-2 bg-gradient-to-br from-amber-50/60 via-white to-orange-50/40 px-2 py-4 md:px-3 rounded-2xl border border-amber-200/40 shadow-sm">
+                    <h2 className="text-xl font-bold text-slate-900 mb-4">הוראות הכנה</h2>
+                    <ol className="space-y-2">
+                      {recipe.directions.map((direction, index) => {
                     const cached = recipeProgressCache.loadProgress(recipe.id);
                     const currentStep = cached?.currentStep ?? (recipe.current_step || 0);
                     const isCompleted = index < currentStep;
@@ -689,11 +697,13 @@ const RecipeDetailPage: React.FC = () => {
                           </div>
                         </div>
                       </li>
-                    );
-                  })}
-                </ol>
+                      );
+                    })}
+                  </ol>
+                </div>
+                )}
               </div>
-            </div>
+            )}
             {/* Additional Sections Title across full width */}
             {(recipe.additional_sections && Object.keys(recipe.additional_sections).length > 0) && (
               <div className="mt-12">

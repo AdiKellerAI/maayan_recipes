@@ -175,6 +175,9 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   // Incremental sync - only fetch changes since last sync
   const syncWithDatabase = async (incremental = true) => {
     try {
+      console.log('🔄 SYNC: Starting sync, current recipes count:', recipes.length);
+      console.log('🔄 SYNC: Recipe IDs before sync:', recipes.map(r => r.id));
+      
       if (incremental && lastSyncTime) {
         console.log('🔄 Incremental sync since:', lastSyncTime.toLocaleTimeString());
         // For now, we'll do a full refresh, but in the future this could be incremental
@@ -183,6 +186,9 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         console.log('🔄 Full sync with database...');
         await loadRecipes(true); // Force refresh
       }
+      
+      console.log('🔄 SYNC: Sync completed, new recipes count:', recipes.length);
+      console.log('🔄 SYNC: Recipe IDs after sync:', recipes.map(r => r.id));
     } catch (err) {
       console.warn('Error syncing with database:', err);
       // Don't show error to user for sync failures
@@ -306,27 +312,41 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       console.log('🔄 CONTEXT: Images in update:', updates.images?.length || 0);
       
       // Optimistically update local state first
-      setRecipes(prev => prev.map(recipe => 
-        recipe.id === id ? { ...recipe, ...updates } : recipe
-      ));
+      console.log('🔄 CONTEXT: Before optimistic update, recipes count:', recipes.length);
+      console.log('🔄 CONTEXT: Recipe to update exists:', recipes.find(r => r.id === id) ? 'YES' : 'NO');
+      
+      setRecipes(prev => {
+        const updated = prev.map(recipe => 
+          recipe.id === id ? { ...recipe, ...updates } : recipe
+        );
+        console.log('🔄 CONTEXT: After optimistic update, recipes count:', updated.length);
+        console.log('🔄 CONTEXT: Updated recipe exists:', updated.find(r => r.id === id) ? 'YES' : 'NO');
+        return updated;
+      });
       
       // Then update backend
       const updatedRecipe = await recipeService.updateRecipe(id, updates);
       console.log('✅ CONTEXT: Backend update successful, images:', updatedRecipe.images?.length || 0);
       
       // Update with the actual response from backend
-      setRecipes(prev => prev.map(recipe => 
-        recipe.id === id ? updatedRecipe : recipe
-      ));
+      setRecipes(prev => {
+        const final = prev.map(recipe => 
+          recipe.id === id ? updatedRecipe : recipe
+        );
+        console.log('🔄 CONTEXT: After backend update, recipes count:', final.length);
+        console.log('🔄 CONTEXT: Final recipe exists:', final.find(r => r.id === id) ? 'YES' : 'NO');
+        return final;
+      });
       
-      // Sync with database in background
-      setTimeout(async () => {
-        try {
-          await syncWithDatabase(true);
-        } catch (err) {
-          console.warn('Background sync after update failed:', err);
-        }
-      }, 100);
+      // Sync with database in background - DISABLED FOR DEBUGGING
+      console.log('🔄 CONTEXT: Skipping background sync for debugging');
+      // setTimeout(async () => {
+      //   try {
+      //     await syncWithDatabase(true);
+      //   } catch (err) {
+      //     console.warn('Background sync after update failed:', err);
+      //   }
+      // }, 100);
       
       return true; // Return success
       
@@ -334,8 +354,17 @@ export const RecipeProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const errorMessage = err instanceof Error ? err.message : 'Failed to update recipe';
       setError(errorMessage);
       
-      // Revert optimistic update on error
+      // Revert optimistic update on error - but keep local recipes
+      console.log('❌ CONTEXT: Update failed, reverting optimistic update');
+      console.log('❌ CONTEXT: Current recipes count before revert:', recipes.length);
+      
+      // Instead of reloading from server (which might not have the recipe),
+      // we need to revert the optimistic update, but we don't have the original recipe
+      // So we'll just reload from server as a fallback, but log the issue
+      console.log('⚠️ CONTEXT: Reloading from server as fallback - this might cause recipe loss');
       await loadRecipes(true);
+      
+      console.log('❌ CONTEXT: Reverted optimistic update, recipes count:', recipes.length);
       throw err;
     }
   };

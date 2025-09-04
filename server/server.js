@@ -342,9 +342,20 @@ app.post('/api/recipes', async (req, res) => {
     console.log('➕ Adding new recipe:', title);
     
     // Validate required fields
-    if (!title || !category || !ingredients || !directions) {
+    if (!title || !category) {
       return res.status(400).json({ 
-        error: 'Missing required fields: title, category, ingredients, and directions are required' 
+        error: 'Missing required fields: title and category are required' 
+      });
+    }
+    
+    // Validate that recipe has at least one content section
+    const hasMainIngredients = ingredients && ingredients.length > 0;
+    const hasMainDirections = directions && directions.length > 0;
+    const hasAdditionalSections = additional_sections && Object.keys(additional_sections).length > 0;
+    
+    if (!hasMainIngredients && !hasMainDirections && !hasAdditionalSections) {
+      return res.status(400).json({ 
+        error: 'Recipe must have at least one of: main ingredients, main directions, or additional sections' 
       });
     }
     
@@ -363,8 +374,8 @@ app.post('/api/recipes', async (req, res) => {
         title,
         description,
         category,
-        JSON.stringify(ingredients),
-        JSON.stringify(directions),
+        JSON.stringify(ingredients || []), // Handle undefined ingredients
+        JSON.stringify(directions || []), // Handle undefined directions
         JSON.stringify(additional_instructions),
         JSON.stringify(additional_sections),
         prep_time,
@@ -393,8 +404,18 @@ app.put('/api/recipes/:id', async (req, res) => {
     const updates = req.body;
     
     console.log('🔄 Updating recipe:', id);
+    console.log('🔄 Update data:', JSON.stringify(updates, null, 2));
     
     const client = await pool.connect();
+    
+    // First check if recipe exists
+    const checkResult = await client.query('SELECT id, title FROM recipes WHERE id = $1', [id]);
+    if (checkResult.rows.length === 0) {
+      console.log('❌ Recipe not found for update:', id);
+      client.release();
+      return res.status(404).json({ error: 'Recipe not found' });
+    }
+    console.log('✅ Recipe exists, proceeding with update:', checkResult.rows[0].title);
     
     // Build dynamic update query
     const updateFields = [];
@@ -473,7 +494,17 @@ app.put('/api/recipes/:id', async (req, res) => {
     }
     
     const recipe = mapRowToRecipe(queryResult.rows[0]);
-    console.log('✅ Recipe updated:', id);
+    console.log('✅ Recipe updated successfully:', id);
+    console.log('✅ Updated recipe title:', recipe.title);
+    console.log('✅ Updated recipe images count:', recipe.images?.length || 0);
+    
+    // Verify the recipe was actually saved by querying it again
+    const verifyResult = await client.query('SELECT id, title FROM recipes WHERE id = $1', [id]);
+    if (verifyResult.rows.length > 0) {
+      console.log('✅ VERIFICATION: Recipe confirmed in database:', verifyResult.rows[0].title);
+    } else {
+      console.log('❌ VERIFICATION: Recipe NOT found in database after update!');
+    }
     
     client.release();
     res.json(recipe);

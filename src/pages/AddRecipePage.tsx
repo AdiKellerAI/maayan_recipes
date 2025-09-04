@@ -25,6 +25,10 @@ const AddRecipePage: React.FC = () => {
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [additionalInstructions, setAdditionalInstructions] = useState<{ [key: string]: string[] }>({});
   const [additionalSections, setAdditionalSections] = useState<{ [key: string]: RecipeSection }>({});
+  
+  // Controls for optional main sections
+  const [includeMainIngredients, setIncludeMainIngredients] = useState(true);
+  const [includeMainDirections, setIncludeMainDirections] = useState(true);
 
   const [showSmartImport, setShowSmartImport] = useState(false);
   const [smartImportText, setSmartImportText] = useState('');
@@ -33,12 +37,16 @@ const AddRecipePage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [showSectionNameModal, setShowSectionNameModal] = useState(false);
   const [newSectionName, setNewSectionName] = useState('');
-  const [showNewSectionModal, setShowNewSectionModal] = useState(false);
-  const [newSectionNameWithIngredients, setNewSectionNameWithIngredients] = useState('');
+  const sectionTitleRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
+
   const [showSmartImageSearch, setShowSmartImageSearch] = useState(false);
   const [buttonsVisible, setButtonsVisible] = useState(false);
   const [saveButtonFilled, setSaveButtonFilled] = useState(false);
   const [cancelButtonFilled, setCancelButtonFilled] = useState(false);
+
+  // Animation state for showing/hiding main sections
+  const [isHiding, setIsHiding] = useState<{ ingredients: boolean; directions: boolean }>({ ingredients: false, directions: false });
+  const [isEntering, setIsEntering] = useState<{ ingredients: boolean; directions: boolean }>({ ingredients: false, directions: false });
 
   
   // Image upload states
@@ -464,10 +472,12 @@ const AddRecipePage: React.FC = () => {
 
 
   const addNewSection = () => {
+    // Create a new section with empty title that user can fill
     const newSectionId = `section-${Date.now()}`;
     setAdditionalSections(prev => ({
       ...prev,
       [newSectionId]: {
+        title: '', // Empty title that user can fill
         ingredients: [''],
         directions: ['']
       }
@@ -490,24 +500,7 @@ const AddRecipePage: React.FC = () => {
     setShowSectionNameModal(false);
   };
 
-  const handleAddNewSection = () => {
-    if (newSectionNameWithIngredients.trim()) {
-      setAdditionalSections(prev => ({
-        ...prev,
-        [newSectionNameWithIngredients.trim()]: {
-          ingredients: [''],
-          directions: ['']
-        }
-      }));
-      setNewSectionNameWithIngredients('');
-      setShowNewSectionModal(false);
-    }
-  };
 
-  const handleCancelNewSection = () => {
-    setNewSectionNameWithIngredients('');
-    setShowNewSectionModal(false);
-  };
 
   const removeAdditionalInstructionSection = (sectionName: string) => {
     setAdditionalInstructions(prev => {
@@ -879,8 +872,13 @@ const AddRecipePage: React.FC = () => {
       const filteredIngredients = ingredients.filter(ing => ing.trim());
       const filteredDirections = directions.filter(dir => dir.trim());
 
-      if (filteredIngredients.length === 0 || filteredDirections.length === 0) {
-        alert('אנא הוסף לפחות רכיב אחד והוראה אחת');
+      // Content validation - at least one section must have content
+      const hasMainIngredients = includeMainIngredients && filteredIngredients.length > 0;
+      const hasMainDirections = includeMainDirections && filteredDirections.length > 0;
+      const hasAdditionalSections = Object.keys(additionalSections).length > 0;
+      
+      if (!hasMainIngredients && !hasMainDirections && !hasAdditionalSections) {
+        alert('המתכון חייב לכלול לפחות אחד מהבאים: רכיבים עיקריים, הוראות עיקריות, או חלקים נוספים');
         return;
       }
 
@@ -890,17 +888,44 @@ const AddRecipePage: React.FC = () => {
       try {
         // Filter additional sections to only include non-empty ones
         const filteredAdditionalSections: { [key: string]: RecipeSection } = {};
+        let missingTitleSectionId: string | null = null;
         Object.entries(additionalSections).forEach(([sectionId, section]) => {
           const filteredIngredients = section.ingredients.filter(ing => ing.trim());
           const filteredDirections = section.directions.filter(dir => dir.trim());
           if (filteredIngredients.length > 0 || filteredDirections.length > 0 || (section.title && section.title.trim())) {
-            filteredAdditionalSections[sectionId] = {
-              title: section.title || '',
+            // Check if section has content but no proper title
+            const sectionTitle = section.title?.trim();
+            if (!sectionTitle) {
+              missingTitleSectionId = sectionId;
+              return; // mark and handle after loop
+            }
+            
+            // Use the section title as the key, but ensure it's not a technical ID
+            let finalKey = sectionTitle || sectionId;
+            if (finalKey.startsWith('section-') || finalKey.startsWith('temp_')) {
+              finalKey = 'חלק נוסף';
+            }
+            
+            filteredAdditionalSections[finalKey] = {
+              title: sectionTitle || (sectionId.startsWith('section-') ? 'חלק נוסף' : ''),
               ingredients: filteredIngredients,
               directions: filteredDirections
             };
           }
         });
+
+        if (missingTitleSectionId) {
+          setIsSaving(false);
+          setUploadStatus('');
+          // Scroll and focus the missing title input
+          const el = sectionTitleRefs.current[missingTitleSectionId];
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            setTimeout(() => el.focus(), 300);
+          }
+          alert('נא להוסיף כותרת לחלק הנוסף שהוספת (למשל: מלית, בצק, רוטב)');
+          return;
+        }
 
         // Process images for storage (universal for all platforms)
         const processedImages: string[] = [];
@@ -936,8 +961,8 @@ const AddRecipePage: React.FC = () => {
           title: title.trim(),
           category,
           difficulty: difficulty || undefined,
-          ingredients: filteredIngredients,
-          directions: filteredDirections,
+          ingredients: includeMainIngredients ? filteredIngredients : [],
+          directions: includeMainDirections ? filteredDirections : [],
           images: processedImages, // Use processed images
           additional_instructions: Object.keys(additionalInstructions).length > 0 ? additionalInstructions : undefined,
           additional_sections: filteredAdditionalSections,
@@ -949,7 +974,9 @@ const AddRecipePage: React.FC = () => {
           category: newRecipe.category,
           imagesCount: newRecipe.images?.length || 0,
           ingredientsCount: newRecipe.ingredients.length,
-          directionsCount: newRecipe.directions.length
+          directionsCount: newRecipe.directions.length,
+          additionalSectionsCount: Object.keys(filteredAdditionalSections).length,
+          additionalSections: filteredAdditionalSections
         });
         
         // Save the recipe directly
@@ -1132,12 +1159,76 @@ const AddRecipePage: React.FC = () => {
               </div>
             </div>
 
+            {/* Removed: Main Sections Toggle */}
+
+            {/* Restore hidden main sections */}
+            {(!includeMainIngredients || !includeMainDirections) && (
+              <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 flex items-center justify-between transition-all duration-300">
+                <span className="text-sm text-blue-800">חלקים עיקריים הוסתרו. ניתן להחזירם:</span>
+                <div className="flex gap-2">
+                  {!includeMainIngredients && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIncludeMainIngredients(true);
+                        // Trigger enter transition: start hidden then show next tick
+                        setIsEntering(prev => ({ ...prev, ingredients: true }));
+                        setTimeout(() => {
+                          setIsEntering(prev => ({ ...prev, ingredients: false }));
+                        }, 20);
+                      }}
+                      className="px-2 py-1 text-xs bg-white border border-blue-300 rounded-md hover:bg-blue-100 text-blue-700"
+                    >
+                      החזר רכיבים
+                    </button>
+                  )}
+                  {!includeMainDirections && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIncludeMainDirections(true);
+                        // Trigger enter transition: start hidden then show next tick
+                        setIsEntering(prev => ({ ...prev, directions: true }));
+                        setTimeout(() => {
+                          setIsEntering(prev => ({ ...prev, directions: false }));
+                        }, 20);
+                      }}
+                      className="px-2 py-1 text-xs bg-white border border-blue-300 rounded-md hover:bg-blue-100 text-blue-700"
+                    >
+                      החזר הוראות
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Ingredients Section */}
-            <div className="bg-gradient-to-r from-orange-50 to-rose-50 p-4 rounded-lg border border-orange-200">
-              <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                רכיבים
-              </h2>
+            {includeMainIngredients && (
+              <div className={`relative bg-gradient-to-r from-orange-50 to-rose-50 p-4 rounded-lg border border-orange-200 transition-all duration-300 ${isEntering.ingredients ? 'opacity-0 -translate-y-2' : 'opacity-100 translate-y-0'} ${isHiding.ingredients ? 'opacity-0 -translate-y-2' : ''}`}
+                onAnimationEnd={() => {
+                  if (isEntering.ingredients) setIsEntering(prev => ({ ...prev, ingredients: false }));
+                }}
+              >
+                {/* Hide ingredients section */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsHiding(prev => ({ ...prev, ingredients: true }));
+                    setTimeout(() => {
+                      setIncludeMainIngredients(false);
+                      setIngredients(['']);
+                      setIsHiding(prev => ({ ...prev, ingredients: false }));
+                    }, 250);
+                  }}
+                  className="absolute top-2 left-2 z-10 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50/70 rounded-md transition-colors"
+                  title="הסתר רכיבים"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                  רכיבים
+                </h2>
               <div className="space-y-2">
                 {ingredients.map((ingredient, index) => (
                   <div key={index} className="flex gap-2 items-center group">
@@ -1185,14 +1276,36 @@ const AddRecipePage: React.FC = () => {
                   הוסף רכיב נוסף
                 </button>
               </div>
-            </div>
+              </div>
+            )}
 
             {/* Directions Section */}
-            <div className="bg-gradient-to-r from-orange-50 to-rose-50 p-4 rounded-lg border border-orange-200">
-              <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
-                <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                הוראות הכנה
-              </h2>
+            {includeMainDirections && (
+              <div className={`relative bg-gradient-to-r from-orange-50 to-rose-50 p-4 rounded-lg border border-orange-200 transition-all duration-300 ${isEntering.directions ? 'opacity-0 -translate-y-2' : 'opacity-100 translate-y-0'} ${isHiding.directions ? 'opacity-0 -translate-y-2' : ''}`}
+                onAnimationEnd={() => {
+                  if (isEntering.directions) setIsEntering(prev => ({ ...prev, directions: false }));
+                }}
+              >
+                {/* Hide directions section */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsHiding(prev => ({ ...prev, directions: true }));
+                    setTimeout(() => {
+                      setIncludeMainDirections(false);
+                      setDirections(['']);
+                      setIsHiding(prev => ({ ...prev, directions: false }));
+                    }, 250);
+                  }}
+                  className="absolute top-2 left-2 z-10 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50/70 rounded-md transition-colors"
+                  title="הסתר הוראות"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+                <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                  הוראות הכנה
+                </h2>
               <div className="space-y-2">
                 {directions.map((direction, index) => (
                   <div key={index} className="flex gap-2 group">
@@ -1258,8 +1371,8 @@ const AddRecipePage: React.FC = () => {
                   הוסף שלב נוסף
                 </button>
               </div>
-            </div>
-
+              </div>
+            )}
 
             
             {/* Additional Sections */}
@@ -1274,6 +1387,9 @@ const AddRecipePage: React.FC = () => {
                   <p className="text-gray-400 text-xs">
                     לחץ על "הוסף חלק חדש" כדי להוסיף מלית, בצק, רוטב או חלק אחר
                   </p>
+                  <p className="text-gray-500 text-xs mt-1">
+                    החלק ייווצר עם שדה ריק שתוכל למלא
+                  </p>
                 </div>
               ) : (
                 <div className="space-y-3">
@@ -1286,6 +1402,7 @@ const AddRecipePage: React.FC = () => {
                           onChange={(e) => updateSectionTitle(sectionId, e.target.value)}
                           className="flex-1 p-2 border-2 border-blue-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-sm font-medium"
                           placeholder="כותרת החלק (לדוגמא: מלית, בצק, רוטב...)"
+                          ref={(el) => { sectionTitleRefs.current[sectionId] = el; }}
                         />
                         <button
                           type="button"
@@ -1431,7 +1548,7 @@ const AddRecipePage: React.FC = () => {
                   className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium bg-gradient-to-r from-blue-50 to-sky-50 hover:from-blue-100 hover:to-sky-100 px-4 py-3 rounded-lg transition-all duration-200 border border-dashed border-blue-300 hover:border-blue-400 mx-auto text-sm"
                 >
                   <Plus className="w-4 h-4" />
-                  הוסף חלק חדש (עם מרכיבים ושלבים)
+                  הוסף חלק חדש (רכיבים והוראות הכנה)
                 </button>
               </div>
             </div>
@@ -1843,48 +1960,7 @@ const AddRecipePage: React.FC = () => {
         </div>
       )}
 
-      {/* New Section Modal (with ingredients and directions) */}
-      {showNewSectionModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-2 sm:p-4 z-50">
-          <div className="bg-white rounded-lg max-w-md w-full p-4 sm:p-6 mx-2 sm:mx-0">
-            <h3 className="text-lg font-semibold mb-4 text-blue-900">הוסף חלק חדש עם מרכיבים</h3>
-            <p className="text-gray-600 mb-4 text-sm sm:text-base">הכנס שם לחלק החדש (למשל: רוטב, בצק, מילוי, קרם):</p>
-            <input
-              type="text"
-              value={newSectionNameWithIngredients}
-              onChange={(e) => setNewSectionNameWithIngredients(e.target.value)}
-              className="w-full p-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent mb-4 text-base"
-              placeholder="שם החלק..."
-              autoFocus
-              onKeyPress={(e) => {
-                if (e.key === 'Enter') {
-                  handleAddNewSection();
-                }
-              }}
-            />
-            <div className="bg-blue-50 p-3 rounded-lg mb-4">
-              <p className="text-xs text-blue-700">
-                חלק זה יכלול גם מרכיבים וגם שלבי הכנה נפרדים
-              </p>
-            </div>
-            <div className="flex gap-3">
-              <button
-                onClick={handleAddNewSection}
-                disabled={!newSectionNameWithIngredients.trim()}
-                className="flex-1 bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed text-sm sm:text-base"
-              >
-                הוסף חלק
-              </button>
-              <button
-                onClick={handleCancelNewSection}
-                className="flex-1 px-4 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors text-sm sm:text-base"
-              >
-                ביטול
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+
 
       {/* Smart Image Search Modal */}
       {showSmartImageSearch && (

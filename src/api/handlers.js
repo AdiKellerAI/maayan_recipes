@@ -185,8 +185,17 @@ export const handlers = {
       console.log('➕ Adding new recipe:', title);
       
       // Validate required fields
-      if (!title || !category || !ingredients || !directions) {
-        throw new Error('Missing required fields: title, category, ingredients, and directions are required');
+      if (!title || !category) {
+        throw new Error('Missing required fields: title and category are required');
+      }
+      
+      // Validate that recipe has at least one content section
+      const hasMainIngredients = ingredients && ingredients.length > 0;
+      const hasMainDirections = directions && directions.length > 0;
+      const hasAdditionalSections = additional_sections && Object.keys(additional_sections).length > 0;
+      
+      if (!hasMainIngredients && !hasMainDirections && !hasAdditionalSections) {
+        throw new Error('Recipe must have at least one of: main ingredients, main directions, or additional sections');
       }
       
       const client = await pool.connect();
@@ -204,8 +213,8 @@ export const handlers = {
           title,
           description,
           category,
-          JSON.stringify(ingredients),
-          JSON.stringify(directions),
+          JSON.stringify(ingredients || []), // Handle undefined ingredients
+          JSON.stringify(directions || []), // Handle undefined directions
           JSON.stringify(additional_instructions),
           JSON.stringify(additional_sections),
           prep_time,

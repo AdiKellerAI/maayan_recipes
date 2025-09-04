@@ -19,6 +19,11 @@ const EditRecipePage: React.FC = () => {
   
   const recipe = recipes.find(r => r.id === id);
   
+  // Debug logging
+  console.log('🔍 EDIT: Looking for recipe with ID:', id);
+  console.log('🔍 EDIT: Available recipes:', recipes.map(r => ({ id: r.id, title: r.title })));
+  console.log('🔍 EDIT: Found recipe:', recipe ? { id: recipe.id, title: recipe.title } : 'NOT FOUND');
+  
   // Form state
   const [formData, setFormData] = useState({
     title: '',
@@ -32,6 +37,10 @@ const EditRecipePage: React.FC = () => {
   const [additionalSections, setAdditionalSections] = useState<{ [key: string]: RecipeSection }>({});
   const [sectionTitles, setSectionTitles] = useState<{ [key: string]: string }>({});
   
+  // Controls for optional main sections
+  const [includeMainIngredients, setIncludeMainIngredients] = useState(true);
+  const [includeMainDirections, setIncludeMainDirections] = useState(true);
+  
   // UI state
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -44,6 +53,9 @@ const EditRecipePage: React.FC = () => {
   const [buttonsVisible, setButtonsVisible] = useState(false);
   const [saveButtonFilled, setSaveButtonFilled] = useState(false);
   const [deleteButtonFilled, setDeleteButtonFilled] = useState(false);
+  // Animations for main sections
+  const [isHiding, setIsHiding] = useState<{ ingredients: boolean; directions: boolean }>({ ingredients: false, directions: false });
+  const [isEntering, setIsEntering] = useState<{ ingredients: boolean; directions: boolean }>({ ingredients: false, directions: false });
   
   // Refs for auto-focusing
   const ingredientRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -61,8 +73,12 @@ const EditRecipePage: React.FC = () => {
         category: recipe.category,
         difficulty: recipe.difficulty || ''
       });
-      setIngredients(recipe.ingredients);
-      setDirections(recipe.directions);
+      setIngredients(recipe.ingredients || []);
+      setDirections(recipe.directions || []);
+      
+      // Set flags based on existing data
+      setIncludeMainIngredients((recipe.ingredients && recipe.ingredients.length > 0) || false);
+      setIncludeMainDirections((recipe.directions && recipe.directions.length > 0) || false);
       
       // Convert string URLs to RecipeImage objects for existing images
       const existingImages: RecipeImage[] = (recipe.images || []).map((url, index) => ({
@@ -87,7 +103,12 @@ const EditRecipePage: React.FC = () => {
       // Initialize section titles with existing section names
       const titles: { [key: string]: string } = {};
       Object.keys(recipe.additional_sections || {}).forEach(sectionName => {
-        titles[sectionName] = sectionName;
+        // If the section name looks like a technical ID, give it a default name
+        if (sectionName.startsWith('section-') || sectionName.startsWith('temp_')) {
+          titles[sectionName] = 'חלק נוסף';
+        } else {
+          titles[sectionName] = sectionName;
+        }
       });
       setSectionTitles(titles);
       setHasUnsavedChanges(false);
@@ -540,9 +561,19 @@ const EditRecipePage: React.FC = () => {
       const filteredIngredients = ingredients.filter(item => item.trim());
       const filteredDirections = directions.filter(item => item.trim());
       
-      if (!formData.title || !formData.category || 
-          filteredIngredients.length === 0 || filteredDirections.length === 0) {
-        alert('נא למלא את שם המתכון, הקטגוריה, הרכיבים וההוראות');
+      // Basic validation
+      if (!formData.title || !formData.category) {
+        alert('נא למלא את שם המתכון והקטגוריה');
+        return;
+      }
+      
+      // Content validation - at least one section must have content
+      const hasMainIngredients = includeMainIngredients && filteredIngredients.length > 0;
+      const hasMainDirections = includeMainDirections && filteredDirections.length > 0;
+      const hasAdditionalSections = Object.keys(additionalSections).length > 0;
+      
+      if (!hasMainIngredients && !hasMainDirections && !hasAdditionalSections) {
+        alert('המתכון חייב לכלול לפחות אחד מהבאים: רכיבים עיקריים, הוראות עיקריות, או חלקים נוספים');
         return;
       }
 
@@ -559,14 +590,17 @@ const EditRecipePage: React.FC = () => {
           // Check if section has content but no proper title
           const sectionTitle = sectionTitles[sectionName]?.trim();
           if (!sectionTitle || sectionName.startsWith('temp_')) {
-            alert('נא להוסיף כותרת לחלק הנוסף שהוספת');
+            alert('נא להוסיף כותרת לחלק הנוסף שהוספת (למשל: מלית, בצק, רוטב)');
             setIsSaving(false);
             setUploadStatus('');
             return;
           }
           
-          // Use the final title as the key
-          const finalKey = sectionTitle || sectionName;
+          // Use the final title as the key, but ensure it's not a technical ID
+          let finalKey = sectionTitle || sectionName;
+          if (finalKey.startsWith('section-') || finalKey.startsWith('temp_')) {
+            finalKey = 'חלק נוסף';
+          }
           
           filteredAdditionalSections[finalKey] = {
             ingredients: filteredIngredients,
@@ -580,9 +614,10 @@ const EditRecipePage: React.FC = () => {
         console.log(`📸 Using ${finalImageUrls.length} images directly:`, finalImageUrls.map(url => url.substring(0, 50) + '...'));
       
               const updatedRecipe = {
+          id: recipe!.id, // Include the recipe ID
           ...formData,
-          ingredients: filteredIngredients,
-          directions: filteredDirections,
+          ingredients: includeMainIngredients ? filteredIngredients : [],
+          directions: includeMainDirections ? filteredDirections : [],
           images: finalImageUrls,
           difficulty: formData.difficulty || undefined,
           additional_sections: filteredAdditionalSections
@@ -599,10 +634,19 @@ const EditRecipePage: React.FC = () => {
         console.log('🔄 Updating recipe:', {
           id: recipe!.id,
           title: updatedRecipe.title,
-          imagesCount: finalImageUrls?.length || 0
+          imagesCount: finalImageUrls?.length || 0,
+          fullUpdatedRecipe: updatedRecipe
         });
         
+        console.log('🔄 EDIT: About to call updateRecipe with ID:', recipe!.id);
+        console.log('🔄 EDIT: ID type:', typeof recipe!.id);
+        console.log('🔄 EDIT: Recipe exists before update:', recipe ? 'YES' : 'NO');
+        console.log('🔄 EDIT: Recipe object:', recipe);
+        
         const updateResult = await updateRecipe(recipe!.id, updatedRecipe);
+        
+        console.log('🔄 EDIT: Update result:', updateResult);
+        console.log('🔄 EDIT: Recipe exists after update:', recipe ? 'YES' : 'NO');
         
         // Only show success if the update actually succeeded
         if (updateResult) {
@@ -1079,12 +1123,69 @@ const EditRecipePage: React.FC = () => {
                 </div>
               )}
 
+              {/* Removed: Main Sections Toggle */}
+
+              {/* Restore hidden main sections */}
+              {(!includeMainIngredients || !includeMainDirections) && (
+                <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 flex items-center justify-between transition-all duration-300">
+                  <span className="text-sm text-blue-800">חלקים עיקריים הוסתרו. ניתן להחזירם:</span>
+                  <div className="flex gap-2">
+                    {!includeMainIngredients && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIncludeMainIngredients(true);
+                          setIsEntering(prev => ({ ...prev, ingredients: true }));
+                          setTimeout(() => setIsEntering(prev => ({ ...prev, ingredients: false })), 20);
+                        }}
+                        className="px-2 py-1 text-xs bg-white border border-blue-300 rounded-md hover:bg-blue-100 text-blue-700"
+                      >
+                        החזר רכיבים
+                      </button>
+                    )}
+                    {!includeMainDirections && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setIncludeMainDirections(true);
+                          setIsEntering(prev => ({ ...prev, directions: true }));
+                          setTimeout(() => setIsEntering(prev => ({ ...prev, directions: false })), 20);
+                        }}
+                        className="px-2 py-1 text-xs bg-white border border-blue-300 rounded-md hover:bg-blue-100 text-blue-700"
+                      >
+                        החזר הוראות
+                      </button>
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* Ingredients Section */}
-              <div className="bg-gradient-to-r from-orange-50 to-rose-50 p-4 rounded-lg border border-orange-200">
-                <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                  רכיבים
-                </h2>
+              {includeMainIngredients && (
+                <div className={`relative bg-gradient-to-r from-orange-50 to-rose-50 p-4 rounded-lg border border-orange-200 transition-all duration-300 ${isEntering.ingredients ? 'opacity-0 -translate-y-2' : 'opacity-100 translate-y-0'} ${isHiding.ingredients ? 'opacity-0 -translate-y-2' : ''}`}
+                  onAnimationEnd={() => {
+                    if (isEntering.ingredients) setIsEntering(prev => ({ ...prev, ingredients: false }));
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsHiding(prev => ({ ...prev, ingredients: true }));
+                      setTimeout(() => {
+                        setIncludeMainIngredients(false);
+                        setIngredients(['']);
+                        setIsHiding(prev => ({ ...prev, ingredients: false }));
+                      }, 250);
+                    }}
+                    className="absolute top-2 left-2 z-10 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50/70 rounded-md transition-colors"
+                    title="הסתר רכיבים"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                  <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                    רכיבים
+                  </h2>
                 <div className="space-y-2">
                   {ingredients.map((ingredient, index) => (
                     <div key={index} className="flex gap-2 items-center group">
@@ -1120,14 +1221,35 @@ const EditRecipePage: React.FC = () => {
                     הוסף רכיב נוסף
                   </button>
                 </div>
-              </div>
+                </div>
+              )}
 
               {/* Directions Section */}
-              <div className="bg-gradient-to-r from-orange-50 to-rose-50 p-4 rounded-lg border border-orange-200">
-                <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
-                  הוראות הכנה
-                </h2>
+              {includeMainDirections && (
+                <div className={`relative bg-gradient-to-r from-orange-50 to-rose-50 p-4 rounded-lg border border-orange-200 transition-all duration-300 ${isEntering.directions ? 'opacity-0 -translate-y-2' : 'opacity-100 translate-y-0'} ${isHiding.directions ? 'opacity-0 -translate-y-2' : ''}`}
+                  onAnimationEnd={() => {
+                    if (isEntering.directions) setIsEntering(prev => ({ ...prev, directions: false }));
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsHiding(prev => ({ ...prev, directions: true }));
+                      setTimeout(() => {
+                        setIncludeMainDirections(false);
+                        setDirections(['']);
+                        setIsHiding(prev => ({ ...prev, directions: false }));
+                      }, 250);
+                    }}
+                    className="absolute top-2 left-2 z-10 p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50/70 rounded-md transition-colors"
+                    title="הסתר הוראות"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                  <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 bg-orange-500 rounded-full"></div>
+                    הוראות הכנה
+                  </h2>
                 <div className="space-y-2">
                   {directions.map((direction, index) => (
                     <div key={index} className="flex gap-2 group">
@@ -1179,7 +1301,8 @@ const EditRecipePage: React.FC = () => {
                     הוסף שלב נוסף
                   </button>
                 </div>
-              </div>
+                </div>
+              )}
 
               {/* Additional Sections */}
               <div className="bg-gradient-to-r from-blue-50 to-sky-50 p-4 rounded-lg border border-blue-200">
