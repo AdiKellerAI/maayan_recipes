@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Timer, Play, Pause, Square, Plus, Minus, X, Volume2, RotateCcw, Minimize2, Maximize2 } from 'lucide-react';
+import { Play, Pause, Square, X, Volume2, RotateCcw, Minimize2 } from 'lucide-react';
 
 interface CookingTimerProps {
   duration: number; // Duration in minutes
@@ -460,19 +460,24 @@ const CookingTimer: React.FC<CookingTimerProps> = ({
     // Minimized view
     if (isMinimized) {
       return (
-        <div className="fixed bottom-4 right-4 rtl:left-4 rtl:right-auto z-[99999] bg-gradient-to-br from-orange-500/95 to-red-500/95 rounded-full shadow-2xl border border-orange-300/50 backdrop-blur-md cursor-pointer hover:scale-105 transition-all duration-200"
+        <div className="fixed bottom-4 right-4 rtl:left-4 rtl:right-auto z-[99999] bg-white/20 backdrop-blur-md rounded-xl shadow-2xl border-2 border-cyan-300/70 cursor-pointer hover:scale-105 transition-all duration-200 relative overflow-hidden"
              onClick={toggleMinimize}>
+          {/* Transparent corner for status indicator */}
+          <div className="absolute top-0 right-0 w-4 h-4 bg-transparent"></div>
+          
           <div className="p-3 flex items-center justify-center">
             <div className="flex flex-col items-center">
-              <span className="text-lg mb-1">⏰</span>
-              <div className="text-xs font-mono font-bold text-white tracking-tight leading-none">
+              <span className="text-lg mb-1 text-black">⏰</span>
+              <div className="text-sm font-mono font-bold text-black tracking-tight leading-none">
                 {formatTime(timeLeft)}
               </div>
-              {isRunning && (
-                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-              )}
             </div>
           </div>
+          
+          {/* Status indicator positioned in transparent corner */}
+          {isRunning && (
+            <div className="absolute top-1 right-1 w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse"></div>
+          )}
         </div>
       );
     }

@@ -12,7 +12,7 @@ import {
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
 
-interface TimerData {
+export interface TimerData {
 	id: string;
 	hours: number;
 	minutes: number;
@@ -28,9 +28,10 @@ interface MultiTimerProps {
 	isVisible: boolean;
 	onClose: () => void;
 	initialTimerName?: string;
+	onTimersChange?: (timers: TimerData[]) => void;
 }
 
-const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose, initialTimerName }) => {
+const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose, initialTimerName, onTimersChange }) => {
 	const savedData = localStorage.getItem("multiTimers");
 	let initialTimers: TimerData[] = [];
 
@@ -551,6 +552,13 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose, initialTime
 		);
 	}, [timers]);
 
+	// Notify parent component of timer changes
+	useEffect(() => {
+		if (onTimersChange) {
+			onTimersChange(timers);
+		}
+	}, [timers, onTimersChange]);
+
 	const formatTime = (totalSeconds: number) => {
 		const hrs = Math.floor(totalSeconds / 3600);
 		const mins = Math.floor((totalSeconds % 3600) / 60);
@@ -659,13 +667,22 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose, initialTime
 				<div className="fixed bottom-4 left-4 z-40 flex items-center space-x-2 rtl:space-x-reverse">
 					{timers
 						.filter((t) => t.isRunning || t.timeLeft > 0)
-						.map((timer) => (
-							<div key={timer.id} className="flex-shrink-0">
+						.map((timer, index) => {
+							// Define pastel colors for each timer
+							const pastelColors = [
+								'border-orange-300/70',    // Orange
+								'border-blue-300/70',      // Blue
+								'border-green-300/70',     // Green
+								'border-purple-300/70',    // Purple
+								'border-pink-300/70',      // Pink
+							];
+							const borderColor = pastelColors[index % pastelColors.length];
+							
+							return (
+							<div key={timer.id} className="flex-shrink-0 relative">
 								<button
 									type="button"
-									className={`bg-gradient-to-br from-orange-500/60 to-red-500/60 rounded-full shadow-2xl border border-orange-300/50 backdrop-blur-md cursor-pointer hover:scale-105 transition-all duration-200 p-3 ${
-										timer.isRunning ? "from-orange-500/90 to-orange-500/90" : ""
-									}`}
+									className={`bg-white/20 backdrop-blur-md rounded-xl shadow-2xl border-2 ${borderColor} cursor-pointer hover:scale-105 transition-all duration-200 p-3 relative overflow-hidden`}
 									onClick={() => {
 										setHighlightedTimerId(timer.id);
 										// Open timer management window
@@ -680,23 +697,29 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose, initialTime
 										}
 									}}
 								>
+									{/* Transparent corner for status indicator */}
+									<div className="absolute top-0 right-0 w-4 h-4 bg-transparent"></div>
+									
 									<div className="flex flex-col items-center">
-										<span className="text-lg mb-1">⏰</span>
-										<div className="text-xs font-mono font-bold text-white tracking-tight leading-none">
+										<span className="text-lg mb-1 text-black">⏰</span>
+										<div className="text-sm font-mono font-bold text-black tracking-tight leading-none">
 											{formatTime(timer.timeLeft)}
 										</div>
 										{timer.label && (
-											<div className="text-xs text-white/90 text-center max-w-16 truncate">
+											<div className="text-xs text-black/80 text-center max-w-16 truncate">
 												{timer.label}
 											</div>
 										)}
-										{timer.isRunning && (
-											<div className="absolute -top-1 -right-1 w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
-										)}
 									</div>
+									
+									{/* Status indicator positioned in transparent corner */}
+									{timer.isRunning && (
+										<div className="absolute top-1 right-1 w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse"></div>
+									)}
 								</button>
 							</div>
-						))}
+							);
+						})}
 				</div>
 
 				{/* Alert Modal */}
