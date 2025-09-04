@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Heart, Plus, Filter, Menu, X, ChefHat, Database, Shield, ShieldCheck, RefreshCw, Download, Smartphone, CheckCircle, WifiOff } from 'lucide-react';
+import { Search, Heart, Plus, Filter, Menu, X, ChefHat, Database, Shield, ShieldCheck, RefreshCw, Download, Smartphone, WifiOff } from 'lucide-react';
 import { useRecipes } from '../../contexts/RecipeContext';
 import { useProtectedAction } from '../../hooks/useProtectedAction';
 import { useAuth } from '../../contexts/AuthContext';
+import { useUnsavedChangesContext } from '../../contexts/UnsavedChangesContext';
 import { getBaselineInstallSupport, listenForInstallAvailability, detectPlatform } from '../../utils/pwa';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { clearAllMemory } from '../../utils/storage';
@@ -25,6 +26,7 @@ const Header: React.FC = () => {
     recipes,
     refreshRecipes
   } = useRecipes();
+  const { navigateWithUnsavedCheck } = useUnsavedChangesContext();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState('');
@@ -140,7 +142,6 @@ const Header: React.FC = () => {
   }, [engagementSeconds, pagesVisited, installAvailable, isInstalled]);
 
   const isIOS = () => /iphone|ipad|ipod/i.test(window.navigator.userAgent);
-  const isSafari = () => /^((?!chrome|android).)*safari/i.test(window.navigator.userAgent);
 
   const triggerInstall = async () => {
     if ((window as any).triggerPwaInstall) {
@@ -268,7 +269,7 @@ const Header: React.FC = () => {
     e.preventDefault();
     if (localSearchQuery.trim()) {
       setSearchQuery(localSearchQuery.trim());
-      navigate('/recipes');
+      navigateWithUnsavedCheck('/recipes');
     } else {
       setSearchQuery('');
     }
@@ -281,10 +282,10 @@ const Header: React.FC = () => {
     setSearchQuery(value.trim());
   };
 
-  const toggleFavorites = () => {
+  const toggleFavorites = async () => {
     setShowFavoritesOnly(!showFavoritesOnly);
     setShowRecentOnly(false);
-    navigate('/recipes');
+    await navigateWithUnsavedCheck('/recipes');
     setIsMenuOpen(false);
   };
 
@@ -483,10 +484,10 @@ const Header: React.FC = () => {
           <Link 
             to="/" 
             className="flex items-center"
-            onClick={(e) => {
+            onClick={async (e) => {
               e.preventDefault();
               resetFilters();
-              navigate('/');
+              await navigateWithUnsavedCheck('/');
             }}
           >
             <div 
@@ -564,7 +565,7 @@ const Header: React.FC = () => {
             </button>
             
             <button
-              onClick={() => executeProtectedAction(() => navigate('/add'))}
+              onClick={() => executeProtectedAction(async () => await navigateWithUnsavedCheck('/add'))}
               className="bg-primary-500 text-white p-2 rounded-lg hover:bg-primary-600 active:bg-primary-700 transition-colors transform active:scale-95"
               title="הוספת מתכון"
             >
@@ -600,10 +601,10 @@ const Header: React.FC = () => {
               <div className="p-3 space-y-2">
                 {/* Add Recipe Button */}
                 <button
-                  onClick={() => {
-                    executeProtectedAction(() => navigate('/add'));
-                    setIsMenuOpen(false);
-                  }}
+                                      onClick={async () => {
+                      await executeProtectedAction(async () => await navigateWithUnsavedCheck('/add'));
+                      setIsMenuOpen(false);
+                    }}
                   className="w-full flex items-center space-x-2 rtl:space-x-reverse py-2 px-2.5 rounded-lg transition-all duration-300 transform hover:scale-105 bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700 hover:from-blue-100 hover:to-purple-100 border border-blue-200 hover:border-blue-300"
                 >
                   <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
@@ -700,9 +701,9 @@ const Header: React.FC = () => {
                   
                   {/* Landing Page Button */}
                   <button
-                    onClick={() => {
+                    onClick={async () => {
                       resetFilters();
-                      navigate('/');
+                      await navigateWithUnsavedCheck('/');
                       setIsMenuOpen(false);
                     }}
                     className="w-full flex items-center space-x-2 rtl:space-x-reverse py-2 px-2.5 rounded-lg bg-gradient-to-r from-violet-50 to-purple-50 text-violet-700 hover:from-violet-100 hover:to-purple-100 transition-all duration-300 transform hover:scale-105 border border-violet-200 hover:border-violet-300"
@@ -1010,7 +1011,7 @@ const Header: React.FC = () => {
                       value={difficultyFilter}
                       onChange={(e) => {
                         setDifficultyFilter(e.target.value);
-                        navigate('/recipes');
+                        navigateWithUnsavedCheck('/recipes');
                       }}
                       className="w-full px-3 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm bg-white shadow-sm transition-all duration-200 hover:border-green-300"
                     >
@@ -1031,7 +1032,7 @@ const Header: React.FC = () => {
                       value={imageFilter}
                       onChange={(e) => {
                         setImageFilter(e.target.value);
-                        navigate('/recipes');
+                        navigateWithUnsavedCheck('/recipes');
                       }}
                       className="w-full px-3 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm bg-white shadow-sm transition-all duration-200 hover:border-green-300"
                     >
@@ -1051,7 +1052,7 @@ const Header: React.FC = () => {
                       value={flourFilter}
                       onChange={(e) => {
                         setFlourFilter(e.target.value);
-                        navigate('/recipes');
+                        navigateWithUnsavedCheck('/recipes');
                       }}
                       className="w-full px-3 py-2 border border-green-200 rounded-lg focus:ring-2 focus:ring-green-400 focus:border-transparent text-sm bg-white shadow-sm transition-all duration-200 hover:border-green-300"
                     >

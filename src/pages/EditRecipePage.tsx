@@ -4,6 +4,7 @@ import { Plus, X, Trash2, Upload, Camera, Image as ImageIcon } from 'lucide-reac
 import { useRecipes } from '../contexts/RecipeContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useProtectedAction } from '../hooks/useProtectedAction';
+import { useUnsavedChangesContext } from '../contexts/UnsavedChangesContext';
 import { categories } from '../data/categories';
 import type { RecipeSection } from '../types/recipe';
 import { RecipeImage } from '../services/imageService';
@@ -61,6 +62,23 @@ const EditRecipePage: React.FC = () => {
   const ingredientRefs = useRef<(HTMLInputElement | null)[]>([]);
   const directionRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
   const buttonsRef = useRef<HTMLDivElement>(null);
+
+  // Unsaved changes handling
+  const { navigateWithUnsavedCheck, registerUnsavedChanges, registerSaveFunction } = useUnsavedChangesContext();
+  
+  // Register unsaved changes with global context
+  useEffect(() => {
+    registerUnsavedChanges(hasUnsavedChanges);
+  }, [hasUnsavedChanges, registerUnsavedChanges]);
+
+  // Register save function with global context
+  useEffect(() => {
+    registerSaveFunction(async () => {
+      if (hasUnsavedChanges) {
+        await handleSubmit(new Event('submit') as any);
+      }
+    });
+  }, [hasUnsavedChanges, registerSaveFunction]);
 
 
 
@@ -136,18 +154,7 @@ const EditRecipePage: React.FC = () => {
 
 
 
-  // Prevent navigation if there are unsaved changes
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (hasUnsavedChanges) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [hasUnsavedChanges]);
+  // Note: beforeunload handling is now managed by useUnsavedChanges hook
 
   // Intersection Observer for button animation
   useEffect(() => {
@@ -182,21 +189,19 @@ const EditRecipePage: React.FC = () => {
   }, [buttonsVisible]);
 
   // Safe navigation function
-  const safeNavigate = useCallback((path: string) => {
+  const safeNavigate = useCallback(async (path: string) => {
     if (isNavigating) return; // Prevent multiple navigations
     
     setIsNavigating(true);
-    setHasUnsavedChanges(false);
     
-    // Use setTimeout to ensure state updates before navigation
+    // Use the unsaved changes hook to handle navigation
+    await navigateWithUnsavedCheck(path);
+    
+    // Reset navigation state after a delay
     setTimeout(() => {
-      navigate(path);
-      // Reset navigation state after navigation
-      setTimeout(() => {
-        setIsNavigating(false);
-      }, 200);
-    }, 100);
-  }, [navigate, isNavigating]);
+      setIsNavigating(false);
+    }, 200);
+  }, [navigateWithUnsavedCheck, isNavigating]);
 
   // Handle form input changes
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {

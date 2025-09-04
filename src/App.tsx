@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { RecipeProvider } from './contexts/RecipeContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { NavigationProvider } from './contexts/NavigationContext';
+import { UnsavedChangesProvider } from './contexts/UnsavedChangesContext';
 import Header from './components/Layout/Header';
 import LandingPage from './pages/LandingPage';
 import HomePage from './pages/HomePage';
@@ -137,6 +138,7 @@ function App() {
         <AuthProvider>
           <RecipeProvider>
             <NavigationProvider>
+              <UnsavedChangesProvider>
               <div className="min-h-screen" dir="rtl">
                 <Header />
                 <main>
@@ -167,6 +169,7 @@ function App() {
                   onClose={() => setShowDatabaseStatus(false)}
                 />
               </div>
+              </UnsavedChangesProvider>
             </NavigationProvider>
           </RecipeProvider>
         </AuthProvider>

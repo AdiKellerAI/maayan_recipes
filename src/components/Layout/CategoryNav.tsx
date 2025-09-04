@@ -3,11 +3,13 @@ import { categories } from '../../data/categories';
 import { useRecipes } from '../../contexts/RecipeContext';
 import { getCategoryColor } from '../../data/categories';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useUnsavedChangesContext } from '../../contexts/UnsavedChangesContext';
 
 const CategoryNav: React.FC = () => {
   const { selectedCategory, setSelectedCategory } = useRecipes();
   const location = useLocation();
   const navigate = useNavigate();
+  const { navigateWithUnsavedCheck } = useUnsavedChangesContext();
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Ensure category selection is synchronized with URL parameters
@@ -52,18 +54,18 @@ const CategoryNav: React.FC = () => {
     }
   }, []); // Only run once when component mounts
 
-  const handleCategoryClick = (categoryId: string) => {
+  const handleCategoryClick = async (categoryId: string) => {
     if (categoryId === '') {
       // Clear category filter - preserve other URL params but remove category
       const urlParams = new URLSearchParams(location.search);
       urlParams.delete('category');
       const newSearch = urlParams.toString();
-      navigate(`/recipes${newSearch ? `?${newSearch}` : ''}`);
+      await navigateWithUnsavedCheck(`/recipes${newSearch ? `?${newSearch}` : ''}`);
     } else {
       // Set category filter - preserve other URL params but set category
       const urlParams = new URLSearchParams(location.search);
       urlParams.set('category', categoryId);
-      navigate(`/recipes?${urlParams.toString()}`);
+      await navigateWithUnsavedCheck(`/recipes?${urlParams.toString()}`);
     }
   };
 

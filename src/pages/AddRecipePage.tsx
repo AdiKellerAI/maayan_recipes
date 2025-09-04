@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useRecipes } from '../contexts/RecipeContext';
 import { useProtectedAction } from '../hooks/useProtectedAction';
+import { useUnsavedChangesContext } from '../contexts/UnsavedChangesContext';
 import type { RecipeInsert, RecipeSection } from '../types/recipe';
 import { categories } from '../data/categories';
 import { Plus, X, Upload, Camera, Sparkles, Link } from 'lucide-react';
@@ -35,6 +36,7 @@ const AddRecipePage: React.FC = () => {
   const [smartImportUrl, setSmartImportUrl] = useState('');
   const [activeTab, setActiveTab] = useState<'text' | 'url'>('text');
   const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [showSectionNameModal, setShowSectionNameModal] = useState(false);
   const [newSectionName, setNewSectionName] = useState('');
   const sectionTitleRefs = useRef<{ [key: string]: HTMLInputElement | null }>({});
@@ -60,6 +62,23 @@ const AddRecipePage: React.FC = () => {
   const sectionIngredientRefs = useRef<{ [key: string]: (HTMLInputElement | null)[] }>({});
   const sectionDirectionRefs = useRef<{ [key: string]: (HTMLTextAreaElement | null)[] }>({});
   const buttonsRef = useRef<HTMLDivElement>(null);
+
+  // Unsaved changes handling
+  const { navigateWithUnsavedCheck, registerUnsavedChanges, registerSaveFunction } = useUnsavedChangesContext();
+  
+  // Register unsaved changes with global context
+  useEffect(() => {
+    registerUnsavedChanges(hasUnsavedChanges);
+  }, [hasUnsavedChanges, registerUnsavedChanges]);
+
+  // Register save function with global context
+  useEffect(() => {
+    registerSaveFunction(async () => {
+      if (hasUnsavedChanges) {
+        await handleSubmit(new Event('submit') as any);
+      }
+    });
+  }, [hasUnsavedChanges, registerSaveFunction]);
 
   // Check authentication when page loads
   useEffect(() => {
@@ -109,6 +128,7 @@ const AddRecipePage: React.FC = () => {
   const addIngredient = () => {
     const newIndex = ingredients.length;
     setIngredients([...ingredients, '']);
+    setHasUnsavedChanges(true);
     
     // Focus the new input field immediately after render without losing focus
     setTimeout(() => {
@@ -127,17 +147,20 @@ const AddRecipePage: React.FC = () => {
     }
     
     setIngredients(ingredients.filter((_, i) => i !== index));
+    setHasUnsavedChanges(true);
   };
 
   const updateIngredient = (index: number, value: string) => {
     const newIngredients = [...ingredients];
     newIngredients[index] = value;
     setIngredients(newIngredients);
+    setHasUnsavedChanges(true);
   };
 
   const addDirection = () => {
     const newIndex = directions.length;
     setDirections([...directions, '']);
+    setHasUnsavedChanges(true);
     
     // Focus the new textarea field immediately after render without losing focus
     setTimeout(() => {
@@ -220,12 +243,14 @@ const AddRecipePage: React.FC = () => {
     }
     
     setDirections(directions.filter((_, i) => i !== index));
+    setHasUnsavedChanges(true);
   };
 
   const updateDirection = (index: number, value: string) => {
     const newDirections = [...directions];
     newDirections[index] = value;
     setDirections(newDirections);
+    setHasUnsavedChanges(true);
   };
 
   // Helper function to detect if we're on mobile
@@ -1023,6 +1048,7 @@ const AddRecipePage: React.FC = () => {
         
         // Reset saving state
         setIsSaving(false);
+        setHasUnsavedChanges(false);
         
         // Clear status after navigation
         setTimeout(() => {
@@ -1115,7 +1141,10 @@ const AddRecipePage: React.FC = () => {
                   <input
                     type="text"
                     value={title}
-                    onChange={(e) => setTitle(e.target.value)}
+                    onChange={(e) => {
+                      setTitle(e.target.value);
+                      setHasUnsavedChanges(true);
+                    }}
                     className="w-full p-2 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-orange-300 focus:border-orange-400 transition-all duration-150 text-sm"
                     placeholder="הכנס שם המתכון..."
                     required
@@ -1128,7 +1157,10 @@ const AddRecipePage: React.FC = () => {
                   </label>
                   <select
                     value={category}
-                    onChange={(e) => setCategory(e.target.value)}
+                    onChange={(e) => {
+                      setCategory(e.target.value);
+                      setHasUnsavedChanges(true);
+                    }}
                     className="w-full p-2 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-orange-300 focus:border-orange-400 transition-all duration-150 text-sm"
                     required
                   >
@@ -1148,7 +1180,10 @@ const AddRecipePage: React.FC = () => {
                 </label>
                 <select
                   value={difficulty}
-                  onChange={(e) => setDifficulty(e.target.value as "קל" | "בינוני" | "קשה" | "")}
+                  onChange={(e) => {
+                    setDifficulty(e.target.value as "קל" | "בינוני" | "קשה" | "");
+                    setHasUnsavedChanges(true);
+                  }}
                   className="w-full md:w-1/2 p-2 bg-white border border-gray-200 rounded-md focus:ring-1 focus:ring-orange-300 focus:border-orange-400 transition-all duration-150 text-sm"
                 >
                   <option value="">בחר רמת קושי</option>
@@ -1761,7 +1796,7 @@ const AddRecipePage: React.FC = () => {
                 
                 <button
                   type="button"
-                  onClick={() => navigate('/recipes')}
+                  onClick={async () => await navigateWithUnsavedCheck('/recipes')}
                   className={`group relative overflow-hidden px-4 py-2.5 rounded-full transition-all duration-500 font-medium text-sm shadow-sm hover:shadow-md active:shadow-md focus:shadow-md flex items-center gap-2 touch-manipulation ${
                     cancelButtonFilled
                       ? 'bg-gradient-to-r from-red-500 to-red-600 text-white border border-red-500'
