@@ -23,6 +23,7 @@ const CookingTimer: React.FC<CookingTimerProps> = ({
   const [showAlert, setShowAlert] = useState(false);
   const [showFloatingTimer, setShowFloatingTimer] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   
   // Performance API-based timing refs
   const startTimeRef = useRef<number | null>(null);
@@ -34,6 +35,19 @@ const CookingTimer: React.FC<CookingTimerProps> = ({
 
   // Local storage key
   const STORAGE_KEY = `cooking_timer_${timerName}`;
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+      const isSmallScreen = window.innerWidth < 768;
+      setIsMobile(hasTouch && isSmallScreen);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // Initialize audio context on user interaction (required for mobile)
   useEffect(() => {
@@ -396,6 +410,49 @@ const CookingTimer: React.FC<CookingTimerProps> = ({
     setIsMinimized(!isMinimized);
   };
 
+  // Mobile Status Bar Component
+  const MobileStatusBar = () => {
+    if (!isMobile || !isRunning || timeLeft === 0) return null;
+
+    return (
+      <div className="fixed top-0 left-0 right-0 z-[99999] bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg">
+        <div className="flex items-center justify-between px-4 py-2">
+          <div className="flex items-center space-x-2 rtl:space-x-reverse">
+            <span className="text-lg">⏰</span>
+            <div className="flex flex-col">
+              <span className="text-xs font-medium opacity-90">{timerName}</span>
+              <span className="text-sm font-mono font-bold">{formatTime(timeLeft)}</span>
+            </div>
+          </div>
+          
+          <div className="flex items-center space-x-2 rtl:space-x-reverse">
+            <button
+              onClick={pauseTimer}
+              className="p-1.5 bg-white/20 rounded-full hover:bg-white/30 transition-colors"
+              title="השהה"
+            >
+              <Pause className="h-4 w-4" />
+            </button>
+            <button
+              onClick={stopTimer}
+              className="p-1.5 bg-white/20 rounded-full hover:bg-white/30 transition-colors"
+              title="עצור"
+            >
+              <Square className="h-4 w-4" />
+            </button>
+            <button
+              onClick={() => setShowFloatingTimer(false)}
+              className="p-1.5 bg-white/20 rounded-full hover:bg-white/30 transition-colors"
+              title="סגור"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   // Floating Timer Component
   const FloatingTimer = () => {
     if (!showFloatingTimer || timeLeft === 0) return null;
@@ -514,8 +571,11 @@ const CookingTimer: React.FC<CookingTimerProps> = ({
 
   return (
     <>
+      {/* Mobile Status Bar */}
+      <MobileStatusBar />
+      
       {/* Main Timer Setup Window */}
-      <div className="bg-white rounded-lg shadow-lg max-w-md w-full p-6">
+      <div className={`bg-white rounded-lg shadow-lg max-w-md w-full p-6 ${isMobile && isRunning && timeLeft > 0 ? 'mt-16' : ''}`}>
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-2 rtl:space-x-reverse">
             <span className="text-2xl">⏰</span>

@@ -676,7 +676,7 @@ const Header: React.FC = () => {
                         )}
                       </div>
                       <span className="text-xs font-semibold text-black">
-                        {installAvailable ? 'התקנת האפליקציה' : detectPlatform() === 'ios_safari' ? 'הוראות iOS: הוסף למסך הבית' : detectPlatform() === 'firefox' ? 'התקן מהדפדפן' : 'התקנה לא זמינה'}
+                        {isInstalled ? 'אפליקציה הותקנה' : installAvailable ? 'התקנת האפליקציה' : detectPlatform() === 'ios_safari' ? 'הוראות iOS: הוסף למסך הבית' : detectPlatform() === 'firefox' ? 'התקן מהדפדפן' : 'התקנה לא זמינה'}
                       </span>
                     </button>
                   )}
@@ -887,7 +887,9 @@ const Header: React.FC = () => {
               </div>
               <div className="flex-1">
                 <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-bold text-gray-900">התקינו את האפליקציה</h4>
+                  <h4 className="text-sm font-bold text-gray-900">
+                    {isInstalled ? 'אפליקציה הותקנה' : 'התקינו את האפליקציה'}
+                  </h4>
                   <button 
                     onClick={(e) => {
                       e.preventDefault();
@@ -899,41 +901,49 @@ const Header: React.FC = () => {
                     <X className="h-4 w-4 text-gray-500" />
                   </button>
                 </div>
-                <p className="text-xs text-gray-700 mt-1">גישה למתכונים גם בלי אינטרנט וטעינה מהירה יותר.</p>
+                <p className="text-xs text-gray-700 mt-1">
+                  {isInstalled ? 'האפליקציה מותקנת ומוכנה לשימוש!' : 'גישה למתכונים גם בלי אינטרנט וטעינה מהירה יותר.'}
+                </p>
                 <div className="mt-2 flex items-center gap-2">
-                  <button
-                    onClick={async (e) => { 
-                      e.preventDefault();
-                      e.stopPropagation();
-                      markPopupShownNow(); 
-                      await triggerInstall(); 
-                    }}
-                    className="flex-1 bg-gradient-to-r from-amber-500 to-yellow-600 text-white text-xs font-semibold px-3 py-2 rounded-lg hover:from-amber-600 hover:to-yellow-700 shadow-sm active:scale-95"
-                  >
-                    התקנה
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      dismissPopup(false);
-                    }}
-                    className="text-xs px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
-                  >
-                    לא עכשיו
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      dismissPopup(true);
-                    }}
-                    className="text-xs px-3 py-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"
-                  >
-                    אל תציגו שוב
-                  </button>
+                  {!isInstalled && (
+                    <button
+                      onClick={async (e) => { 
+                        e.preventDefault();
+                        e.stopPropagation();
+                        markPopupShownNow(); 
+                        await triggerInstall(); 
+                      }}
+                      className="flex-1 bg-gradient-to-r from-amber-500 to-yellow-600 text-white text-xs font-semibold px-3 py-2 rounded-lg hover:from-amber-600 hover:to-yellow-700 shadow-sm active:scale-95"
+                    >
+                      התקנה
+                    </button>
+                  )}
+                  {!isInstalled && (
+                    <>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          dismissPopup(false);
+                        }}
+                        className="text-xs px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+                      >
+                        לא עכשיו
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          dismissPopup(true);
+                        }}
+                        className="text-xs px-3 py-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"
+                      >
+                        אל תציגו שוב
+                      </button>
+                    </>
+                  )}
                 </div>
-                {isIOS() && (
+                {isIOS() && !isInstalled && (
                   <div className="mt-2 text-[11px] text-gray-600">ב-iOS: הקישו על שיתוף › הוספה למסך הבית</div>
                 )}
               </div>
