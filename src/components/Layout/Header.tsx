@@ -3,6 +3,7 @@ import { Search, Heart, Plus, Filter, Menu, X, ChefHat, Database, Shield, Shield
 import { useRecipes } from '../../contexts/RecipeContext';
 import { useProtectedAction } from '../../hooks/useProtectedAction';
 import { useAuth } from '../../contexts/AuthContext';
+import { getBaselineInstallSupport, listenForInstallAvailability, detectPlatform } from '../../utils/pwa';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { clearAllMemory } from '../../utils/storage';
 import { recipeService } from '../../services/recipeService';
@@ -37,6 +38,7 @@ const Header: React.FC = () => {
   const [showInstallBanner, setShowInstallBanner] = useState<boolean>(false);
   const [engagementSeconds, setEngagementSeconds] = useState<number>(0);
   const [pagesVisited, setPagesVisited] = useState<number>(0);
+  const [showInstallHelp, setShowInstallHelp] = useState<boolean>(false);
   
   // Global flag to prevent API calls during memory cleanup
   useEffect(() => {
@@ -86,19 +88,19 @@ const Header: React.FC = () => {
     setIsInstalled(Boolean(standalone || installedAt));
   }, []);
 
-  // Listen to install availability and installed events
+  // Listen to install availability and installed events and baseline support
   useEffect(() => {
-    const onAvailable = () => setInstallAvailable(true);
-    const onInstalled = () => {
-      setInstallAvailable(false);
-      setIsInstalled(true);
-      setShowInstallBanner(false);
+    const updateBySupport = () => {
+      const support = getBaselineInstallSupport();
+      // Chrome/Edge: enable when BIP exists; Firefox/Safari: allow install flow/instructions
+      setInstallAvailable(support.canInstall);
     };
-    window.addEventListener('pwa:install-available', onAvailable);
-    window.addEventListener('pwa:installed', onInstalled);
+    updateBySupport();
+    const unsub = listenForInstallAvailability(updateBySupport);
+    window.addEventListener('focus', updateBySupport);
     return () => {
-      window.removeEventListener('pwa:install-available', onAvailable);
-      window.removeEventListener('pwa:installed', onInstalled);
+      unsub();
+      window.removeEventListener('focus', updateBySupport);
     };
   }, []);
 
@@ -143,8 +145,9 @@ const Header: React.FC = () => {
   const triggerInstall = async () => {
     if ((window as any).triggerPwaInstall) {
       await (window as any).triggerPwaInstall();
-    } else if (isIOS() && isSafari()) {
-      alert('ב-iOS יש להקיש על כפתור השיתוף ולבחור “הוספה למסך הבית”.');
+    } else {
+      // Fallback: open contextual instructions
+      setShowInstallHelp(true);
     }
   };
 
@@ -660,9 +663,9 @@ const Header: React.FC = () => {
                   {(!isInstalled) && (
                     <button
                       onClick={() => { triggerInstall(); setIsMenuOpen(false); }}
-                      disabled={!installAvailable && !isIOS()}
-                      className={`w-full flex items-center space-x-2 rtl:space-x-reverse py-2 px-2.5 rounded-lg transition-all duration-300 transform hover:scale-105 border ${installAvailable || isIOS() ? 'bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-700 hover:from-amber-100 hover:to-yellow-100 border-amber-200 hover:border-amber-300' : 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'}`}
-                      title={installAvailable ? 'התקן אפליקציה' : isIOS() ? 'הוספה למסך הבית דרך שיתוף' : 'התקנה לא זמינה במכשיר זה'}
+                      disabled={!installAvailable && detectPlatform() === 'chrome'}
+                      className={`w-full flex items-center space-x-2 rtl:space-x-reverse py-2 px-2.5 rounded-lg transition-all duration-300 transform hover:scale-105 border ${installAvailable || detectPlatform() !== 'chrome' ? 'bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-700 hover:from-amber-100 hover:to-yellow-100 border-amber-200 hover:border-amber-300' : 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'}`}
+                      title={installAvailable ? 'התקן אפליקציה' : detectPlatform() === 'ios_safari' ? 'הוספה למסך הבית דרך שיתוף' : detectPlatform() === 'firefox' ? 'התקנה דרך כפתור ה+ בשורת הכתובת' : 'התקנה לא זמינה כרגע'}
                     >
                       <div className="w-6 h-6 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-full flex items-center justify-center">
                         {installAvailable ? (
@@ -672,7 +675,7 @@ const Header: React.FC = () => {
                         )}
                       </div>
                       <span className="text-xs font-semibold text-black">
-                        {installAvailable ? 'התקנת האפליקציה' : isIOS() ? 'הוראות iOS: הוסף למסך הבית' : 'התקנה לא זמינה'}
+                        {installAvailable ? 'התקנת האפליקציה' : detectPlatform() === 'ios_safari' ? 'הוראות iOS: הוסף למסך הבית' : detectPlatform() === 'firefox' ? 'התקן מהדפדפן' : 'התקנה לא זמינה'}
                       </span>
                     </button>
                   )}
@@ -913,6 +916,50 @@ const Header: React.FC = () => {
                   <div className="mt-2 text-[11px] text-gray-600">ב-iOS: הקישו על שיתוף › הוספה למסך הבית</div>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Install Help Modal */}
+      {showInstallHelp && !isInstalled && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-[100000] p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-xs w-full overflow-hidden border border-gray-100">
+            <div className="bg-gradient-to-r from-amber-50 via-yellow-50 to-orange-50 border-b border-amber-100 p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                  <div className="w-8 h-8 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-lg flex items-center justify-center shadow-md">
+                    <Download className="h-4 w-4 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-gray-800">התקנת האפליקציה</h3>
+                    <p className="text-xs text-gray-600">הוראות מותאמות לדפדפן שלך</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowInstallHelp(false)} className="p-1.5 hover:bg-white/50 rounded-lg transition-all duration-200 hover:scale-110" type="button">
+                  <X className="h-4 w-4 text-gray-500" />
+                </button>
+              </div>
+            </div>
+            <div className="p-4 text-sm text-gray-800 space-y-2">
+              {detectPlatform() === 'chrome' && (
+                <>
+                  <p>בכרום: פתחו את התפריט ⋮ בפינה הימנית עליונה ובחרו "התקן אפליקציה".</p>
+                  <p className="text-gray-600">האפשרות תופיע אחרי טעינת האתר בפריוויו/פרודקשן ובנוכחות אייקון 512x512.</p>
+                </>
+              )}
+              {detectPlatform() === 'edge' && (
+                <p>באדג׳: פתחו את התפריט ⋯ ובחרו "Apps" › "Install this site as an app".</p>
+              )}
+              {detectPlatform() === 'firefox' && (
+                <p>בפיירפוקס: לחצו על כפתור ה־+ בשורת הכתובת ובחרו "התקן".</p>
+              )}
+              {(detectPlatform() === 'ios_safari' || detectPlatform() === 'safari') && (
+                <p>ב־Safari: הקישו על "שיתוף" › "הוספה למסך הבית".</p>
+              )}
+            </div>
+            <div className="p-3 flex justify-end gap-2 border-t border-gray-100">
+              <button onClick={() => setShowInstallHelp(false)} className="text-xs px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50">סגור</button>
             </div>
           </div>
         </div>

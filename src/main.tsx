@@ -16,6 +16,25 @@ if ('serviceWorker' in navigator) {
       .register('/sw.js')
       .then(reg => {
         console.log('Service Worker registered:', reg.scope);
+        // Seamless updates: if a new SW is installed, activate it
+        reg.addEventListener('updatefound', () => {
+          const newWorker = reg.installing;
+          if (!newWorker) return;
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              // Tell SW to skip waiting and reload clients
+              if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+            }
+          });
+        });
+
+        // When controller changes (new SW took control), refresh once
+        let refreshed = false;
+        navigator.serviceWorker.addEventListener('controllerchange', () => {
+          if (refreshed) return;
+          refreshed = true;
+          window.location.reload();
+        });
       })
       .catch(err => console.warn('Service Worker registration failed:', err));
   });
