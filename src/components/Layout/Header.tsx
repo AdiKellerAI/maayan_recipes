@@ -888,26 +888,46 @@ const Header: React.FC = () => {
               <div className="flex-1">
                 <div className="flex items-center justify-between">
                   <h4 className="text-sm font-bold text-gray-900">התקינו את האפליקציה</h4>
-                  <button onClick={() => dismissPopup(false)} className="p-1 hover:bg-gray-100 rounded-md">
+                  <button 
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      dismissPopup(false);
+                    }} 
+                    className="p-1 hover:bg-gray-100 rounded-md"
+                  >
                     <X className="h-4 w-4 text-gray-500" />
                   </button>
                 </div>
                 <p className="text-xs text-gray-700 mt-1">גישה למתכונים גם בלי אינטרנט וטעינה מהירה יותר.</p>
                 <div className="mt-2 flex items-center gap-2">
                   <button
-                    onClick={async () => { markPopupShownNow(); await triggerInstall(); }}
+                    onClick={async (e) => { 
+                      e.preventDefault();
+                      e.stopPropagation();
+                      markPopupShownNow(); 
+                      await triggerInstall(); 
+                    }}
                     className="flex-1 bg-gradient-to-r from-amber-500 to-yellow-600 text-white text-xs font-semibold px-3 py-2 rounded-lg hover:from-amber-600 hover:to-yellow-700 shadow-sm active:scale-95"
                   >
                     התקנה
                   </button>
                   <button
-                    onClick={() => dismissPopup(false)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      dismissPopup(false);
+                    }}
                     className="text-xs px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
                   >
                     לא עכשיו
                   </button>
                   <button
-                    onClick={() => dismissPopup(true)}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      dismissPopup(true);
+                    }}
                     className="text-xs px-3 py-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"
                   >
                     אל תציגו שוב

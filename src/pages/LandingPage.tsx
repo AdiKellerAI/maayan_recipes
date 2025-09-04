@@ -290,6 +290,17 @@ const LandingPage: React.FC = () => {
     }
   }, [hasPreloaded, refreshRecipes]);
 
+  // Disable scrolling on landing page
+  useEffect(() => {
+    // Disable scrolling when component mounts
+    document.body.style.overflow = 'hidden';
+    
+    // Re-enable scrolling when component unmounts
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
+
   return (
     <div className="h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
       {/* Background Decorative Circles - Uniformly Distributed */}

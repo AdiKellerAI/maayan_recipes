@@ -53,6 +53,7 @@ const EditRecipePage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [buttonsVisible, setButtonsVisible] = useState(false);
   const [saveButtonFilled, setSaveButtonFilled] = useState(false);
+  const [cancelButtonFilled, setCancelButtonFilled] = useState(false);
   const [deleteButtonFilled, setDeleteButtonFilled] = useState(false);
   // Animations for main sections
   const [isHiding, setIsHiding] = useState<{ ingredients: boolean; directions: boolean }>({ ingredients: false, directions: false });
@@ -167,6 +168,8 @@ const EditRecipePage: React.FC = () => {
               setButtonsVisible(true);
               // Animate save button first (right to left in RTL) - faster timing
               setTimeout(() => setSaveButtonFilled(true), 100);
+              // Then animate cancel button
+              setTimeout(() => setCancelButtonFilled(true), 300);
               // Then animate delete button - faster timing
               setTimeout(() => setDeleteButtonFilled(true), 500);
             }
@@ -174,6 +177,7 @@ const EditRecipePage: React.FC = () => {
             // Buttons are not visible, reset them
             setButtonsVisible(false);
             setSaveButtonFilled(false);
+            setCancelButtonFilled(false);
             setDeleteButtonFilled(false);
           }
         });
@@ -1498,6 +1502,29 @@ const EditRecipePage: React.FC = () => {
                           <span>שמור שינויים</span>
                         </>
                       )}
+                    </div>
+                  </button>
+                  
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isNavigating) return;
+                      setIsNavigating(true);
+                      safeNavigate(navigateToLastRecipesPage());
+                    }}
+                    disabled={isNavigating}
+                    className={`group relative overflow-hidden border px-4 py-2.5 rounded-full transition-all duration-500 font-medium text-sm shadow-sm hover:shadow-md active:shadow-md focus:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 touch-manipulation ${
+                      cancelButtonFilled 
+                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 border-blue-500 text-white' 
+                        : 'bg-white border-blue-200 text-blue-700 hover:text-white active:text-white focus:text-white hover:border-blue-300 active:border-blue-300 focus:border-blue-300'
+                    }`}
+                  >
+                    <div className={`absolute inset-0 bg-gradient-to-r from-blue-500 to-blue-600 transition-transform duration-300 ease-out ${
+                      cancelButtonFilled ? 'translate-x-0' : 'translate-x-full group-hover:translate-x-0 group-active:translate-x-0 group-focus:translate-x-0'
+                    }`}></div>
+                    <div className="relative flex items-center gap-2">
+                      <X className="h-3.5 w-3.5" />
+                      <span>ביטול</span>
                     </div>
                   </button>
                   

@@ -32,7 +32,7 @@ export const UnsavedChangesProvider: React.FC<{ children: React.ReactNode }> = (
       return;
     }
 
-    const userChoice = window.confirm('יש שינויים לא שמורים. לשמור? (OK=שמור, Cancel=בטל)');
+    const userChoice = window.confirm('יש שינויים לא שמורים בעריכת המתכון. האם לשמור את השינויים לפני היציאה? (OK=שמור ויציאה, Cancel=יציאה ללא שמירה)');
     if (userChoice) {
       // User chose to save
       if (saveFunction) {
