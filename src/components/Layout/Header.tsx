@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Heart, Plus, Filter, Menu, X, ChefHat, Database, Shield, ShieldCheck, RefreshCw } from 'lucide-react';
+import { Search, Heart, Plus, Filter, Menu, X, ChefHat, Database, Shield, ShieldCheck, RefreshCw, Download, Smartphone, CheckCircle, WifiOff } from 'lucide-react';
 import { useRecipes } from '../../contexts/RecipeContext';
 import { useProtectedAction } from '../../hooks/useProtectedAction';
 import { useAuth } from '../../contexts/AuthContext';
@@ -31,6 +31,12 @@ const Header: React.FC = () => {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isClearingMemory, setIsClearingMemory] = useState(false);
   const [memoryCleanupMessage, setMemoryCleanupMessage] = useState<string | null>(null);
+  const [isOffline, setIsOffline] = useState<boolean>(typeof navigator !== 'undefined' ? !navigator.onLine : false);
+  const [installAvailable, setInstallAvailable] = useState<boolean>(false);
+  const [isInstalled, setIsInstalled] = useState<boolean>(false);
+  const [showInstallBanner, setShowInstallBanner] = useState<boolean>(false);
+  const [engagementSeconds, setEngagementSeconds] = useState<number>(0);
+  const [pagesVisited, setPagesVisited] = useState<number>(0);
   
   // Global flag to prevent API calls during memory cleanup
   useEffect(() => {
@@ -59,6 +65,100 @@ const Header: React.FC = () => {
 
   // Check if we're on a recipe detail page
   const isRecipeDetailPage = location.pathname.startsWith('/recipe/');
+
+  // Track online/offline state
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    setIsOffline(!navigator.onLine);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  // Detect PWA installed (iOS standalone or appinstalled event)
+  useEffect(() => {
+    const standalone = (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || (navigator as any).standalone;
+    const installedAt = localStorage.getItem('pwa_installed_at');
+    setIsInstalled(Boolean(standalone || installedAt));
+  }, []);
+
+  // Listen to install availability and installed events
+  useEffect(() => {
+    const onAvailable = () => setInstallAvailable(true);
+    const onInstalled = () => {
+      setInstallAvailable(false);
+      setIsInstalled(true);
+      setShowInstallBanner(false);
+    };
+    window.addEventListener('pwa:install-available', onAvailable);
+    window.addEventListener('pwa:installed', onInstalled);
+    return () => {
+      window.removeEventListener('pwa:install-available', onAvailable);
+      window.removeEventListener('pwa:installed', onInstalled);
+    };
+  }, []);
+
+  // Engagement tracking: time on site and pages visited
+  useEffect(() => {
+    const interval = setInterval(() => setEngagementSeconds((s) => s + 1), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    setPagesVisited((prev) => prev + 1);
+  }, [location.pathname]);
+
+  // Daily popup logic
+  useEffect(() => {
+    const DISMISS_KEY = 'pwa_popup_dismissed_permanently';
+    const LAST_KEY = 'pwa_last_popup_at';
+    const now = Date.now();
+    const dismissed = localStorage.getItem(DISMISS_KEY) === 'true';
+    const last = Number(localStorage.getItem(LAST_KEY) || 0);
+    const twentyFourHours = 24 * 60 * 60 * 1000;
+
+    if (dismissed || isInstalled) return;
+    if (!installAvailable && !isIOS()) return; // show only when possible or iOS instructions
+
+    const meetsEngagement = engagementSeconds >= 30 && pagesVisited >= 2;
+    const longEnoughSinceLast = now - last >= twentyFourHours;
+
+    const schedule = () => {
+      // Show not immediately on load
+      setTimeout(() => setShowInstallBanner(true), 2500);
+    };
+
+    if (meetsEngagement && longEnoughSinceLast) {
+      schedule();
+    }
+  }, [engagementSeconds, pagesVisited, installAvailable, isInstalled]);
+
+  const isIOS = () => /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+  const isSafari = () => /^((?!chrome|android).)*safari/i.test(window.navigator.userAgent);
+
+  const triggerInstall = async () => {
+    if ((window as any).triggerPwaInstall) {
+      await (window as any).triggerPwaInstall();
+    } else if (isIOS() && isSafari()) {
+      alert('ב-iOS יש להקיש על כפתור השיתוף ולבחור “הוספה למסך הבית”.');
+    }
+  };
+
+  const markPopupShownNow = () => {
+    try { localStorage.setItem('pwa_last_popup_at', String(Date.now())); } catch {}
+  };
+
+  const dismissPopup = (permanent: boolean) => {
+    markPopupShownNow();
+    if (permanent) {
+      try { localStorage.setItem('pwa_popup_dismissed_permanently', 'true'); } catch {}
+    }
+    setShowInstallBanner(false);
+  };
 
   useEffect(() => {
     if (location.pathname === '/') {
@@ -400,6 +500,16 @@ const Header: React.FC = () => {
             </div>
           </Link>
 
+          {/* Offline indicator */}
+          <div className="hidden sm:flex items-center mx-2">
+            {isOffline && (
+              <div className="flex items-center text-red-600 text-xs bg-red-50 border border-red-200 rounded-md px-2 py-1">
+                <WifiOff className="h-3.5 w-3.5 mr-1 rtl:ml-1 rtl:mr-0" />
+                אופליין
+              </div>
+            )}
+          </div>
+
           {/* Fixed Search Bar - Desktop */}
           {location.pathname !== '/' && (
             <div className={`hidden sm:flex mx-8 transition-all duration-300 ${
@@ -545,6 +655,27 @@ const Header: React.FC = () => {
                 {/* Quick Actions */}
                 <div className="space-y-1.5">
                   <h5 className="text-xs font-semibold text-black uppercase tracking-wide">פעולות מהירות</h5>
+
+                  {/* Install App Button */}
+                  {(!isInstalled) && (
+                    <button
+                      onClick={() => { triggerInstall(); setIsMenuOpen(false); }}
+                      disabled={!installAvailable && !isIOS()}
+                      className={`w-full flex items-center space-x-2 rtl:space-x-reverse py-2 px-2.5 rounded-lg transition-all duration-300 transform hover:scale-105 border ${installAvailable || isIOS() ? 'bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-700 hover:from-amber-100 hover:to-yellow-100 border-amber-200 hover:border-amber-300' : 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'}`}
+                      title={installAvailable ? 'התקן אפליקציה' : isIOS() ? 'הוספה למסך הבית דרך שיתוף' : 'התקנה לא זמינה במכשיר זה'}
+                    >
+                      <div className="w-6 h-6 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-full flex items-center justify-center">
+                        {installAvailable ? (
+                          <Download className="h-3.5 w-3.5 text-white" />
+                        ) : (
+                          <Smartphone className="h-3.5 w-3.5 text-white" />
+                        )}
+                      </div>
+                      <span className="text-xs font-semibold text-black">
+                        {installAvailable ? 'התקנת האפליקציה' : isIOS() ? 'הוראות iOS: הוסף למסך הבית' : 'התקנה לא זמינה'}
+                      </span>
+                    </button>
+                  )}
                   
                   {/* Timer Button */}
                   <button
@@ -741,6 +872,51 @@ const Header: React.FC = () => {
       )}
       
       </header>
+
+      {/* Install Banner / Daily Popup */}
+      {showInstallBanner && !isInstalled && (
+        <div className="fixed bottom-3 left-1/2 -translate-x-1/2 z-[99999] w-[92%] max-w-md">
+          <div className="bg-white border border-amber-200 rounded-xl shadow-xl p-3">
+            <div className="flex items-start">
+              <div className="mr-2 rtl:ml-2 rtl:mr-0 w-8 h-8 rounded-full bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shadow">
+                <ChefHat className="h-4 w-4 text-white" />
+              </div>
+              <div className="flex-1">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-bold text-gray-900">התקינו את האפליקציה</h4>
+                  <button onClick={() => dismissPopup(false)} className="p-1 hover:bg-gray-100 rounded-md">
+                    <X className="h-4 w-4 text-gray-500" />
+                  </button>
+                </div>
+                <p className="text-xs text-gray-700 mt-1">גישה למתכונים גם בלי אינטרנט וטעינה מהירה יותר.</p>
+                <div className="mt-2 flex items-center gap-2">
+                  <button
+                    onClick={async () => { markPopupShownNow(); await triggerInstall(); }}
+                    className="flex-1 bg-gradient-to-r from-amber-500 to-yellow-600 text-white text-xs font-semibold px-3 py-2 rounded-lg hover:from-amber-600 hover:to-yellow-700 shadow-sm active:scale-95"
+                  >
+                    התקנה
+                  </button>
+                  <button
+                    onClick={() => dismissPopup(false)}
+                    className="text-xs px-3 py-2 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50"
+                  >
+                    לא עכשיו
+                  </button>
+                  <button
+                    onClick={() => dismissPopup(true)}
+                    className="text-xs px-3 py-2 rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50"
+                  >
+                    אל תציגו שוב
+                  </button>
+                </div>
+                {isIOS() && (
+                  <div className="mt-2 text-[11px] text-gray-600">ב-iOS: הקישו על שיתוף › הוספה למסך הבית</div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Filter Modal - Elegant and modern design */}
       {isFilterOpen && (

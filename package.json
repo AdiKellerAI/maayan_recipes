@@ -16,7 +16,8 @@
     "benchmark": "node scripts/apply-performance-migration.js --benchmark",
     "migrate:images": "node scripts/run-image-migration.js",
     "migrate:images:blob": "node scripts/migrate-blob-images.js migrate",
-    "migrate:images:cleanup": "node scripts/migrate-blob-images.js cleanup"
+    "migrate:images:cleanup": "node scripts/migrate-blob-images.js cleanup",
+    "icons": "node ./scripts/generate-icons.js"
   },
   "dependencies": {
     "@types/pg": "^8.15.4",
