@@ -78,34 +78,29 @@ export const useMobileFormPersistence = ({
     }
   }, [formKey, enabled]);
 
-  // Check if form data has changed
-  const hasFormDataChanged = useCallback(() => {
-    if (!enabled) return false;
-    
-    try {
-      const currentData = getFormData();
-      const lastSaved = lastSavedDataRef.current;
-      
-      // Simple deep comparison for form data
-      return JSON.stringify(currentData) !== JSON.stringify(lastSaved);
-    } catch (error) {
-      console.error('Error checking form data changes:', error);
-      return false;
-    }
-  }, [getFormData, enabled]);
-
   // Auto-save form data periodically
   useEffect(() => {
     if (!enabled) return;
 
     const autoSaveInterval = setInterval(() => {
-      if (hasFormDataChanged() && !isRestoringRef.current) {
-        saveFormData();
+      if (isRestoringRef.current) return;
+      
+      try {
+        const currentData = getFormData();
+        const lastSaved = lastSavedDataRef.current;
+        
+        // Simple deep comparison for form data
+        const hasChanged = JSON.stringify(currentData) !== JSON.stringify(lastSaved);
+        if (hasChanged) {
+          saveFormData();
+        }
+      } catch (error) {
+        console.error('Error checking form data changes:', error);
       }
     }, 2000); // Auto-save every 2 seconds
 
     return () => clearInterval(autoSaveInterval);
-  }, [enabled, hasFormDataChanged, saveFormData]);
+  }, [enabled, getFormData, saveFormData]);
 
   // Handle app visibility changes (mobile app switching)
   useEffect(() => {
@@ -162,7 +157,6 @@ export const useMobileFormPersistence = ({
   return {
     saveFormData,
     restoreFormData,
-    clearFormData,
-    hasFormDataChanged
+    clearFormData
   };
 };

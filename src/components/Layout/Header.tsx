@@ -610,52 +610,46 @@ const Header: React.FC = () => {
               
               {/* Menu Items */}
               <div className="p-3 space-y-2">
-                {/* Install App Button - Black & White Design */}
-                <button
-                  onClick={() => { triggerInstall(); handleMenuClose(); }}
-                  disabled={isInstalled || (!installAvailable && detectPlatform() === 'chrome')}
-                  className={`w-full flex items-center space-x-3 rtl:space-x-reverse py-2 px-3 rounded-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] border-2 relative overflow-hidden ${
-                    isInstalled
-                      ? 'bg-black border-black text-white hover:bg-gray-800 hover:border-gray-800'
-                      : installAvailable || detectPlatform() !== 'chrome' 
+                {/* Install App Button - Only show when not installed */}
+                {!isInstalled && (
+                  <button
+                    onClick={() => { triggerInstall(); handleMenuClose(); }}
+                    disabled={!installAvailable && detectPlatform() === 'chrome'}
+                    className={`w-full flex items-center space-x-3 rtl:space-x-reverse py-2 px-3 rounded-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] border-2 relative overflow-hidden ${
+                      installAvailable || detectPlatform() !== 'chrome' 
                         ? 'bg-white border-black text-black hover:bg-gray-100 hover:border-gray-800' 
                         : 'bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed'
-                  }`}
-                  title={isInstalled ? 'אפליקציה הותקנה' : installAvailable ? 'התקן אפליקציה' : detectPlatform() === 'ios_safari' ? 'הוספה למסך הבית דרך שיתוף' : detectPlatform() === 'firefox' ? 'התקנה דרך כפתור ה+ בשורת הכתובת' : 'התקנה לא זמינה כרגע'}
-                >
-                  {/* Icon */}
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
-                    isInstalled 
-                      ? 'bg-white text-black' 
-                      : installAvailable || detectPlatform() !== 'chrome'
+                    }`}
+                    title={installAvailable ? 'התקן אפליקציה' : detectPlatform() === 'ios_safari' ? 'הוספה למסך הבית דרך שיתוף' : detectPlatform() === 'firefox' ? 'התקנה דרך כפתור ה+ בשורת הכתובת' : 'התקנה לא זמינה כרגע'}
+                  >
+                    {/* Icon */}
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                      installAvailable || detectPlatform() !== 'chrome'
                         ? 'bg-black text-white'
                         : 'bg-gray-200 text-gray-400'
-                  }`}>
-                    {isInstalled ? (
-                      <span className="text-lg font-bold">✓</span>
-                    ) : installAvailable ? (
-                      <Download className="h-4 w-4" />
-                    ) : (
-                      <Smartphone className="h-4 w-4" />
-                    )}
-                  </div>
-                  
-                  {/* Text */}
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm font-bold leading-tight">
-                      {isInstalled ? 'הותקן' : installAvailable ? 'התקן אפליקציה' : detectPlatform() === 'ios_safari' ? 'iOS' : detectPlatform() === 'firefox' ? 'התקן' : 'התקנה לא זמינה'}
-                    </span>
-                  </div>
-                  
-                  {/* Status indicator */}
-                  <div className={`w-2 h-2 rounded-full transition-all duration-300 ${
-                    isInstalled 
-                      ? 'bg-white' 
-                      : installAvailable || detectPlatform() !== 'chrome'
+                    }`}>
+                      {installAvailable ? (
+                        <Download className="h-4 w-4" />
+                      ) : (
+                        <Smartphone className="h-4 w-4" />
+                      )}
+                    </div>
+                    
+                    {/* Text */}
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-bold leading-tight">
+                        {installAvailable ? 'התקן אפליקציה' : detectPlatform() === 'ios_safari' ? 'iOS' : detectPlatform() === 'firefox' ? 'התקן' : 'התקנה לא זמינה'}
+                      </span>
+                    </div>
+                    
+                    {/* Status indicator */}
+                    <div className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                      installAvailable || detectPlatform() !== 'chrome'
                         ? 'bg-black animate-pulse'
                         : 'bg-gray-400'
-                  }`}></div>
-                </button>
+                    }`}></div>
+                  </button>
+                )}
 
                 {/* Add Recipe Button */}
                 <button
