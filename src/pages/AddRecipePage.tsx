@@ -1828,7 +1828,13 @@ const AddRecipePage: React.FC = () => {
                 
                 <button
                   type="button"
-                  onClick={async () => await navigateWithUnsavedCheck('/recipes')}
+                  onClick={async () => {
+                    try {
+                      await navigateWithUnsavedCheck('/recipes');
+                    } catch (error) {
+                      console.error('Navigation error:', error);
+                    }
+                  }}
                   className={`group relative overflow-hidden px-4 py-2.5 rounded-full transition-all duration-500 font-medium text-sm shadow-sm hover:shadow-md active:shadow-md focus:shadow-md flex items-center gap-2 touch-manipulation ${
                     cancelButtonFilled
                       ? 'bg-gradient-to-r from-red-500 to-red-600 text-white border border-red-500'

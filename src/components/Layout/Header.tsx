@@ -496,7 +496,11 @@ const Header: React.FC = () => {
             onClick={async (e) => {
               e.preventDefault();
               resetFilters();
-              await navigateWithUnsavedCheck('/');
+              try {
+                await navigateWithUnsavedCheck('/');
+              } catch (error) {
+                console.error('Navigation error:', error);
+              }
             }}
           >
             <div 

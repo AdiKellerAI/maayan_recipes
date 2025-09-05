@@ -39,21 +39,26 @@ export const UnsavedChangesProvider: React.FC<{ children: React.ReactNode }> = (
         try {
           await saveFunction();
           setHasUnsavedChanges(false);
+          setSaveFunction(null);
           navigate(path);
         } catch (error) {
           console.error('Error saving changes:', error);
-          // Still navigate even if save fails
+          // Show error but still navigate
+          alert('שגיאה בשמירת השינויים. היציאה תתבצע ללא שמירה.');
           setHasUnsavedChanges(false);
+          setSaveFunction(null);
           navigate(path);
         }
       } else {
         // No save function registered, just navigate
         setHasUnsavedChanges(false);
+        setSaveFunction(null);
         navigate(path);
       }
     } else {
       // User chose to discard
       setHasUnsavedChanges(false);
+      setSaveFunction(null);
       navigate(path);
     }
   }, [hasUnsavedChanges, navigate, saveFunction]);

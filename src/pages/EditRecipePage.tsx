@@ -604,6 +604,8 @@ const EditRecipePage: React.FC = () => {
       // Basic validation
       if (!formData.title || !formData.category) {
         alert('נא למלא את שם המתכון והקטגוריה');
+        setIsSaving(false);
+        setUploadStatus('');
         return;
       }
       
@@ -614,6 +616,8 @@ const EditRecipePage: React.FC = () => {
       
       if (!hasMainIngredients && !hasMainDirections && !hasAdditionalSections) {
         alert('המתכון חייב לכלול לפחות אחד מהבאים: רכיבים עיקריים, הוראות עיקריות, או שלבים נוספים');
+        setIsSaving(false);
+        setUploadStatus('');
         return;
       }
 
@@ -698,6 +702,7 @@ const EditRecipePage: React.FC = () => {
             alert('המתכון עודכן בהצלחה!');
           }, 500);
         } else {
+          console.error('❌ EDIT: Update failed - updateResult is false');
           throw new Error('Failed to update recipe in database');
         }
         
@@ -846,16 +851,28 @@ const EditRecipePage: React.FC = () => {
   }, [recipe, formData, ingredients, directions, images, additionalSections]);
 
   // Close page
-  const handleClose = () => {
+  const handleClose = async () => {
+    if (isNavigating) return;
+    
     if (hasActualChanges) {
       const confirmClose = window.confirm('יש לך שינויים שלא נשמרו. האם אתה בטוח שברצונך לצאת מבלי לשמור?');
       if (confirmClose) {
-        setIsNavigating(false); // Reset navigation state before navigating
-        safeNavigate(`/recipe/${recipe!.id}`);
+        setIsNavigating(true);
+        try {
+          await safeNavigate(`/recipe/${recipe!.id}`);
+        } catch (error) {
+          console.error('Navigation error:', error);
+          setIsNavigating(false);
+        }
       }
     } else {
-      setIsNavigating(false); // Reset navigation state before navigating
-      safeNavigate(`/recipe/${recipe!.id}`);
+      setIsNavigating(true);
+      try {
+        await safeNavigate(`/recipe/${recipe!.id}`);
+      } catch (error) {
+        console.error('Navigation error:', error);
+        setIsNavigating(false);
+      }
     }
   };
 
@@ -1541,10 +1558,15 @@ const EditRecipePage: React.FC = () => {
                   
                   <button
                     type="button"
-                    onClick={() => {
+                    onClick={async () => {
                       if (isNavigating) return;
                       setIsNavigating(true);
-                      safeNavigate(navigateToLastRecipesPage());
+                      try {
+                        await safeNavigate(navigateToLastRecipesPage());
+                      } catch (error) {
+                        console.error('Navigation error:', error);
+                        setIsNavigating(false);
+                      }
                     }}
                     disabled={isNavigating}
                     className={`group relative overflow-hidden border px-4 py-2.5 rounded-full transition-all duration-500 font-medium text-sm shadow-sm hover:shadow-md active:shadow-md focus:shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 touch-manipulation ${

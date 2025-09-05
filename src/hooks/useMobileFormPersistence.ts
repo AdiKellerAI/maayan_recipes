@@ -19,6 +19,8 @@ export const useMobileFormPersistence = ({
 }: UseMobileFormPersistenceOptions) => {
   const lastSavedDataRef = useRef<FormData>({});
   const isRestoringRef = useRef(false);
+  const lastUserInputRef = useRef<number>(0);
+  const hasRestoredRef = useRef(false);
 
   // Save form data to localStorage
   const saveFormData = useCallback(() => {
@@ -40,7 +42,7 @@ export const useMobileFormPersistence = ({
 
   // Restore form data from localStorage
   const restoreFormData = useCallback(() => {
-    if (!enabled) return;
+    if (!enabled || hasRestoredRef.current) return;
     
     try {
       const savedData = localStorage.getItem(`form_${formKey}`);
@@ -50,6 +52,7 @@ export const useMobileFormPersistence = ({
         const isRecent = Date.now() - parsedData.timestamp < 24 * 60 * 60 * 1000;
         if (isRecent) {
           isRestoringRef.current = true;
+          hasRestoredRef.current = true;
           const { timestamp, ...formData } = parsedData;
           setFormData(formData);
           lastSavedDataRef.current = formData;
@@ -72,6 +75,7 @@ export const useMobileFormPersistence = ({
     try {
       localStorage.removeItem(`form_${formKey}`);
       lastSavedDataRef.current = {};
+      hasRestoredRef.current = false;
       console.log(`📱 Cleared form data for ${formKey}`);
     } catch (error) {
       console.error('Error clearing form data:', error);
@@ -92,12 +96,13 @@ export const useMobileFormPersistence = ({
         // Simple deep comparison for form data
         const hasChanged = JSON.stringify(currentData) !== JSON.stringify(lastSaved);
         if (hasChanged) {
+          lastUserInputRef.current = Date.now();
           saveFormData();
         }
       } catch (error) {
         console.error('Error checking form data changes:', error);
       }
-    }, 2000); // Auto-save every 2 seconds
+    }, 5000); // Auto-save every 5 seconds (reduced frequency)
 
     return () => clearInterval(autoSaveInterval);
   }, [enabled, getFormData, saveFormData]);
@@ -112,9 +117,13 @@ export const useMobileFormPersistence = ({
         console.log('📱 App going to background, saving form data');
         saveFormData();
       } else {
-        // App is coming to foreground, restore form data
-        console.log('📱 App coming to foreground, restoring form data');
-        restoreFormData();
+        // App is coming to foreground, restore form data only if not currently editing
+        console.log('📱 App coming to foreground, checking if should restore form data');
+        // Only restore if we're not in the middle of editing (no recent user input)
+        const timeSinceLastInput = Date.now() - lastUserInputRef.current;
+        if (timeSinceLastInput > 10000) { // Only restore if no user input in last 10 seconds
+          restoreFormData();
+        }
       }
     };
 
@@ -125,9 +134,12 @@ export const useMobileFormPersistence = ({
     };
 
     const handlePageShow = () => {
-      // Page is being shown (back from cache), restore form data
-      console.log('📱 Page showing, restoring form data');
-      restoreFormData();
+      // Page is being shown (back from cache), restore form data only if not currently editing
+      console.log('📱 Page showing, checking if should restore form data');
+      const timeSinceLastInput = Date.now() - lastUserInputRef.current;
+      if (timeSinceLastInput > 10000) { // Only restore if no user input in last 10 seconds
+        restoreFormData();
+      }
     };
 
     const handlePageHide = () => {
@@ -142,10 +154,13 @@ export const useMobileFormPersistence = ({
     window.addEventListener('pagehide', handlePageHide);
     window.addEventListener('pageshow', handlePageShow);
 
-    // Restore form data on mount
-    restoreFormData();
+    // Restore form data on mount only once
+    const timeoutId = setTimeout(() => {
+      restoreFormData();
+    }, 100); // Small delay to ensure form is ready
 
     return () => {
+      clearTimeout(timeoutId);
       // Cleanup event listeners
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.removeEventListener('beforeunload', handleBeforeUnload);
