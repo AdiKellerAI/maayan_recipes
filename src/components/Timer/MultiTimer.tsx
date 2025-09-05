@@ -681,6 +681,15 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose, initialTime
 		onClose();
 	};
 
+	const handleCloseAllTimers = () => {
+		if (window.confirm('האם אתה בטוח שברצונך לסגור את כל הטיימרים?')) {
+			setTimers([]);
+			setHighlightedTimerId(null);
+			// Clear localStorage
+			localStorage.removeItem("multiTimers");
+		}
+	};
+
 	if (!isVisible)
 		return (
 			<>
@@ -993,33 +1002,46 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose, initialTime
 									/>
 								</div>
 
-								{/* Add Timer Button */}
-								<div className="text-center">
+								{/* Add Timer Button and Close All Button */}
+								<div className="flex items-center justify-center space-x-3 rtl:space-x-reverse">
+									{/* Add Timer Button */}
 									<button
 										onClick={addTimer}
 										disabled={timers.length >= 5}
-										className="flex items-center space-x-2 rtl:space-x-reverse bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-lg hover:from-green-600 hover:to-emerald-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-200 mx-auto text-sm shadow-md"
+										className="flex items-center space-x-2 rtl:space-x-reverse bg-gradient-to-r from-green-500 to-emerald-500 text-white px-4 py-2 rounded-lg hover:from-green-600 hover:to-emerald-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-200 text-sm shadow-md"
 										type="button"
 									>
 										<Plus className="h-4 w-4" />
 										<span>הוסף טיימר</span>
 									</button>
+									
+									{/* Close All Button - Only show if there are active timers */}
+									{timers.length > 0 && (
+										<button
+											onClick={handleCloseAllTimers}
+											className="flex items-center space-x-2 rtl:space-x-reverse bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-all duration-200 text-sm shadow-md"
+											type="button"
+										>
+											<X className="h-4 w-4" />
+											<span>סגור הכל</span>
+										</button>
+									)}
 								</div>
 							</div>
 						</div>
 
 						{/* Active Timers Area - Scrollable */}
 						<div className="flex-1 overflow-hidden flex flex-col p-3 pt-0">
-							<div className="space-y-2 flex-1 flex flex-col">
-								{/* Fixed height container for 2.5 timers with scroll indication */}
-								<div className="relative h-[200px] overflow-y-auto pt-4 pb-2">
+							<div className="space-y-1 flex-1 flex flex-col">
+								{/* Fixed height container for 3+ timers with scroll indication */}
+								<div className="relative h-[250px] overflow-y-auto pt-4 pb-2">
 									{timers.length === 0 ? (
-										<div className="text-center py-6 h-full flex flex-col items-center justify-center">
-											<Clock className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-											<h4 className="text-base font-medium text-gray-600 mb-1">
+										<div className="absolute inset-0 flex flex-col items-center justify-start text-center pt-2">
+											<Clock className="h-10 w-10 text-gray-300 mb-1" />
+											<h4 className="text-sm font-medium text-gray-600 mb-1">
 												אין טיימרים פעילים
 											</h4>
-											<p className="text-sm text-gray-500">
+											<p className="text-xs text-gray-500">
 												בחר זמן ולחץ על "הוסף טיימר" כדי להתחיל
 											</p>
 										</div>
@@ -1029,7 +1051,7 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose, initialTime
 										<div
 											key={timer.id}
 											data-timer-id={timer.id}
-											className={`rounded-lg p-2.5 border border-gray-200 transition-all duration-200 shadow-sm ${
+											className={`rounded-lg p-1.5 border border-gray-200 transition-all duration-200 shadow-sm ${
 												highlightedTimerId === timer.id
 													? "bg-gradient-to-r from-orange-100 to-orange-200 shadow-lg"
 													: "bg-gradient-to-r from-white to-gray-50"
@@ -1052,7 +1074,7 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose, initialTime
 													</div>
 												</div>
 
-												<div className="flex items-center space-x-1 rtl:space-x-reverse">
+												<div className="flex items-center space-x-0.5 rtl:space-x-reverse">
 													{!timer.isRunning ? (
 														<button
 															onClick={() => startTimer(timer.id)}
@@ -1061,48 +1083,48 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose, initialTime
 																globalMinutes === 0 &&
 																globalSeconds === 0
 															}
-															className="p-2 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-200 touch-manipulation min-w-[36px] min-h-[36px] flex items-center justify-center"
+															className="p-1.5 bg-green-500 text-white rounded-md hover:bg-green-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-all duration-200 touch-manipulation min-w-[28px] min-h-[28px] flex items-center justify-center"
 															title="הפעל טיימר"
 															type="button"
 														>
-															<Play className="h-4 w-4" />
+															<Play className="h-3 w-3" />
 														</button>
 													) : (
 														<button
 															onClick={() => pauseTimer(timer.id)}
-															className="p-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-all duration-200 touch-manipulation min-w-[36px] min-h-[36px] flex items-center justify-center"
+															className="p-1.5 bg-yellow-500 text-white rounded-md hover:bg-yellow-600 transition-all duration-200 touch-manipulation min-w-[28px] min-h-[28px] flex items-center justify-center"
 															title="השהה טיימר"
 															type="button"
 														>
-															<Pause className="h-4 w-4" />
+															<Pause className="h-3 w-3" />
 														</button>
 													)}
 
 													<button
 														onClick={() => stopTimer(timer.id)}
-														className="p-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-all duration-200 touch-manipulation min-w-[36px] min-h-[36px] flex items-center justify-center"
+														className="p-1.5 bg-red-500 text-white rounded-md hover:bg-red-600 transition-all duration-200 touch-manipulation min-w-[28px] min-h-[28px] flex items-center justify-center"
 														title="עצור טיימר"
 														type="button"
 													>
-														<Square className="h-4 w-4" />
+														<Square className="h-3 w-3" />
 													</button>
 
 													<button
 														onClick={() => resetTimer(timer.id)}
-														className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-all duration-200 touch-manipulation min-w-[36px] min-h-[36px] flex items-center justify-center"
+														className="p-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-all duration-200 touch-manipulation min-w-[28px] min-h-[28px] flex items-center justify-center"
 														title="אפס טיימר"
 														type="button"
 													>
-														<RotateCcw className="h-4 w-4" />
+														<RotateCcw className="h-3 w-3" />
 													</button>
 
 													<button
 														onClick={() => removeTimer(timer.id)}
-														className="p-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-all duration-200 touch-manipulation min-w-[36px] min-h-[36px] flex items-center justify-center"
+														className="p-1.5 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-all duration-200 touch-manipulation min-w-[28px] min-h-[28px] flex items-center justify-center"
 														title="מחק טיימר"
 														type="button"
 													>
-														<X className="h-4 w-4" />
+														<X className="h-3 w-3" />
 													</button>
 												</div>
 											</div>

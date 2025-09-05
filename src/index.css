@@ -41,6 +41,42 @@ html {
   direction: rtl;
 }
 
+/* Prevent logo inversion during startup */
+img[alt*="Logo"], img[alt*="logo"] {
+  transform: none !important;
+  filter: none !important;
+  -webkit-transform: none !important;
+  -webkit-filter: none !important;
+}
+
+/* Prevent Android system dictionary translation from appearing */
+* {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Allow text selection in input fields and textareas */
+input, textarea, [contenteditable="true"] {
+  -webkit-user-select: text;
+  -khtml-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* Prevent text selection on specific elements that might trigger dictionary */
+.recipe-card, .recipe-title, .recipe-ingredient, .recipe-direction {
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
@@ -97,6 +133,36 @@ body {
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+.animate-slide-in-right {
+  animation: slideInRight 0.33s ease-out; /* 1.5x faster than 0.5s */
+}
+
+.animate-slide-out-right {
+  animation: slideOutRight 0.33s ease-in;
 }
 
 /* Floating animations for background circles - Enhanced with larger movement range */

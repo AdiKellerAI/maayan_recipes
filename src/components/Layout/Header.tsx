@@ -28,6 +28,7 @@ const Header: React.FC = () => {
   } = useRecipes();
   const { navigateWithUnsavedCheck } = useUnsavedChangesContext();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMenuClosing, setIsMenuClosing] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [localSearchQuery, setLocalSearchQuery] = useState('');
   const [isConnecting, setIsConnecting] = useState(false);
@@ -142,6 +143,14 @@ const Header: React.FC = () => {
   }, [engagementSeconds, pagesVisited, installAvailable, isInstalled]);
 
   const isIOS = () => /iphone|ipad|ipod/i.test(window.navigator.userAgent);
+
+  const handleMenuClose = () => {
+    setIsMenuClosing(true);
+    setTimeout(() => {
+      setIsMenuOpen(false);
+      setIsMenuClosing(false);
+    }, 300); // Match the animation duration
+  };
 
   const triggerInstall = async () => {
     if ((window as any).triggerPwaInstall) {
@@ -581,16 +590,18 @@ const Header: React.FC = () => {
             {/* Backdrop */}
             <div 
               className="fixed inset-0 bg-black bg-opacity-50 z-[99998]"
-              onClick={() => setIsMenuOpen(false)}
+              onClick={handleMenuClose}
             />
             
             {/* Sidebar */}
-            <div className="fixed top-0 right-0 w-56 bg-gradient-to-b from-white via-gray-50 to-white shadow-xl z-[99999] transform transition-transform duration-300 ease-in-out rounded-l-2xl border-l border-gray-200">
+            <div className={`fixed top-0 right-0 w-56 bg-gradient-to-b from-white via-gray-50 to-white shadow-xl z-[99999] transform transition-all duration-300 ease-out rounded-l-2xl border-l border-gray-200 ${
+              isMenuClosing ? 'animate-slide-out-right' : 'animate-slide-in-right'
+            }`}>
               {/* Header */}
               <div className="flex items-center justify-between p-2 border-b border-gray-200">
                 <h2 className="text-base font-bold text-black">תפריט</h2>
                 <button
-                  onClick={() => setIsMenuOpen(false)}
+                  onClick={handleMenuClose}
                   className="p-1 hover:bg-gray-100 rounded-full transition-all duration-300 hover:scale-110"
                 >
                   <X className="h-4 w-4 text-gray-600" />
@@ -599,12 +610,59 @@ const Header: React.FC = () => {
               
               {/* Menu Items */}
               <div className="p-3 space-y-2">
+                {/* Install App Button - Black & White Design */}
+                <button
+                  onClick={() => { triggerInstall(); handleMenuClose(); }}
+                  disabled={isInstalled || (!installAvailable && detectPlatform() === 'chrome')}
+                  className={`w-full flex items-center space-x-3 rtl:space-x-reverse py-2 px-3 rounded-lg transition-all duration-300 transform hover:scale-[1.02] active:scale-[0.98] border-2 relative overflow-hidden ${
+                    isInstalled
+                      ? 'bg-black border-black text-white hover:bg-gray-800 hover:border-gray-800'
+                      : installAvailable || detectPlatform() !== 'chrome' 
+                        ? 'bg-white border-black text-black hover:bg-gray-100 hover:border-gray-800' 
+                        : 'bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed'
+                  }`}
+                  title={isInstalled ? 'אפליקציה הותקנה' : installAvailable ? 'התקן אפליקציה' : detectPlatform() === 'ios_safari' ? 'הוספה למסך הבית דרך שיתוף' : detectPlatform() === 'firefox' ? 'התקנה דרך כפתור ה+ בשורת הכתובת' : 'התקנה לא זמינה כרגע'}
+                >
+                  {/* Icon */}
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+                    isInstalled 
+                      ? 'bg-white text-black' 
+                      : installAvailable || detectPlatform() !== 'chrome'
+                        ? 'bg-black text-white'
+                        : 'bg-gray-200 text-gray-400'
+                  }`}>
+                    {isInstalled ? (
+                      <span className="text-lg font-bold">✓</span>
+                    ) : installAvailable ? (
+                      <Download className="h-4 w-4" />
+                    ) : (
+                      <Smartphone className="h-4 w-4" />
+                    )}
+                  </div>
+                  
+                  {/* Text */}
+                  <div className="flex-1 min-w-0">
+                    <span className="text-sm font-bold leading-tight">
+                      {isInstalled ? 'הותקן' : installAvailable ? 'התקן אפליקציה' : detectPlatform() === 'ios_safari' ? 'iOS' : detectPlatform() === 'firefox' ? 'התקן' : 'התקנה לא זמינה'}
+                    </span>
+                  </div>
+                  
+                  {/* Status indicator */}
+                  <div className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                    isInstalled 
+                      ? 'bg-white' 
+                      : installAvailable || detectPlatform() !== 'chrome'
+                        ? 'bg-black animate-pulse'
+                        : 'bg-gray-400'
+                  }`}></div>
+                </button>
+
                 {/* Add Recipe Button */}
                 <button
-                                      onClick={async () => {
-                      await executeProtectedAction(async () => await navigateWithUnsavedCheck('/add'));
-                      setIsMenuOpen(false);
-                    }}
+                  onClick={async () => {
+                    await executeProtectedAction(async () => await navigateWithUnsavedCheck('/add'));
+                    handleMenuClose();
+                  }}
                   className="w-full flex items-center space-x-2 rtl:space-x-reverse py-2 px-2.5 rounded-lg transition-all duration-300 transform hover:scale-105 bg-gradient-to-r from-blue-50 to-purple-50 text-blue-700 hover:from-blue-100 hover:to-purple-100 border border-blue-200 hover:border-blue-300"
                 >
                   <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
@@ -615,7 +673,7 @@ const Header: React.FC = () => {
                 
                 {/* Favorites Button */}
                 <button
-                  onClick={toggleFavorites}
+                  onClick={() => { toggleFavorites(); handleMenuClose(); }}
                   className={`w-full flex items-center space-x-2 rtl:space-x-reverse py-2 px-2.5 rounded-lg transition-all duration-300 transform hover:scale-105 ${
                     showFavoritesOnly 
                       ? 'bg-gradient-to-r from-red-100 to-pink-100 text-red-700 border border-red-300 shadow-md' 
@@ -634,7 +692,7 @@ const Header: React.FC = () => {
                 <button
                   onClick={() => {
                     setIsFilterOpen(true);
-                    setIsMenuOpen(false);
+                    handleMenuClose();
                   }}
                   className={`w-full flex items-center space-x-2 rtl:space-x-reverse py-2 px-2.5 rounded-lg transition-all duration-300 transform hover:scale-105 ${
                     hasActiveFilters
@@ -660,26 +718,6 @@ const Header: React.FC = () => {
                 <div className="space-y-1.5">
                   <h5 className="text-xs font-semibold text-black uppercase tracking-wide">פעולות מהירות</h5>
 
-                  {/* Install App Button */}
-                  {(!isInstalled) && (
-                    <button
-                      onClick={() => { triggerInstall(); setIsMenuOpen(false); }}
-                      disabled={!installAvailable && detectPlatform() === 'chrome'}
-                      className={`w-full flex items-center space-x-2 rtl:space-x-reverse py-2 px-2.5 rounded-lg transition-all duration-300 transform hover:scale-105 border ${installAvailable || detectPlatform() !== 'chrome' ? 'bg-gradient-to-r from-amber-50 to-yellow-50 text-amber-700 hover:from-amber-100 hover:to-yellow-100 border-amber-200 hover:border-amber-300' : 'bg-gray-50 text-gray-400 border-gray-200 cursor-not-allowed'}`}
-                      title={installAvailable ? 'התקן אפליקציה' : detectPlatform() === 'ios_safari' ? 'הוספה למסך הבית דרך שיתוף' : detectPlatform() === 'firefox' ? 'התקנה דרך כפתור ה+ בשורת הכתובת' : 'התקנה לא זמינה כרגע'}
-                    >
-                      <div className="w-6 h-6 bg-gradient-to-br from-amber-500 to-yellow-600 rounded-full flex items-center justify-center">
-                        {installAvailable ? (
-                          <Download className="h-3.5 w-3.5 text-white" />
-                        ) : (
-                          <Smartphone className="h-3.5 w-3.5 text-white" />
-                        )}
-                      </div>
-                      <span className="text-xs font-semibold text-black">
-                        {isInstalled ? 'אפליקציה הותקנה' : installAvailable ? 'התקנת האפליקציה' : detectPlatform() === 'ios_safari' ? 'הוראות iOS: הוסף למסך הבית' : detectPlatform() === 'firefox' ? 'התקן מהדפדפן' : 'התקנה לא זמינה'}
-                      </span>
-                    </button>
-                  )}
                   
                   {/* Timer Button */}
                   <button
@@ -689,7 +727,7 @@ const Header: React.FC = () => {
                         detail: { recipeName }
                       });
                       window.dispatchEvent(timerEvent);
-                      setIsMenuOpen(false);
+                      handleMenuClose();
                     }}
                     className="w-full flex items-center space-x-2 rtl:space-x-reverse py-2 px-2.5 rounded-lg bg-gradient-to-r from-orange-50 to-yellow-50 text-orange-700 hover:from-orange-100 hover:to-yellow-100 transition-all duration-300 transform hover:scale-105 border border-orange-200 hover:border-orange-300"
                   >
@@ -704,7 +742,7 @@ const Header: React.FC = () => {
                     onClick={async () => {
                       resetFilters();
                       await navigateWithUnsavedCheck('/');
-                      setIsMenuOpen(false);
+                      handleMenuClose();
                     }}
                     className="w-full flex items-center space-x-2 rtl:space-x-reverse py-2 px-2.5 rounded-lg bg-gradient-to-r from-violet-50 to-purple-50 text-violet-700 hover:from-violet-100 hover:to-purple-100 transition-all duration-300 transform hover:scale-105 border border-violet-200 hover:border-violet-300"
                   >
@@ -786,7 +824,7 @@ const Header: React.FC = () => {
                         <button
                           onClick={() => {
                             executeProtectedAction(() => {});
-                            setIsMenuOpen(false);
+                            handleMenuClose();
                           }}
                           className="bg-gradient-to-br from-orange-500/80 to-yellow-600/80 border border-orange-400/80 text-white px-3 py-0 rounded-md hover:from-orange-600/80 hover:to-yellow-700/80 transition-all duration-300 font-medium shadow-sm hover:shadow-md transform hover:scale-105 active:scale-95 flex items-center justify-center"
                           style={{
