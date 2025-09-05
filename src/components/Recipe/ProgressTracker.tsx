@@ -128,7 +128,7 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
               <div className="bg-gradient-to-r from-slate-50 via-white to-slate-50 px-6 py-2 rounded-full shadow-sm border border-slate-200/50">
                 <div className="flex items-center space-x-2 rtl:space-x-reverse">
                   <div className="w-2 h-2 bg-gradient-to-r from-slate-400 to-slate-500 rounded-full"></div>
-                  <h2 className="text-lg font-bold text-slate-800 tracking-wide">חלקים נוספים</h2>
+                  <h2 className="text-lg font-bold text-slate-800 tracking-wide">שלבים נוספים</h2>
                   <div className="w-2 h-2 bg-gradient-to-r from-slate-400 to-slate-500 rounded-full"></div>
                 </div>
               </div>
@@ -197,7 +197,7 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
                     {section.directions.length > 0 && (
                       <div className={`bg-gradient-to-br ${colorScheme.directions.bg} px-2 py-4 md:px-3 rounded-xl border ${colorScheme.directions.border}`}>
                         <h4 className="text-lg font-bold text-slate-800 mb-4">הוראות הכנה ל{sectionName}</h4>
-                        <ol className="space-y-2">
+                        <ol className="space-y-1">
                           {section.directions.map((direction, index) => {
                             const isCompleted = index < sectionCurrentStep;
                             const isCurrent = index === sectionCurrentStep;
@@ -213,7 +213,7 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
                                       ? `bg-gradient-to-br ${colorScheme.directions.accent} text-white shadow-lg ring-2 ring-orange-200/50`
                                       : 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-600 hover:from-slate-200 hover:to-slate-300'
                                   }`}
-                                  style={{ width: '28px', height: '28px', minWidth: '28px', minHeight: '28px' }}
+                                  style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px' }}
                                 >
                                   {isCompleted ? (
                                     <Check className="h-3 w-3" />
@@ -226,16 +226,12 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
                                     isCompleted
                                       ? 'text-slate-500 line-through opacity-70'
                                       : isCurrent
-                                      ? `text-slate-900 font-medium bg-white/60 px-4 py-4 md:px-5 rounded-xl border ${colorScheme.directions.border}`
-                                      : 'text-slate-700 hover:text-slate-900 px-4 py-4 md:px-5 hover:bg-white/40 rounded-xl transition-colors'
+                                      ? `text-slate-900 font-medium bg-white/60 px-4 py-2 md:px-5 rounded-xl border ${colorScheme.directions.border}`
+                                      : 'text-slate-700 hover:text-slate-900 px-4 py-2 md:px-5 hover:bg-white/40 rounded-xl transition-colors'
                                   }`}
                                   onClick={() => handleAdditionalStepClick(sectionName, index)}
                                 >
-                                  <div className={`leading-relaxed text-base ${
-                                    direction.length <= 50 
-                                      ? 'min-h-[36px] flex items-center' // Single line height for short text
-                                      : 'min-h-[56px]' // Multi-line height for long text
-                                  }`}>
+                                  <div className="leading-relaxed text-base">
                                     {direction}
                                   </div>
                                 </div>

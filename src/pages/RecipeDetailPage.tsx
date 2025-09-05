@@ -655,7 +655,7 @@ const RecipeDetailPage: React.FC = () => {
                 {recipe.directions && recipe.directions.length > 0 && (
                   <div className="order-2 md:order-2 bg-gradient-to-br from-amber-50/60 via-white to-orange-50/40 px-2 py-4 md:px-3 rounded-2xl border border-amber-200/40 shadow-sm">
                     <h2 className="text-xl font-bold text-slate-900 mb-4">הוראות הכנה</h2>
-                    <ol className="space-y-2">
+                    <ol className="space-y-1">
                       {recipe.directions.map((direction, index) => {
                     const cached = recipeProgressCache.loadProgress(recipe.id);
                     const currentStep = cached?.currentStep ?? (recipe.current_step || 0);
@@ -681,7 +681,7 @@ const RecipeDetailPage: React.FC = () => {
                           )}
                         </button>
                         <div
-                          className={`flex-1 pt-1 cursor-pointer transition-all duration-200 px-4 py-4 rounded-xl ${
+                          className={`flex-1 pt-1 cursor-pointer transition-all duration-200 px-4 py-2 rounded-xl ${
                             isCompleted
                               ? 'text-slate-500 line-through opacity-70 bg-white/40'
                               : isCurrent
@@ -690,9 +690,7 @@ const RecipeDetailPage: React.FC = () => {
                           }`}
                           onClick={() => handleStepClick(index)}
                         >
-                          <div className={`leading-relaxed text-base ${
-                            direction.length <= 50 ? 'min-h-[36px] flex items-center' : 'min-h-[56px]'
-                          }`}>
+                          <div className="leading-relaxed text-base">
                             {direction}
                           </div>
                         </div>
@@ -716,7 +714,7 @@ const RecipeDetailPage: React.FC = () => {
                     <div className="bg-gradient-to-r from-white via-slate-50 to-white px-8 py-3 rounded-full shadow-md border border-slate-200/50 backdrop-blur-sm">
                       <div className="flex items-center space-x-3 rtl:space-x-reverse">
                         <div className="w-2 h-2 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full animate-pulse"></div>
-                        <h2 className="text-xl font-bold text-slate-800 tracking-wide">חלקים נוספים</h2>
+                        <h2 className="text-xl font-bold text-slate-800 tracking-wide">שלבים נוספים</h2>
                         <div className="w-2 h-2 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full animate-pulse"></div>
                       </div>
                     </div>
@@ -761,7 +759,7 @@ const RecipeDetailPage: React.FC = () => {
                         {/* Directions Left (desktop) */}
                         <div className={`order-2 md:order-2 bg-gradient-to-br ${cs.subBg} px-2 py-4 md:px-3 rounded-xl border ${cs.subBorder}`}>
                           <h4 className="text-lg font-bold text-slate-800 mb-4">הוראות הכנה ל{sectionName}</h4>
-                          <ol className="space-y-2">
+                          <ol className="space-y-1">
                             {section.directions.map((direction, i) => {
                               const isCompleted = i < (additionalSectionSteps[sectionName] ?? 0);
                               const isCurrent = i === (additionalSectionSteps[sectionName] ?? 0);
@@ -776,7 +774,7 @@ const RecipeDetailPage: React.FC = () => {
                                         ? 'bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-orange-200 ring-2 ring-orange-200/50'
                                         : 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-600 hover:from-slate-200 hover:to-slate-300'
                                     }`}
-                                    style={{ width: '28px', height: '28px', minWidth: '28px', minHeight: '28px' }}
+                                    style={{ width: '24px', height: '24px', minWidth: '24px', minHeight: '24px' }}
                                   >
                                     {isCompleted ? (
                                       <Check className="h-4 w-4" />
@@ -784,7 +782,7 @@ const RecipeDetailPage: React.FC = () => {
                                       <span className="text-xs">{i + 1}</span>
                                     )}
                                   </button>
-                                  <div className={`flex-1 pt-1 cursor-pointer transition-all duration-200 px-4 py-4 rounded-xl ${
+                                  <div className={`flex-1 pt-1 cursor-pointer transition-all duration-200 px-4 py-2 rounded-xl ${
                                       isCompleted
                                         ? 'text-slate-500 line-through opacity-70 bg-white/40'
                                         : isCurrent
@@ -793,9 +791,7 @@ const RecipeDetailPage: React.FC = () => {
                                     }`}
                                     onClick={() => handleAdditionalSectionStepClick(sectionName, i)}
                                   >
-                                    <div className={`leading-relaxed text-base ${
-                                      direction.length <= 50 ? 'min-h-[36px] flex items-center' : 'min-h-[56px]'
-                                    }`}>
+                                    <div className="leading-relaxed text-base">
                                       {direction}
                                     </div>
                                   </div>

@@ -100,6 +100,7 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose, initialTime
 		null,
 	);
 	const [timerName, setTimerName] = useState("");
+	const [showTimerAddedNotification, setShowTimerAddedNotification] = useState(false);
 	const intervalRefs = useRef<{ [key: string]: NodeJS.Timeout }>({});
 	const audioContextRef = useRef<AudioContext | null>(null);
 	const alarmAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -320,6 +321,26 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose, initialTime
 
 		setTimers((prev) => [...prev, newTimer]);
 		setTimerName(""); // Reset timer name input
+		
+		// Highlight the newly added timer
+		setHighlightedTimerId(newTimer.id);
+		setTimeout(() => {
+			setHighlightedTimerId(null);
+		}, 2000);
+		
+		// Show notification that timer was added and started
+		setShowTimerAddedNotification(true);
+		setTimeout(() => {
+			setShowTimerAddedNotification(false);
+		}, 3000);
+		
+		// Scroll to the newly added timer after a short delay
+		setTimeout(() => {
+			const timerElement = document.querySelector(`[data-timer-id="${newTimer.id}"]`);
+			if (timerElement) {
+				timerElement.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+			}
+		}, 100);
 	};
 
 	const removeTimer = (id: string) => {
@@ -722,6 +743,19 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose, initialTime
 						})}
 				</div>
 
+				{/* Timer Added Notification */}
+				{showTimerAddedNotification && (
+					<div className="fixed top-4 right-4 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg z-[99999] animate-pulse">
+						<div className="flex items-center space-x-2 rtl:space-x-reverse">
+							<span className="text-lg">⏰</span>
+							<div>
+								<p className="font-medium">טיימר נוסף והופעל!</p>
+								<p className="text-sm opacity-90">הטיימר פועל ברקע</p>
+							</div>
+						</div>
+					</div>
+				)}
+
 				{/* Alert Modal */}
 				{showAlert && alertTimerId && (
 					<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999] p-4">
@@ -778,11 +812,60 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose, initialTime
 
 	return (
 		<>
+			{/* Floating Timers in Background - Left Side - New Card Design */}
+			<div className="fixed bottom-4 left-4 z-[99998] flex items-center space-x-2 rtl:space-x-reverse">
+				{timers
+					.filter((t) => t.isRunning || t.timeLeft > 0)
+					.map((timer, index) => {
+						// Define pastel colors for each timer
+						const pastelColors = [
+							'border-orange-300/70',    // Orange
+							'border-blue-300/70',      // Blue
+							'border-green-300/70',     // Green
+							'border-purple-300/70',    // Purple
+							'border-pink-300/70',      // Pink
+						];
+						const borderColor = pastelColors[index % pastelColors.length];
+						
+						return (
+						<div key={timer.id} className="flex-shrink-0 relative">
+							<button
+								onClick={() => {
+									// Toggle minimized state
+									setTimers(prev => prev.map(t => 
+										t.id === timer.id ? { ...t, isMinimized: !t.isMinimized } : t
+									));
+								}}
+								className="bg-white/20 backdrop-blur-md rounded-xl shadow-2xl border-2 border-cyan-300/70 cursor-pointer hover:scale-105 transition-all duration-200 relative overflow-hidden touch-manipulation"
+								style={{ width: '60px', height: '60px' }}
+							>
+								{/* Transparent corner for status indicator */}
+								<div className="absolute top-0 right-0 w-4 h-4 bg-transparent"></div>
+								
+								<div className="p-3 flex items-center justify-center h-full">
+									<div className="flex flex-col items-center">
+										<span className="text-lg mb-1 text-black">⏰</span>
+										<div className="text-sm font-mono font-bold text-black tracking-tight leading-none">
+											{formatTime(timer.timeLeft)}
+										</div>
+									</div>
+								</div>
+								
+								{/* Status indicator positioned in transparent corner */}
+								{timer.isRunning && (
+									<div className="absolute top-1 right-1 w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse"></div>
+								)}
+							</button>
+						</div>
+						);
+					})}
+			</div>
+
 			{/* Main Timer Setup Window */}
 			<div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999] p-4">
-				<div className="bg-white rounded-xl shadow-2xl w-80 max-w-[90vw] max-h-[85vh] overflow-hidden border border-gray-100">
-					{/* Sticky Header */}
-					<div className="sticky top-0 bg-gradient-to-r from-orange-50 to-red-50 border-b border-orange-100 p-3 z-10">
+				<div className="bg-white rounded-xl shadow-2xl w-80 max-w-[90vw] h-[600px] overflow-hidden border border-gray-100 flex flex-col">
+					{/* Fixed Header */}
+					<div className="bg-gradient-to-r from-orange-50 to-red-50 border-b border-orange-100 p-3 flex-shrink-0">
 						<div className="flex items-center justify-between">
 							<div className="flex items-center space-x-2 rtl:space-x-reverse">
 								<span className="text-xl">⏰</span>
@@ -800,9 +883,10 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose, initialTime
 						</div>
 					</div>
 
-					{/* Scrollable Content */}
-					<div className="overflow-y-auto max-h-[calc(85vh-80px)]">
-						<div className="p-3">
+					{/* Fixed Content - No Scroll */}
+					<div className="flex-1 overflow-hidden flex flex-col">
+						{/* Timer Setup Area - Fixed */}
+						<div className="p-3 flex-shrink-0">
 							{/* Global Time Selection */}
 							<div className="bg-gradient-to-br from-orange-50 to-amber-50 rounded-lg p-3 border border-orange-100 mb-3">
 								<h4 className="text-base font-semibold text-gray-800 mb-2 text-center">
@@ -922,30 +1006,33 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose, initialTime
 									</button>
 								</div>
 							</div>
+						</div>
 
-							{/* Active Timers List */}
-							{timers.length === 0 ? (
-								<div className="text-center py-6">
-									<Clock className="h-12 w-12 text-gray-300 mx-auto mb-2" />
-									<h4 className="text-base font-medium text-gray-600 mb-1">
-										אין טיימרים פעילים
-									</h4>
-									<p className="text-sm text-gray-500">
-										בחר זמן ולחץ על "הוסף טיימר" כדי להתחיל
-									</p>
-								</div>
-							) : (
-								<div className="space-y-2">
-									<h4 className="text-base font-semibold text-gray-800 mb-2">
-										טיימרים פעילים
-									</h4>
-									{timers.map((timer) => (
+						{/* Active Timers Area - Scrollable */}
+						<div className="flex-1 overflow-hidden flex flex-col p-3 pt-0">
+							<div className="space-y-2 flex-1 flex flex-col">
+								{/* Fixed height container for 2.5 timers with scroll indication */}
+								<div className="relative h-[200px] overflow-y-auto pt-4 pb-2">
+									{timers.length === 0 ? (
+										<div className="text-center py-6 h-full flex flex-col items-center justify-center">
+											<Clock className="h-12 w-12 text-gray-300 mx-auto mb-2" />
+											<h4 className="text-base font-medium text-gray-600 mb-1">
+												אין טיימרים פעילים
+											</h4>
+											<p className="text-sm text-gray-500">
+												בחר זמן ולחץ על "הוסף טיימר" כדי להתחיל
+											</p>
+										</div>
+									) : (
+										<>
+											{timers.map((timer) => (
 										<div
 											key={timer.id}
-											className={`bg-gradient-to-r from-white to-gray-50 rounded-lg p-2.5 border border-gray-200 transition-all duration-200 shadow-sm ${
+											data-timer-id={timer.id}
+											className={`rounded-lg p-2.5 border border-gray-200 transition-all duration-200 shadow-sm ${
 												highlightedTimerId === timer.id
-													? "ring-2 ring-orange-400 shadow-md"
-													: ""
+													? "bg-gradient-to-r from-orange-100 to-orange-200 shadow-lg"
+													: "bg-gradient-to-r from-white to-gray-50"
 											}`}
 										>
 											<div className="flex items-center justify-between">
@@ -1043,8 +1130,10 @@ const MultiTimer: React.FC<MultiTimerProps> = ({ isVisible, onClose, initialTime
 											)}
 										</div>
 									))}
+										</>
+									)}
 								</div>
-							)}
+							</div>
 						</div>
 					</div>
 				</div>

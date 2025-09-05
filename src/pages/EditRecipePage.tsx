@@ -5,6 +5,7 @@ import { useRecipes } from '../contexts/RecipeContext';
 import { useNavigation } from '../contexts/NavigationContext';
 import { useProtectedAction } from '../hooks/useProtectedAction';
 import { useUnsavedChangesContext } from '../contexts/UnsavedChangesContext';
+import { useMobileFormPersistence } from '../hooks/useMobileFormPersistence';
 import { categories } from '../data/categories';
 import type { RecipeSection } from '../types/recipe';
 import { RecipeImage } from '../services/imageService';
@@ -81,7 +82,37 @@ const EditRecipePage: React.FC = () => {
     });
   }, [hasUnsavedChanges, registerSaveFunction]);
 
+  // Mobile form persistence
+  const getFormData = () => ({
+    title: formData.title,
+    category: formData.category,
+    difficulty: formData.difficulty,
+    ingredients,
+    directions,
+    additionalSections,
+    sectionTitles,
+    includeMainIngredients,
+    includeMainDirections
+  });
 
+  const setFormDataFromPersistence = (data: any) => {
+    if (data.title !== undefined) setFormData(prev => ({ ...prev, title: data.title }));
+    if (data.category !== undefined) setFormData(prev => ({ ...prev, category: data.category }));
+    if (data.difficulty !== undefined) setFormData(prev => ({ ...prev, difficulty: data.difficulty }));
+    if (data.ingredients !== undefined) setIngredients(data.ingredients);
+    if (data.directions !== undefined) setDirections(data.directions);
+    if (data.additionalSections !== undefined) setAdditionalSections(data.additionalSections);
+    if (data.sectionTitles !== undefined) setSectionTitles(data.sectionTitles);
+    if (data.includeMainIngredients !== undefined) setIncludeMainIngredients(data.includeMainIngredients);
+    if (data.includeMainDirections !== undefined) setIncludeMainDirections(data.includeMainDirections);
+  };
+
+  const { clearFormData } = useMobileFormPersistence({
+    formKey: `edit-recipe-${id}`,
+    getFormData,
+    setFormData: setFormDataFromPersistence,
+    enabled: !!recipe // Only enable if recipe is loaded
+  });
 
   // Initialize form data when recipe loads
   useEffect(() => {
@@ -582,7 +613,7 @@ const EditRecipePage: React.FC = () => {
       const hasAdditionalSections = Object.keys(additionalSections).length > 0;
       
       if (!hasMainIngredients && !hasMainDirections && !hasAdditionalSections) {
-        alert('המתכון חייב לכלול לפחות אחד מהבאים: רכיבים עיקריים, הוראות עיקריות, או חלקים נוספים');
+        alert('המתכון חייב לכלול לפחות אחד מהבאים: רכיבים עיקריים, הוראות עיקריות, או שלבים נוספים');
         return;
       }
 
@@ -669,6 +700,9 @@ const EditRecipePage: React.FC = () => {
         } else {
           throw new Error('Failed to update recipe in database');
         }
+        
+        // Clear form data from localStorage since recipe was saved successfully
+        clearFormData();
         
         // Navigate to recipe detail page after successful save
         // Use replace: true to remove edit page from history so back button goes to recipes page
@@ -766,14 +800,14 @@ const EditRecipePage: React.FC = () => {
     }
     
     // Check ingredients
-    if (ingredients.length !== recipe.ingredients.length ||
-        ingredients.some((ing, i) => ing !== recipe.ingredients[i])) {
+    if (ingredients.length !== (recipe.ingredients?.length || 0) ||
+        ingredients.some((ing, i) => ing !== (recipe.ingredients?.[i] || ''))) {
       return true;
     }
     
     // Check directions
-    if (directions.length !== recipe.directions.length ||
-        directions.some((dir, i) => dir !== recipe.directions[i])) {
+    if (directions.length !== (recipe.directions?.length || 0) ||
+        directions.some((dir, i) => dir !== (recipe.directions?.[i] || ''))) {
       return true;
     }
     
@@ -1317,13 +1351,13 @@ const EditRecipePage: React.FC = () => {
               <div className="bg-gradient-to-r from-blue-50 to-sky-50 p-4 rounded-lg border border-blue-200">
                 <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
                   <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                  חלקים נוספים
+                  שלבים נוספים
                 </h2>
                 <div className="space-y-3">
                   {Object.keys(additionalSections).length === 0 && (
                     <div className="text-center py-6 text-gray-500">
-                      <p className="text-sm">אין חלקים נוספים עדיין</p>
-                      <p className="text-xs mt-1">לחץ על "הוסף חלק חדש" כדי להוסיף מלית, בצק, רוטב או חלק אחר</p>
+                      <p className="text-sm">אין שלבים נוספים עדיין</p>
+                      <p className="text-xs mt-1">לחץ על "הוסף שלב חדש" כדי להוסיף מלית, בצק, רוטב או חלק אחר</p>
                     </div>
                   )}
                   {Object.entries(additionalSections).map(([sectionName, section]) => (
@@ -1445,7 +1479,7 @@ const EditRecipePage: React.FC = () => {
                       className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium bg-gradient-to-r from-blue-50 to-sky-50 hover:from-blue-100 hover:to-sky-100 px-4 py-3 rounded-lg transition-all duration-200 border border-dashed border-blue-300 hover:border-blue-400 mx-auto text-sm"
                     >
                       <Plus className="w-4 h-4" />
-                      הוסף חלק חדש
+                      הוסף שלב חדש
                     </button>
                   </div>
                 </div>
@@ -1499,7 +1533,7 @@ const EditRecipePage: React.FC = () => {
                           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                           </svg>
-                          <span>שמור שינויים</span>
+                          <span>שמור</span>
                         </>
                       )}
                     </div>

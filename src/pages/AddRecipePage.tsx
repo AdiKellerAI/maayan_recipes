@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useRecipes } from '../contexts/RecipeContext';
 import { useProtectedAction } from '../hooks/useProtectedAction';
 import { useUnsavedChangesContext } from '../contexts/UnsavedChangesContext';
+import { useMobileFormPersistence } from '../hooks/useMobileFormPersistence';
 import type { RecipeInsert, RecipeSection } from '../types/recipe';
 import { categories } from '../data/categories';
 import { Plus, X, Upload, Camera, Sparkles, Link } from 'lucide-react';
@@ -79,6 +80,44 @@ const AddRecipePage: React.FC = () => {
       }
     });
   }, [hasUnsavedChanges, registerSaveFunction]);
+
+  // Mobile form persistence
+  const getFormData = () => ({
+    title,
+    category,
+    difficulty,
+    ingredients,
+    directions,
+    additionalInstructions,
+    additionalSections,
+    includeMainIngredients,
+    includeMainDirections,
+    smartImportText,
+    smartImportUrl,
+    activeTab
+  });
+
+  const setFormData = (data: any) => {
+    if (data.title !== undefined) setTitle(data.title);
+    if (data.category !== undefined) setCategory(data.category);
+    if (data.difficulty !== undefined) setDifficulty(data.difficulty);
+    if (data.ingredients !== undefined) setIngredients(data.ingredients);
+    if (data.directions !== undefined) setDirections(data.directions);
+    if (data.additionalInstructions !== undefined) setAdditionalInstructions(data.additionalInstructions);
+    if (data.additionalSections !== undefined) setAdditionalSections(data.additionalSections);
+    if (data.includeMainIngredients !== undefined) setIncludeMainIngredients(data.includeMainIngredients);
+    if (data.includeMainDirections !== undefined) setIncludeMainDirections(data.includeMainDirections);
+    if (data.smartImportText !== undefined) setSmartImportText(data.smartImportText);
+    if (data.smartImportUrl !== undefined) setSmartImportUrl(data.smartImportUrl);
+    if (data.activeTab !== undefined) setActiveTab(data.activeTab);
+  };
+
+  const { clearFormData } = useMobileFormPersistence({
+    formKey: 'add-recipe',
+    getFormData,
+    setFormData,
+    enabled: true
+  });
 
   // Check authentication when page loads
   useEffect(() => {
@@ -903,7 +942,7 @@ const AddRecipePage: React.FC = () => {
       const hasAdditionalSections = Object.keys(additionalSections).length > 0;
       
       if (!hasMainIngredients && !hasMainDirections && !hasAdditionalSections) {
-        alert('המתכון חייב לכלול לפחות אחד מהבאים: רכיבים עיקריים, הוראות עיקריות, או חלקים נוספים');
+        alert('המתכון חייב לכלול לפחות אחד מהבאים: רכיבים עיקריים, הוראות עיקריות, או שלבים נוספים');
         return;
       }
 
@@ -998,8 +1037,8 @@ const AddRecipePage: React.FC = () => {
           title: newRecipe.title,
           category: newRecipe.category,
           imagesCount: newRecipe.images?.length || 0,
-          ingredientsCount: newRecipe.ingredients.length,
-          directionsCount: newRecipe.directions.length,
+          ingredientsCount: newRecipe.ingredients?.length || 0,
+          directionsCount: newRecipe.directions?.length || 0,
           additionalSectionsCount: Object.keys(filteredAdditionalSections).length,
           additionalSections: filteredAdditionalSections
         });
@@ -1039,6 +1078,9 @@ const AddRecipePage: React.FC = () => {
         
         // Force refresh recipes in context to ensure the new recipe is visible
         await refreshRecipes();
+        
+        // Clear form data from localStorage since recipe was saved successfully
+        clearFormData();
         
         // Navigate to recipe detail page
         // Use replace: true to remove add page from history so back button goes to recipes page
@@ -1296,13 +1338,8 @@ const AddRecipePage: React.FC = () => {
                     e.preventDefault();
                     addIngredient();
                   }}
-                  onTouchStart={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
                   onTouchEnd={(e) => {
                     e.preventDefault();
-                    e.stopPropagation();
                     addIngredient();
                   }}
                   className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm touch-manipulation"
@@ -1391,13 +1428,8 @@ const AddRecipePage: React.FC = () => {
                     e.preventDefault();
                     addDirection();
                   }}
-                  onTouchStart={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                  }}
                   onTouchEnd={(e) => {
                     e.preventDefault();
-                    e.stopPropagation();
                     addDirection();
                   }}
                   className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm touch-manipulation"
@@ -1414,13 +1446,13 @@ const AddRecipePage: React.FC = () => {
             <div className="bg-gradient-to-r from-blue-50 to-sky-50 p-4 rounded-lg border border-blue-200">
               <h2 className="text-base font-medium text-gray-800 mb-3 flex items-center gap-2">
                 <div className="w-1.5 h-1.5 bg-blue-500 rounded-full"></div>
-                חלקים נוספים
+                שלבים נוספים
               </h2>
               
               {Object.keys(additionalSections).length === 0 ? (
                 <div className="text-center py-2">
                   <p className="text-gray-400 text-xs">
-                    לחץ על "הוסף חלק חדש" כדי להוסיף מלית, בצק, רוטב או חלק אחר
+                    לחץ על "הוסף שלב חדש" כדי להוסיף מלית, בצק, רוטב או חלק אחר
                   </p>
                   <p className="text-gray-500 text-xs mt-1">
                     החלק ייווצר עם שדה ריק שתוכל למלא
@@ -1583,7 +1615,7 @@ const AddRecipePage: React.FC = () => {
                   className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium bg-gradient-to-r from-blue-50 to-sky-50 hover:from-blue-100 hover:to-sky-100 px-4 py-3 rounded-lg transition-all duration-200 border border-dashed border-blue-300 hover:border-blue-400 mx-auto text-sm"
                 >
                   <Plus className="w-4 h-4" />
-                  הוסף חלק חדש (רכיבים והוראות הכנה)
+                  הוסף שלב חדש (רכיבים והוראות הכנה)
                 </button>
               </div>
             </div>
@@ -1788,7 +1820,7 @@ const AddRecipePage: React.FC = () => {
                         <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
-                        <span>שמור מתכון</span>
+                        <span>שמור</span>
                       </>
                     )}
                   </div>
