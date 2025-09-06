@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recipe URL Test - המטבח של מעיין</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        .test-container {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        .test-link {
+            display: block;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: background 0.3s;
+        }
+        .test-link:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success { background: rgba(34, 197, 94, 0.3); }
+        .error { background: rgba(239, 68, 68, 0.3); }
+        .info { background: rgba(59, 130, 246, 0.3); }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🧪 Recipe URL Sharing Test</h1>
+        <p>Test the recipe URL sharing functionality without modifying vercel.json</p>
+        
+        <div class="status info">
+            <strong>Test Instructions:</strong><br>
+            1. Click on the test recipe links below<br>
+            2. Each link should open the recipe page directly<br>
+            3. The URLs should work when shared or bookmarked<br>
+            4. Test both in browser and PWA mode
+        </div>
+
+        <h2>Test Recipe URLs:</h2>
+        
+        <a href="/recipe/8de0d3b5-3895-490e-a59f-451eefad4732" class="test-link">
+            🍽️ Test Recipe 1: 8de0d3b5-3895-490e-a59f-451eefad4732
+        </a>
+        
+        <a href="/recipe/aeb90b77-cd9f-4fdb-ab06-f15b648b9064" class="test-link">
+            🥗 Test Recipe 2: aeb90b77-cd9f-4fdb-ab06-f15b648b9064
+        </a>
+        
+        <a href="/recipe/866f02ce-d1f7-45f5-8c99-6178841ce87d" class="test-link">
+            🍲 Test Recipe 3: 866f02ce-d1f7-45f5-8c99-6178841ce87d
+        </a>
+
+        <h2>Invalid URL Tests:</h2>
+        
+        <a href="/recipe/invalid-id" class="test-link">
+            ❌ Invalid Recipe ID: invalid-id
+        </a>
+        
+        <a href="/recipe/123" class="test-link">
+            ❌ Short ID: 123
+        </a>
+
+        <div class="status info">
+            <strong>Expected Behavior:</strong><br>
+            • Valid recipe URLs should load the recipe page<br>
+            • Invalid URLs should show error message and redirect to recipes list<br>
+            • All URLs should work when accessed directly (not just through navigation)<br>
+            • URLs should be shareable and work in new browser tabs
+        </div>
+
+        <div id="test-results"></div>
+    </div>
+
+    <script>
+        // Test the URL pattern matching
+        function testUrlPattern(url) {
+            const recipeUrlPattern = /^\/recipe\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            return recipeUrlPattern.test(url);
+        }
+
+        // Test current URL
+        const currentPath = window.location.pathname;
+        const resultsDiv = document.getElementById('test-results');
+        
+        if (currentPath.startsWith('/recipe/')) {
+            const isValid = testUrlPattern(currentPath);
+            const statusClass = isValid ? 'success' : 'error';
+            const message = isValid ? 
+                `✅ Current URL is valid: ${currentPath}` : 
+                `❌ Current URL is invalid: ${currentPath}`;
+            
+            resultsDiv.innerHTML = `<div class="status ${statusClass}">${message}</div>`;
+        } else {
+            resultsDiv.innerHTML = '<div class="status info">ℹ️ Click on a recipe link above to test URL handling</div>';
+        }
+
+        // Log URL handling for debugging
+        console.log('🔍 Recipe URL Test Page Loaded');
+        console.log('Current path:', currentPath);
+        console.log('Pattern test result:', testUrlPattern(currentPath));
+    </script>
+</body>
+</html>
