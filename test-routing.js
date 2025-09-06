@@ -9,25 +9,17 @@ const https = require('https');
 const http = require('http');
 
 // Configuration
-const DOMAIN = process.env.VERCEL_URL || 'maayanrecipes-owdczwsnu-kellersn-gmailcoms-projects.vercel.app';
+const DOMAIN = process.env.VERCEL_URL || 'your-domain.vercel.app';
 const PROTOCOL = DOMAIN.includes('vercel.app') ? 'https' : 'http';
 const BASE_URL = `${PROTOCOL}://${DOMAIN}`;
 
-// Real UUIDs for testing (replace with actual recipe IDs from your database)
-const REAL_RECIPE_IDS = [
-  '8de0d3b5-3895-490e-a59f-451eefad4732',
-  'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-  'f47ac10b-58cc-4372-a567-0e02b2c3d479'
-];
-
-// Test routes with real UUIDs
+// Test routes
 const TEST_ROUTES = [
   '/',
   '/recipes',
-  `/recipe/${REAL_RECIPE_IDS[0]}`,
-  `/recipe/${REAL_RECIPE_IDS[1]}`,
+  '/recipe/test-recipe-id-123',
   '/add',
-  `/edit/${REAL_RECIPE_IDS[0]}`,
+  '/edit/test-recipe-id-456',
   '/search',
   '/api/health',
   '/manifest.json',
@@ -38,10 +30,9 @@ const TEST_ROUTES = [
 const EXPECTED_STATUS = {
   '/': 200,
   '/recipes': 200,
-  [`/recipe/${REAL_RECIPE_IDS[0]}`]: 200,
-  [`/recipe/${REAL_RECIPE_IDS[1]}`]: 200,
+  '/recipe/test-recipe-id-123': 200,
   '/add': 200,
-  [`/edit/${REAL_RECIPE_IDS[0]}`]: 200,
+  '/edit/test-recipe-id-456': 200,
   '/search': 200,
   '/api/health': 200,
   '/manifest.json': 200,
@@ -52,10 +43,9 @@ const EXPECTED_STATUS = {
 const EXPECTED_CONTENT_TYPES = {
   '/': 'text/html',
   '/recipes': 'text/html',
-  [`/recipe/${REAL_RECIPE_IDS[0]}`]: 'text/html',
-  [`/recipe/${REAL_RECIPE_IDS[1]}`]: 'text/html',
+  '/recipe/test-recipe-id-123': 'text/html',
   '/add': 'text/html',
-  [`/edit/${REAL_RECIPE_IDS[0]}`]: 'text/html',
+  '/edit/test-recipe-id-456': 'text/html',
   '/search': 'text/html',
   '/api/health': 'application/json',
   '/manifest.json': 'application/manifest+json',
