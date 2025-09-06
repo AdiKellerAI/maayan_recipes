@@ -42,11 +42,13 @@ html {
 }
 
 /* Prevent logo inversion during startup */
-img[alt*="Logo"], img[alt*="logo"] {
+img[alt*="Logo"], img[alt*="logo"], img[src*="Maayan"] {
   transform: none !important;
   filter: none !important;
   -webkit-transform: none !important;
   -webkit-filter: none !important;
+  -webkit-backface-visibility: hidden !important;
+  backface-visibility: hidden !important;
 }
 
 /* Prevent Android system dictionary translation from appearing */

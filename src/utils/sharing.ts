@@ -15,7 +15,7 @@ export const getCanonicalUrl = (): string => {
   // Always use the main deployment URL for sharing to ensure consistency
   // This prevents issues with preview deployments having different URLs
   if (currentOrigin.includes('maayanrecipes') && currentOrigin.includes('kellersn-gmailcoms-projects')) {
-    const canonicalUrl = 'https://maayanrecipes-52w60q377-kellersn-gmailcoms-projects.vercel.app';
+    const canonicalUrl = 'https://maayanrecipes-hyplbr3j4-kellersn-gmailcoms-projects.vercel.app';
     console.log('🔍 SHARING: Using canonical URL for sharing:', canonicalUrl);
     return canonicalUrl;
   }

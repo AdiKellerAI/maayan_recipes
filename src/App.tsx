@@ -13,14 +13,12 @@ import EditRecipePage from './pages/EditRecipePage';
 import SearchResultsPage from './pages/SearchResultsPage';
 import ErrorBoundary from './components/ErrorBoundary';
 import MultiTimer, { TimerData } from './components/Timer/MultiTimer';
-import GlobalTimerStatusBar from './components/Timer/GlobalTimerStatusBar';
 import AuthModal from './components/AuthModal';
 import DatabaseStatus from './components/DatabaseStatus';
 
 function App() {
   const [showTimer, setShowTimer] = React.useState(false);
   const [showDatabaseStatus, setShowDatabaseStatus] = React.useState(false);
-  const [activeTimers, setActiveTimers] = React.useState<TimerData[]>([]);
 
   // Handle database status changes
   const handleDatabaseStatusChange = React.useCallback((status: 'checking' | 'connected' | 'disconnected' | 'error') => {
@@ -100,9 +98,6 @@ function App() {
   }, []);
 
   // Handle timer changes from MultiTimer
-  const handleTimersChange = React.useCallback((timers: TimerData[]) => {
-    setActiveTimers(timers);
-  }, []);
 
   // Show database status on development or when there are issues
   React.useEffect(() => {
@@ -147,8 +142,6 @@ function App() {
             <NavigationProvider>
               <UnsavedChangesProvider>
               <div className="min-h-screen" dir="rtl">
-                {/* Global Timer Status Bar for PWA */}
-                <GlobalTimerStatusBar timers={activeTimers} />
                 
                 <Header />
                 <main>
@@ -167,7 +160,6 @@ function App() {
                   isVisible={showTimer}
                   onClose={() => setShowTimer(false)}
                   initialTimerName={initialTimerName}
-                  onTimersChange={handleTimersChange}
                 />
                 
                 {/* Authentication Modal */}

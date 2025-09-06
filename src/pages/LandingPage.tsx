@@ -302,7 +302,7 @@ const LandingPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
+    <div className="h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-orange-100 relative overflow-hidden">
       {/* Background Decorative Circles - Uniformly Distributed */}
       <div className="absolute inset-0 pointer-events-none">
         {backgroundCircles.map((circle) => (
@@ -334,6 +334,14 @@ const LandingPage: React.FC = () => {
                   src="/Maayan_HD.svg" 
                   alt="Maayan Kitchen Logo" 
                   className="h-52 md:h-64 w-auto object-contain"
+                  style={{
+                    transform: 'none',
+                    filter: 'none',
+                    WebkitTransform: 'none',
+                    WebkitFilter: 'none',
+                    WebkitBackfaceVisibility: 'hidden',
+                    backfaceVisibility: 'hidden'
+                  }}
                 />
               </div>
             </div>
