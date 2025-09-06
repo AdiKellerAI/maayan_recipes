@@ -170,22 +170,14 @@ const AddRecipePage: React.FC = () => {
     setHasUnsavedChanges(true);
     
     // Focus the new input field immediately after render without losing focus
-    // Use multiple strategies to prevent keyboard from closing on mobile
-    setTimeout(() => {
+    // Use requestAnimationFrame to ensure DOM is updated
+    requestAnimationFrame(() => {
       if (ingredientRefs.current[newIndex]) {
-        const input = ingredientRefs.current[newIndex];
-        if (input) {
-          // Prevent default behavior that might close keyboard
-          input.focus({ preventScroll: true });
-          // Ensure input is visible and focused
-          input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          // Additional focus to maintain keyboard
-          setTimeout(() => {
-            input.focus({ preventScroll: true });
-          }, 100);
-        }
+        ingredientRefs.current[newIndex]?.focus();
+        // Prevent keyboard from closing by ensuring focus stays
+        ingredientRefs.current[newIndex]?.click();
       }
-    }, 50);
+    });
   };
 
   const removeIngredient = (index: number) => {
@@ -213,22 +205,14 @@ const AddRecipePage: React.FC = () => {
     setHasUnsavedChanges(true);
     
     // Focus the new textarea field immediately after render without losing focus
-    // Use multiple strategies to prevent keyboard from closing on mobile
-    setTimeout(() => {
+    // Use requestAnimationFrame to ensure DOM is updated
+    requestAnimationFrame(() => {
       if (directionRefs.current[newIndex]) {
-        const textarea = directionRefs.current[newIndex];
-        if (textarea) {
-          // Prevent default behavior that might close keyboard
-          textarea.focus({ preventScroll: true });
-          // Ensure textarea is visible and focused
-          textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          // Additional focus to maintain keyboard
-          setTimeout(() => {
-            textarea.focus({ preventScroll: true });
-          }, 100);
-        }
+        directionRefs.current[newIndex]?.focus();
+        // Prevent keyboard from closing by ensuring focus stays
+        directionRefs.current[newIndex]?.click();
       }
-    }, 50);
+    });
   };
 
   // Simple image compression function
@@ -608,20 +592,6 @@ const AddRecipePage: React.FC = () => {
       ...prev,
       [sectionName]: [...prev[sectionName], '']
     }));
-    
-    // Focus the new input field to keep keyboard open
-    setTimeout(() => {
-      const newIndex = additionalInstructions[sectionName]?.length || 0;
-      const inputSelector = `textarea[name="additionalInstructions.${sectionName}.${newIndex}"]`;
-      const input = document.querySelector(inputSelector) as HTMLTextAreaElement;
-      if (input) {
-        input.focus({ preventScroll: true });
-        input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        setTimeout(() => {
-          input.focus({ preventScroll: true });
-        }, 100);
-      }
-    }, 50);
   };
 
   const removeAdditionalInstructionStep = (sectionName: string, index: number) => {
@@ -665,19 +635,14 @@ const AddRecipePage: React.FC = () => {
       const currentIngredients = prev[sectionId]?.ingredients || [''];
       const newIndex = currentIngredients.length;
       
-      // Focus the new input field after render with mobile keyboard handling
-      setTimeout(() => {
+      // Focus the new input field after render
+      requestAnimationFrame(() => {
         if (sectionIngredientRefs.current[sectionId]?.[newIndex]) {
-          const input = sectionIngredientRefs.current[sectionId][newIndex];
-          if (input) {
-            input.focus({ preventScroll: true });
-            input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            setTimeout(() => {
-              input.focus({ preventScroll: true });
-            }, 100);
-          }
+          sectionIngredientRefs.current[sectionId][newIndex]?.focus();
+          // Prevent keyboard from closing by ensuring focus stays
+          sectionIngredientRefs.current[sectionId][newIndex]?.click();
         }
-      }, 50);
+      });
       
       return {
         ...prev,
@@ -687,7 +652,6 @@ const AddRecipePage: React.FC = () => {
         }
       };
     });
-    setHasUnsavedChanges(true);
   };
 
   const removeSectionIngredient = (sectionId: string, index: number) => {
@@ -721,19 +685,14 @@ const AddRecipePage: React.FC = () => {
       const currentDirections = prev[sectionId]?.directions || [''];
       const newIndex = currentDirections.length;
       
-      // Focus the new textarea field after render with mobile keyboard handling
-      setTimeout(() => {
+      // Focus the new textarea field after render
+      requestAnimationFrame(() => {
         if (sectionDirectionRefs.current[sectionId]?.[newIndex]) {
-          const textarea = sectionDirectionRefs.current[sectionId][newIndex];
-          if (textarea) {
-            textarea.focus({ preventScroll: true });
-            textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            setTimeout(() => {
-              textarea.focus({ preventScroll: true });
-            }, 100);
-          }
+          sectionDirectionRefs.current[sectionId][newIndex]?.focus();
+          // Prevent keyboard from closing by ensuring focus stays
+          sectionDirectionRefs.current[sectionId][newIndex]?.click();
         }
-      }, 50);
+      });
       
       return {
         ...prev,
@@ -743,7 +702,6 @@ const AddRecipePage: React.FC = () => {
         }
       };
     });
-    setHasUnsavedChanges(true);
   };
 
   const removeSectionDirection = (sectionId: string, index: number) => {
@@ -1392,10 +1350,9 @@ const AddRecipePage: React.FC = () => {
                   }}
                   onTouchEnd={(e) => {
                     e.preventDefault();
-                    e.stopPropagation();
                     addIngredient();
                   }}
-                  className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm touch-manipulation mobile-form-add-button"
+                  className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm touch-manipulation"
                 >
                   <Plus className="w-4 h-4" />
                   הוסף רכיב נוסף
@@ -1483,10 +1440,9 @@ const AddRecipePage: React.FC = () => {
                   }}
                   onTouchEnd={(e) => {
                     e.preventDefault();
-                    e.stopPropagation();
                     addDirection();
                   }}
-                  className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm touch-manipulation mobile-form-add-button"
+                  className="flex items-center gap-2 text-orange-600 hover:text-orange-700 font-medium bg-white hover:bg-orange-50 px-3 py-2 rounded-md transition-all duration-200 border border-dashed border-orange-300 hover:border-orange-400 w-full justify-center text-sm touch-manipulation"
                 >
                   <Plus className="w-4 h-4" />
                   הוסף שלב נוסף
