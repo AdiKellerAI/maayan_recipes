@@ -13,6 +13,7 @@ const DOMAIN = process.env.VERCEL_URL || 'your-domain.vercel.app';
 const PROTOCOL = DOMAIN.includes('vercel.app') ? 'https' : 'http';
 const BASE_URL = `${PROTOCOL}://${DOMAIN}`;
 
+<<<<<<< HEAD
 // Colors for console output
 const colors = {
   green: '\x1b[32m',
@@ -23,6 +24,8 @@ const colors = {
   bold: '\x1b[1m'
 };
 
+=======
+>>>>>>> dev
 // Test routes
 const TEST_ROUTES = [
   '/',
@@ -99,14 +102,20 @@ async function testRoute(route) {
   const expectedContentType = EXPECTED_CONTENT_TYPES[route];
   
   try {
+<<<<<<< HEAD
     console.log(`\n${colors.blue}🧪 Testing:${colors.reset} ${colors.bold}${route}${colors.reset}`);
     console.log(`   ${colors.blue}URL:${colors.reset} ${url}`);
+=======
+    console.log(`\n🧪 Testing: ${route}`);
+    console.log(`   URL: ${url}`);
+>>>>>>> dev
     
     const result = await makeRequest(url);
     const actualContentType = result.headers['content-type']?.split(';')[0];
     
     // Check status code
     const statusOk = result.statusCode === expectedStatus;
+<<<<<<< HEAD
     const statusIcon = statusOk ? `${colors.green}✅${colors.reset}` : `${colors.red}❌${colors.reset}`;
     console.log(`   ${colors.blue}Status:${colors.reset} ${result.statusCode} ${statusIcon} (expected ${expectedStatus})`);
     
@@ -120,6 +129,18 @@ async function testRoute(route) {
       const hasReactApp = result.data.includes('root') || result.data.includes('react') || result.data.includes('id="root"');
       const reactIcon = hasReactApp ? `${colors.green}✅${colors.reset}` : `${colors.red}❌${colors.reset}`;
       console.log(`   ${colors.blue}React App:${colors.reset} ${reactIcon}`);
+=======
+    console.log(`   Status: ${result.statusCode} ${statusOk ? '✅' : '❌'} (expected ${expectedStatus})`);
+    
+    // Check content type
+    const contentTypeOk = actualContentType === expectedContentType;
+    console.log(`   Content-Type: ${actualContentType} ${contentTypeOk ? '✅' : '❌'} (expected ${expectedContentType})`);
+    
+    // Check if HTML contains React app
+    if (route !== '/api/health' && route !== '/manifest.json' && route !== '/sw.js') {
+      const hasReactApp = result.data.includes('root') || result.data.includes('react');
+      console.log(`   React App: ${hasReactApp ? '✅' : '❌'}`);
+>>>>>>> dev
     }
     
     // Check for security headers
@@ -133,6 +154,7 @@ async function testRoute(route) {
       result.headers[header]
     ).length;
     
+<<<<<<< HEAD
     const securityIcon = securityScore === securityHeaders.length ? `${colors.green}✅${colors.reset}` : `${colors.yellow}⚠️${colors.reset}`;
     console.log(`   ${colors.blue}Security Headers:${colors.reset} ${securityScore}/${securityHeaders.length} ${securityIcon}`);
     
@@ -142,18 +164,29 @@ async function testRoute(route) {
       const pwaIcon = hasPWAHeaders ? `${colors.green}✅${colors.reset}` : `${colors.yellow}⚠️${colors.reset}`;
       console.log(`   ${colors.blue}PWA Headers:${colors.reset} ${pwaIcon}`);
     }
+=======
+    console.log(`   Security Headers: ${securityScore}/${securityHeaders.length} ${securityScore === securityHeaders.length ? '✅' : '⚠️'}`);
+>>>>>>> dev
     
     return {
       route,
       success: statusOk && contentTypeOk,
       statusCode: result.statusCode,
       contentType: actualContentType,
+<<<<<<< HEAD
       hasSecurityHeaders: securityScore === securityHeaders.length,
       hasReactApp: route === '/api/health' || route === '/manifest.json' || route === '/sw.js' ? true : result.data.includes('root') || result.data.includes('react')
     };
     
   } catch (error) {
     console.log(`   ${colors.red}Error:${colors.reset} ${error.message} ${colors.red}❌${colors.reset}`);
+=======
+      hasSecurityHeaders: securityScore === securityHeaders.length
+    };
+    
+  } catch (error) {
+    console.log(`   Error: ${error.message} ❌`);
+>>>>>>> dev
     return {
       route,
       success: false,
@@ -163,9 +196,15 @@ async function testRoute(route) {
 }
 
 async function runTests() {
+<<<<<<< HEAD
   console.log(`${colors.bold}${colors.blue}🚀 Starting Vercel Routing Tests${colors.reset}`);
   console.log(`${colors.blue}📍 Testing domain:${colors.reset} ${colors.bold}${BASE_URL}${colors.reset}`);
   console.log(`${colors.blue}⏰ Started at:${colors.reset} ${new Date().toISOString()}`);
+=======
+  console.log('🚀 Starting Vercel Routing Tests');
+  console.log(`📍 Testing domain: ${BASE_URL}`);
+  console.log(`⏰ Started at: ${new Date().toISOString()}`);
+>>>>>>> dev
   
   const results = [];
   
@@ -178,6 +217,7 @@ async function runTests() {
   }
   
   // Summary
+<<<<<<< HEAD
   console.log(`\n${colors.bold}${colors.blue}📊 Test Summary${colors.reset}`);
   console.log(`${colors.blue}================${colors.reset}`);
   
@@ -215,6 +255,30 @@ async function runTests() {
   
   // Return exit code for CI/CD
   process.exit(successful === total ? 0 : 1);
+=======
+  console.log('\n📊 Test Summary');
+  console.log('================');
+  
+  const successful = results.filter(r => r.success).length;
+  const total = results.length;
+  
+  console.log(`✅ Successful: ${successful}/${total}`);
+  console.log(`❌ Failed: ${total - successful}/${total}`);
+  
+  if (successful === total) {
+    console.log('\n🎉 All tests passed! Your routing is working correctly.');
+  } else {
+    console.log('\n⚠️  Some tests failed. Check the configuration.');
+    
+    const failed = results.filter(r => !r.success);
+    console.log('\nFailed routes:');
+    failed.forEach(r => {
+      console.log(`  - ${r.route}: ${r.error || 'Unexpected status/content-type'}`);
+    });
+  }
+  
+  console.log(`\n⏰ Completed at: ${new Date().toISOString()}`);
+>>>>>>> dev
 }
 
 // Run tests if this script is executed directly

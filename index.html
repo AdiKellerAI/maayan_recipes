@@ -26,45 +26,5 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    
-    <!-- Client-side URL handling for recipe sharing -->
-    <script>
-      // Handle direct recipe URL access before React Router loads
-      (function() {
-        const currentPath = window.location.pathname;
-        const recipeUrlPattern = /^\/recipe\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-        
-        // Check if current URL is a recipe URL
-        if (recipeUrlPattern.test(currentPath)) {
-          console.log('🔍 Detected direct recipe URL access:', currentPath);
-          
-          // Store the recipe URL for React Router to handle
-          sessionStorage.setItem('directRecipeAccess', currentPath);
-          
-          // Optional: Add a loading indicator
-          const root = document.getElementById('root');
-          if (root) {
-            root.innerHTML = `
-              <div style="
-                display: flex;
-                justify-content: center;
-                align-items: center;
-                height: 100vh;
-                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-                background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
-                color: white;
-                text-align: center;
-                direction: rtl;
-              ">
-                <div>
-                  <div style="font-size: 24px; margin-bottom: 16px;">המטבח של מעיין</div>
-                  <div style="font-size: 16px; opacity: 0.9;">טוען מתכון...</div>
-                </div>
-              </div>
-            `;
-          }
-        }
-      })();
-    </script>
   </body>
 </html>

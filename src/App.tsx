@@ -37,25 +37,6 @@ function App() {
     // For 'checking' and 'disconnected' states, keep the modal hidden by default
   }, []);
 
-  // Handle direct recipe URL access
-  React.useEffect(() => {
-    const handleDirectRecipeAccess = () => {
-      // Check if we have a stored direct recipe access
-      const directRecipePath = sessionStorage.getItem('directRecipeAccess');
-      if (directRecipePath) {
-        console.log('🔍 Handling direct recipe access:', directRecipePath);
-        
-        // Clear the stored path
-        sessionStorage.removeItem('directRecipeAccess');
-        
-        // The URL is already correct, React Router should handle it
-        // No need to reload or navigate - just let React Router do its job
-      }
-    };
-
-    handleDirectRecipeAccess();
-  }, []);
-
   // PWA Detection and Logo Handling
   React.useEffect(() => {
     const checkPWAMode = () => {
