@@ -11,6 +11,7 @@ import { getCategoryColor } from '../data/categories';
 // ProgressTracker removed from main section; using inline compact layout
 import { recipeProgressCache } from '../lib/cache';
 import DeleteConfirmationModal from '../components/DeleteConfirmationModal';
+import RecipeUrlFallback from '../components/RecipeUrlFallback';
 
 // Category illustrations as emoji/unicode characters
 const getCategoryIllustration = (categoryId: string) => {
@@ -379,7 +380,8 @@ const RecipeDetailPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
+    <RecipeUrlFallback>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-50">
       {/* Sticky Navigation Bar - Dynamic based on scroll */}
       <div className={`sticky top-16 z-[9990] bg-gradient-to-br from-slate-50/95 via-white/95 to-slate-50/95 backdrop-blur-md border-b border-slate-200/50 transition-all duration-300 ${
         isScrolled ? 'shadow-lg' : ''
@@ -873,7 +875,8 @@ const RecipeDetailPage: React.FC = () => {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </RecipeUrlFallback>
   );
 };
 

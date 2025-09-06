@@ -41,6 +41,11 @@ function isHtmlRequest(request) {
   return request.mode === 'navigate' || (request.headers.get('accept') || '').includes('text/html');
 }
 
+function isRecipeUrl(url) {
+  const recipeUrlPattern = /^\/recipe\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return recipeUrlPattern.test(url.pathname);
+}
+
 function isApiRequest(url) {
   return url.pathname.startsWith('/api/');
 }
@@ -68,12 +73,26 @@ self.addEventListener('fetch', event => {
     event.respondWith(
       (async () => {
         try {
+          // For recipe URLs, always serve the main index.html to let React Router handle it
+          if (isRecipeUrl(url)) {
+            const indexRequest = new Request('/', { method: 'GET' });
+            const indexResponse = await caches.match(indexRequest) || await fetch(indexRequest);
+            return indexResponse;
+          }
+          
           const networkResponse = await fetch(request);
           // Optionally update runtime cache
           const cache = await caches.open(RUNTIME_CACHE);
           cache.put(request, networkResponse.clone());
           return networkResponse;
         } catch (error) {
+          // For recipe URLs, serve index.html even when offline
+          if (isRecipeUrl(url)) {
+            const indexRequest = new Request('/', { method: 'GET' });
+            const cached = await caches.match(indexRequest);
+            if (cached) return cached;
+          }
+          
           const cached = await caches.match(request);
           if (cached) return cached;
           const offline = await caches.match('/offline.html');
