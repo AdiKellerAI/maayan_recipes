@@ -116,6 +116,12 @@ const EditRecipePage: React.FC = () => {
     enabled: !!recipe // Only enable if recipe is loaded
   });
 
+  // Helper function to detect if we're on mobile
+  const isMobile = () => {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           (window.innerWidth <= 768);
+  };
+
   // Initialize form data when recipe loads
   useEffect(() => {
     if (recipe) {
@@ -185,6 +191,7 @@ const EditRecipePage: React.FC = () => {
       setReferrerFromRecipes(recipesPath);
     }
   }, [setReferrerFromRecipes]);
+
 
 
 
@@ -405,9 +412,21 @@ const EditRecipePage: React.FC = () => {
       // Use requestAnimationFrame to ensure DOM is updated
       requestAnimationFrame(() => {
         if (ingredientRefs.current[newIndex]) {
-          ingredientRefs.current[newIndex]?.focus();
-          // Prevent keyboard from closing by ensuring focus stays
-          ingredientRefs.current[newIndex]?.click();
+          const input = ingredientRefs.current[newIndex];
+          if (input) {
+            // First focus the input
+            input.focus();
+            
+            // On mobile, also trigger click to ensure keyboard stays open
+            if (isMobile()) {
+              input.click();
+              // Additional mobile-specific focus handling
+              setTimeout(() => {
+                input.focus();
+                input.click();
+              }, 50);
+            }
+          }
         }
       });
       
@@ -436,9 +455,21 @@ const EditRecipePage: React.FC = () => {
       // Use requestAnimationFrame to ensure DOM is updated
       requestAnimationFrame(() => {
         if (directionRefs.current[newIndex]) {
-          directionRefs.current[newIndex]?.focus();
-          // Prevent keyboard from closing by ensuring focus stays
-          directionRefs.current[newIndex]?.click();
+          const textarea = directionRefs.current[newIndex];
+          if (textarea) {
+            // First focus the textarea
+            textarea.focus();
+            
+            // On mobile, also trigger click to ensure keyboard stays open
+            if (isMobile()) {
+              textarea.click();
+              // Additional mobile-specific focus handling
+              setTimeout(() => {
+                textarea.focus();
+                textarea.click();
+              }, 50);
+            }
+          }
         }
       });
       
@@ -552,9 +583,21 @@ const EditRecipePage: React.FC = () => {
       // Focus the new input field after render
       requestAnimationFrame(() => {
         if (sectionIngredientRefs.current[sectionName]?.[newIndex]) {
-          sectionIngredientRefs.current[sectionName][newIndex]?.focus();
-          // Prevent keyboard from closing by ensuring focus stays
-          sectionIngredientRefs.current[sectionName][newIndex]?.click();
+          const input = sectionIngredientRefs.current[sectionName][newIndex];
+          if (input) {
+            // First focus the input
+            input.focus();
+            
+            // On mobile, also trigger click to ensure keyboard stays open
+            if (isMobile()) {
+              input.click();
+              // Additional mobile-specific focus handling
+              setTimeout(() => {
+                input.focus();
+                input.click();
+              }, 50);
+            }
+          }
         }
       });
       
@@ -599,9 +642,21 @@ const EditRecipePage: React.FC = () => {
       // Focus the new textarea field after render
       requestAnimationFrame(() => {
         if (sectionDirectionRefs.current[sectionName]?.[newIndex]) {
-          sectionDirectionRefs.current[sectionName][newIndex]?.focus();
-          // Prevent keyboard from closing by ensuring focus stays
-          sectionDirectionRefs.current[sectionName][newIndex]?.click();
+          const textarea = sectionDirectionRefs.current[sectionName][newIndex];
+          if (textarea) {
+            // First focus the textarea
+            textarea.focus();
+            
+            // On mobile, also trigger click to ensure keyboard stays open
+            if (isMobile()) {
+              textarea.click();
+              // Additional mobile-specific focus handling
+              setTimeout(() => {
+                textarea.focus();
+                textarea.click();
+              }, 50);
+            }
+          }
         }
       });
       
@@ -885,6 +940,40 @@ const EditRecipePage: React.FC = () => {
     
     return false;
   }, [recipe, formData, ingredients, directions, images, additionalSections]);
+
+  // Handle mobile back button with unsaved changes check
+  useEffect(() => {
+    const handleBackButton = (event: PopStateEvent) => {
+      if (hasActualChanges) {
+        event.preventDefault();
+        const userChoice = window.confirm('יש שינויים לא שמורים בעריכת המתכון. האם לשמור את השינויים לפני היציאה? (OK=שמור ויציאה, Cancel=יציאה ללא שמירה)');
+        if (userChoice) {
+          // User chose to save
+          handleSubmit(new Event('submit') as any).then(() => {
+            navigate(navigateToLastRecipesPage());
+          }).catch(() => {
+            // If save fails, still navigate
+            navigate(navigateToLastRecipesPage());
+          });
+        } else {
+          // User chose to discard changes
+          navigate(navigateToLastRecipesPage());
+        }
+      } else {
+        // No unsaved changes, allow normal navigation
+        navigate(navigateToLastRecipesPage());
+      }
+    };
+
+    // Push a state when page loads to capture back button
+    window.history.pushState({ editRecipePage: true }, '', window.location.href);
+    
+    window.addEventListener('popstate', handleBackButton);
+
+    return () => {
+      window.removeEventListener('popstate', handleBackButton);
+    };
+  }, [hasActualChanges, navigate, navigateToLastRecipesPage]);
 
   // Close page
   const handleClose = async () => {
