@@ -402,22 +402,14 @@ const EditRecipePage: React.FC = () => {
       const newIngredients = [...prev, ''];
       const newIndex = newIngredients.length - 1;
       
-      // Use multiple strategies to prevent keyboard from closing on mobile
-      setTimeout(() => {
+      // Use requestAnimationFrame to ensure DOM is updated
+      requestAnimationFrame(() => {
         if (ingredientRefs.current[newIndex]) {
-          const input = ingredientRefs.current[newIndex];
-          if (input) {
-            // Prevent default behavior that might close keyboard
-            input.focus({ preventScroll: true });
-            // Ensure input is visible and focused
-            input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            // Additional focus to maintain keyboard
-            setTimeout(() => {
-              input.focus({ preventScroll: true });
-            }, 100);
-          }
+          ingredientRefs.current[newIndex]?.focus();
+          // Prevent keyboard from closing by ensuring focus stays
+          ingredientRefs.current[newIndex]?.click();
         }
-      }, 50);
+      });
       
       return newIngredients;
     });
@@ -441,22 +433,14 @@ const EditRecipePage: React.FC = () => {
       const newDirections = [...prev, ''];
       const newIndex = newDirections.length - 1;
       
-      // Use multiple strategies to prevent keyboard from closing on mobile
-      setTimeout(() => {
+      // Use requestAnimationFrame to ensure DOM is updated
+      requestAnimationFrame(() => {
         if (directionRefs.current[newIndex]) {
-          const textarea = directionRefs.current[newIndex];
-          if (textarea) {
-            // Prevent default behavior that might close keyboard
-            textarea.focus({ preventScroll: true });
-            // Ensure textarea is visible and focused
-            textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            // Additional focus to maintain keyboard
-            setTimeout(() => {
-              textarea.focus({ preventScroll: true });
-            }, 100);
-          }
+          directionRefs.current[newIndex]?.focus();
+          // Prevent keyboard from closing by ensuring focus stays
+          directionRefs.current[newIndex]?.click();
         }
-      }, 50);
+      });
       
       return newDirections;
     });
@@ -565,19 +549,14 @@ const EditRecipePage: React.FC = () => {
       const newIngredients = [...prev[sectionName].ingredients, ''];
       const newIndex = newIngredients.length - 1;
       
-      // Focus the new input field after render with mobile keyboard handling
-      setTimeout(() => {
+      // Focus the new input field after render
+      requestAnimationFrame(() => {
         if (sectionIngredientRefs.current[sectionName]?.[newIndex]) {
-          const input = sectionIngredientRefs.current[sectionName][newIndex];
-          if (input) {
-            input.focus({ preventScroll: true });
-            input.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            setTimeout(() => {
-              input.focus({ preventScroll: true });
-            }, 100);
-          }
+          sectionIngredientRefs.current[sectionName][newIndex]?.focus();
+          // Prevent keyboard from closing by ensuring focus stays
+          sectionIngredientRefs.current[sectionName][newIndex]?.click();
         }
-      }, 50);
+      });
       
       return {
         ...prev,
@@ -617,19 +596,14 @@ const EditRecipePage: React.FC = () => {
       const newDirections = [...prev[sectionName].directions, ''];
       const newIndex = newDirections.length - 1;
       
-      // Focus the new textarea field after render with mobile keyboard handling
-      setTimeout(() => {
+      // Focus the new textarea field after render
+      requestAnimationFrame(() => {
         if (sectionDirectionRefs.current[sectionName]?.[newIndex]) {
-          const textarea = sectionDirectionRefs.current[sectionName][newIndex];
-          if (textarea) {
-            textarea.focus({ preventScroll: true });
-            textarea.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            setTimeout(() => {
-              textarea.focus({ preventScroll: true });
-            }, 100);
-          }
+          sectionDirectionRefs.current[sectionName][newIndex]?.focus();
+          // Prevent keyboard from closing by ensuring focus stays
+          sectionDirectionRefs.current[sectionName][newIndex]?.click();
         }
-      }, 50);
+      });
       
       return {
         ...prev,
