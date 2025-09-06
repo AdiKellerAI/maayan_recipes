@@ -98,6 +98,25 @@ const SmartImageSearch: React.FC<SmartImageSearchProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Empty dependency array means this runs once on mount
 
+  // Handle mobile back button to close modal
+  useEffect(() => {
+    const handleBackButton = (event: PopStateEvent) => {
+      event.preventDefault();
+      onClose();
+      // Push current state back to prevent actual navigation
+      window.history.pushState(null, '', window.location.href);
+    };
+
+    // Push a state when modal opens to capture back button
+    window.history.pushState({ smartImageSearchOpen: true }, '', window.location.href);
+    
+    window.addEventListener('popstate', handleBackButton);
+
+    return () => {
+      window.removeEventListener('popstate', handleBackButton);
+    };
+  }, [onClose]);
+
   // REDESIGNED: Intelligent 5-phase image search system
   const searchImages = async () => {
     if (!recipeName.trim()) {
@@ -377,8 +396,8 @@ const SmartImageSearch: React.FC<SmartImageSearchProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-3 z-50 pt-4">
-      <div className="bg-white rounded-lg max-w-3xl w-full max-h-[85vh] overflow-y-auto shadow-xl">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center p-3 z-[9999] pt-4" style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}>
+      <div className="bg-white rounded-lg max-w-3xl w-full max-h-[85vh] overflow-y-auto shadow-xl relative transform translate-y-0" style={{ position: 'relative', zIndex: 10000 }}>
         <div className="p-4">
           {/* Header */}
           <div className="flex justify-between items-center mb-3">

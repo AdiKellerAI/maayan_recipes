@@ -130,6 +130,40 @@ const AddRecipePage: React.FC = () => {
     window.scrollTo(0, 0);
   }, []);
 
+  // Handle mobile back button with unsaved changes check
+  useEffect(() => {
+    const handleBackButton = (event: PopStateEvent) => {
+      if (hasUnsavedChanges) {
+        event.preventDefault();
+        const userChoice = window.confirm('יש שינויים לא שמורים בעריכת המתכון. האם לשמור את השינויים לפני היציאה? (OK=שמור ויציאה, Cancel=יציאה ללא שמירה)');
+        if (userChoice) {
+          // User chose to save
+          handleSubmit(new Event('submit') as any).then(() => {
+            navigate('/recipes');
+          }).catch(() => {
+            // If save fails, still navigate
+            navigate('/recipes');
+          });
+        } else {
+          // User chose to discard changes
+          navigate('/recipes');
+        }
+      } else {
+        // No unsaved changes, allow normal navigation
+        navigate('/recipes');
+      }
+    };
+
+    // Push a state when page loads to capture back button
+    window.history.pushState({ addRecipePage: true }, '', window.location.href);
+    
+    window.addEventListener('popstate', handleBackButton);
+
+    return () => {
+      window.removeEventListener('popstate', handleBackButton);
+    };
+  }, [hasUnsavedChanges, navigate]);
+
   // Intersection Observer for button animation
   useEffect(() => {
     const observer = new IntersectionObserver(
@@ -170,12 +204,24 @@ const AddRecipePage: React.FC = () => {
     setHasUnsavedChanges(true);
     
     // Focus the new input field immediately after render without losing focus
-    // Use requestAnimationFrame to ensure DOM is updated
+    // Use multiple strategies to ensure keyboard stays open on mobile
     requestAnimationFrame(() => {
       if (ingredientRefs.current[newIndex]) {
-        ingredientRefs.current[newIndex]?.focus();
-        // Prevent keyboard from closing by ensuring focus stays
-        ingredientRefs.current[newIndex]?.click();
+        const input = ingredientRefs.current[newIndex];
+        if (input) {
+          // First focus the input
+          input.focus();
+          
+          // On mobile, also trigger click to ensure keyboard stays open
+          if (isMobile()) {
+            input.click();
+            // Additional mobile-specific focus handling
+            setTimeout(() => {
+              input.focus();
+              input.click();
+            }, 50);
+          }
+        }
       }
     });
   };
@@ -205,12 +251,24 @@ const AddRecipePage: React.FC = () => {
     setHasUnsavedChanges(true);
     
     // Focus the new textarea field immediately after render without losing focus
-    // Use requestAnimationFrame to ensure DOM is updated
+    // Use multiple strategies to ensure keyboard stays open on mobile
     requestAnimationFrame(() => {
       if (directionRefs.current[newIndex]) {
-        directionRefs.current[newIndex]?.focus();
-        // Prevent keyboard from closing by ensuring focus stays
-        directionRefs.current[newIndex]?.click();
+        const textarea = directionRefs.current[newIndex];
+        if (textarea) {
+          // First focus the textarea
+          textarea.focus();
+          
+          // On mobile, also trigger click to ensure keyboard stays open
+          if (isMobile()) {
+            textarea.click();
+            // Additional mobile-specific focus handling
+            setTimeout(() => {
+              textarea.focus();
+              textarea.click();
+            }, 50);
+          }
+        }
       }
     });
   };
@@ -638,9 +696,21 @@ const AddRecipePage: React.FC = () => {
       // Focus the new input field after render
       requestAnimationFrame(() => {
         if (sectionIngredientRefs.current[sectionId]?.[newIndex]) {
-          sectionIngredientRefs.current[sectionId][newIndex]?.focus();
-          // Prevent keyboard from closing by ensuring focus stays
-          sectionIngredientRefs.current[sectionId][newIndex]?.click();
+          const input = sectionIngredientRefs.current[sectionId][newIndex];
+          if (input) {
+            // First focus the input
+            input.focus();
+            
+            // On mobile, also trigger click to ensure keyboard stays open
+            if (isMobile()) {
+              input.click();
+              // Additional mobile-specific focus handling
+              setTimeout(() => {
+                input.focus();
+                input.click();
+              }, 50);
+            }
+          }
         }
       });
       
@@ -688,9 +758,21 @@ const AddRecipePage: React.FC = () => {
       // Focus the new textarea field after render
       requestAnimationFrame(() => {
         if (sectionDirectionRefs.current[sectionId]?.[newIndex]) {
-          sectionDirectionRefs.current[sectionId][newIndex]?.focus();
-          // Prevent keyboard from closing by ensuring focus stays
-          sectionDirectionRefs.current[sectionId][newIndex]?.click();
+          const textarea = sectionDirectionRefs.current[sectionId][newIndex];
+          if (textarea) {
+            // First focus the textarea
+            textarea.focus();
+            
+            // On mobile, also trigger click to ensure keyboard stays open
+            if (isMobile()) {
+              textarea.click();
+              // Additional mobile-specific focus handling
+              setTimeout(() => {
+                textarea.focus();
+                textarea.click();
+              }, 50);
+            }
+          }
         }
       });
       
