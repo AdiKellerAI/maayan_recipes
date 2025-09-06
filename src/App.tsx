@@ -15,10 +15,13 @@ import ErrorBoundary from './components/ErrorBoundary';
 import MultiTimer, { TimerData } from './components/Timer/MultiTimer';
 import AuthModal from './components/AuthModal';
 import DatabaseStatus from './components/DatabaseStatus';
+import { isStandalone, detectPlatform } from './utils/pwa';
 
 function App() {
   const [showTimer, setShowTimer] = React.useState(false);
   const [showDatabaseStatus, setShowDatabaseStatus] = React.useState(false);
+  const [isPWA, setIsPWA] = React.useState(false);
+  const [platform, setPlatform] = React.useState<string>('unknown');
 
   // Handle database status changes
   const handleDatabaseStatusChange = React.useCallback((status: 'checking' | 'connected' | 'disconnected' | 'error') => {
@@ -32,6 +35,57 @@ function App() {
       setShowDatabaseStatus(false);
     }
     // For 'checking' and 'disconnected' states, keep the modal hidden by default
+  }, []);
+
+  // PWA Detection and Logo Handling
+  React.useEffect(() => {
+    const checkPWAMode = () => {
+      const standalone = isStandalone();
+      const detectedPlatform = detectPlatform();
+      
+      setIsPWA(standalone);
+      setPlatform(detectedPlatform);
+      
+      console.log('🔍 PWA Detection:', { standalone, platform: detectedPlatform });
+      
+      // Add PWA-specific classes to body
+      if (standalone) {
+        document.body.classList.add('pwa-mode');
+        document.body.classList.add(`platform-${detectedPlatform}`);
+        
+        // Ensure logo styling for PWA mode
+        const style = document.createElement('style');
+        style.textContent = `
+          .pwa-mode img[alt*="Logo"], 
+          .pwa-mode img[alt*="logo"], 
+          .pwa-mode img[src*="Maayan"], 
+          .pwa-mode img[src*="logo"] {
+            transform: none !important;
+            filter: none !important;
+            -webkit-transform: none !important;
+            -webkit-filter: none !important;
+            -webkit-backface-visibility: hidden !important;
+            backface-visibility: hidden !important;
+            background: transparent !important;
+          }
+        `;
+        document.head.appendChild(style);
+      } else {
+        document.body.classList.remove('pwa-mode');
+        document.body.classList.remove(`platform-${detectedPlatform}`);
+      }
+    };
+
+    checkPWAMode();
+    
+    // Listen for display mode changes
+    if (window.matchMedia) {
+      const mediaQuery = window.matchMedia('(display-mode: standalone)');
+      const handleChange = () => checkPWAMode();
+      mediaQuery.addEventListener('change', handleChange);
+      
+      return () => mediaQuery.removeEventListener('change', handleChange);
+    }
   }, []);
 
   // Check database status on app load (silently, without showing modal)
@@ -141,7 +195,7 @@ function App() {
           <RecipeProvider>
             <NavigationProvider>
               <UnsavedChangesProvider>
-              <div className="min-h-screen" dir="rtl">
+              <div className={`min-h-screen ${isPWA ? 'pwa-mode' : ''} platform-${platform}`} dir="rtl">
                 
                 <Header />
                 <main>

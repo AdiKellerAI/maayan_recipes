@@ -13,6 +13,27 @@
   user-select: none;
 }
 
+/* Prevent keyboard from closing on mobile when adding form elements */
+.mobile-form-add-button {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.mobile-form-add-button:active {
+  transform: scale(0.98);
+  transition: transform 0.1s ease;
+}
+
+/* Ensure input focus is maintained on mobile */
+input:focus, textarea:focus {
+  -webkit-user-select: text;
+  user-select: text;
+  -webkit-touch-callout: default;
+}
+
 /* Improve button responsiveness on mobile */
 @media (hover: none) and (pointer: coarse) {
   .touch-manipulation:active {
@@ -656,6 +677,54 @@ body {
 
 .circle-fade-in.visible {
   opacity: var(--circle-opacity);
+}
+
+/* PWA Standalone Mode Styles */
+@media (display-mode: standalone) {
+  /* Ensure proper status bar spacing on iOS */
+  body {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  /* PWA-specific logo styling to prevent inversion */
+  img[alt*="Logo"], img[alt*="logo"], img[src*="Maayan"], img[src*="logo"] {
+    transform: none !important;
+    filter: none !important;
+    -webkit-transform: none !important;
+    -webkit-filter: none !important;
+    -webkit-backface-visibility: hidden !important;
+    backface-visibility: hidden !important;
+    background: transparent !important;
+  }
+  
+  /* Ensure light background for PWA loading screen */
+  .pwa-loading-screen {
+    background: #ffffff !important;
+  }
+  
+  /* PWA-specific header styling */
+  .pwa-header {
+    background: linear-gradient(135deg, #f97316 0%, #ca8a04 100%) !important;
+  }
+}
+
+/* iOS PWA specific styles */
+@supports (-webkit-touch-callout: none) {
+  @media (display-mode: standalone) {
+    /* iOS PWA status bar styling */
+    body {
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+    
+    /* Prevent logo inversion on iOS PWA */
+    img[alt*="Logo"], img[alt*="logo"], img[src*="Maayan"], img[src*="logo"] {
+      -webkit-transform: none !important;
+      -webkit-filter: none !important;
+      transform: none !important;
+      filter: none !important;
+    }
+  }
 }
 
 /* Print styles */

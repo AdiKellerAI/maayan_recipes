@@ -302,7 +302,7 @@ const LandingPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="h-screen bg-gradient-to-br from-orange-50 via-yellow-50 to-orange-100 relative overflow-hidden">
+    <div className="h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 relative overflow-hidden">
       {/* Background Decorative Circles - Uniformly Distributed */}
       <div className="absolute inset-0 pointer-events-none">
         {backgroundCircles.map((circle) => (
