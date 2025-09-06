@@ -63,6 +63,8 @@ const EditRecipePage: React.FC = () => {
   // Refs for auto-focusing
   const ingredientRefs = useRef<(HTMLInputElement | null)[]>([]);
   const directionRefs = useRef<(HTMLTextAreaElement | null)[]>([]);
+  const sectionIngredientRefs = useRef<{ [key: string]: (HTMLInputElement | null)[] }>({});
+  const sectionDirectionRefs = useRef<{ [key: string]: (HTMLTextAreaElement | null)[] }>({});
   const buttonsRef = useRef<HTMLDivElement>(null);
 
   // Unsaved changes handling
@@ -400,11 +402,14 @@ const EditRecipePage: React.FC = () => {
       const newIngredients = [...prev, ''];
       const newIndex = newIngredients.length - 1;
       
-      setTimeout(() => {
+      // Use requestAnimationFrame to ensure DOM is updated
+      requestAnimationFrame(() => {
         if (ingredientRefs.current[newIndex]) {
           ingredientRefs.current[newIndex]?.focus();
+          // Prevent keyboard from closing by ensuring focus stays
+          ingredientRefs.current[newIndex]?.click();
         }
-      }, 10);
+      });
       
       return newIngredients;
     });
@@ -428,11 +433,14 @@ const EditRecipePage: React.FC = () => {
       const newDirections = [...prev, ''];
       const newIndex = newDirections.length - 1;
       
-      setTimeout(() => {
+      // Use requestAnimationFrame to ensure DOM is updated
+      requestAnimationFrame(() => {
         if (directionRefs.current[newIndex]) {
           directionRefs.current[newIndex]?.focus();
+          // Prevent keyboard from closing by ensuring focus stays
+          directionRefs.current[newIndex]?.click();
         }
-      }, 10);
+      });
       
       return newDirections;
     });
@@ -537,13 +545,27 @@ const EditRecipePage: React.FC = () => {
   };
 
   const addSectionIngredient = (sectionName: string) => {
-    setAdditionalSections(prev => ({
-      ...prev,
-      [sectionName]: {
-        ...prev[sectionName],
-        ingredients: [...prev[sectionName].ingredients, '']
-      }
-    }));
+    setAdditionalSections(prev => {
+      const newIngredients = [...prev[sectionName].ingredients, ''];
+      const newIndex = newIngredients.length - 1;
+      
+      // Focus the new input field after render
+      requestAnimationFrame(() => {
+        if (sectionIngredientRefs.current[sectionName]?.[newIndex]) {
+          sectionIngredientRefs.current[sectionName][newIndex]?.focus();
+          // Prevent keyboard from closing by ensuring focus stays
+          sectionIngredientRefs.current[sectionName][newIndex]?.click();
+        }
+      });
+      
+      return {
+        ...prev,
+        [sectionName]: {
+          ...prev[sectionName],
+          ingredients: newIngredients
+        }
+      };
+    });
     setHasUnsavedChanges(true);
   };
 
@@ -570,13 +592,27 @@ const EditRecipePage: React.FC = () => {
   };
 
   const addSectionDirection = (sectionName: string) => {
-    setAdditionalSections(prev => ({
-      ...prev,
-      [sectionName]: {
-        ...prev[sectionName],
-        directions: [...prev[sectionName].directions, '']
-      }
-    }));
+    setAdditionalSections(prev => {
+      const newDirections = [...prev[sectionName].directions, ''];
+      const newIndex = newDirections.length - 1;
+      
+      // Focus the new textarea field after render
+      requestAnimationFrame(() => {
+        if (sectionDirectionRefs.current[sectionName]?.[newIndex]) {
+          sectionDirectionRefs.current[sectionName][newIndex]?.focus();
+          // Prevent keyboard from closing by ensuring focus stays
+          sectionDirectionRefs.current[sectionName][newIndex]?.click();
+        }
+      });
+      
+      return {
+        ...prev,
+        [sectionName]: {
+          ...prev[sectionName],
+          directions: newDirections
+        }
+      };
+    });
     setHasUnsavedChanges(true);
   };
 
@@ -1409,29 +1445,41 @@ const EditRecipePage: React.FC = () => {
                               מרכיבים {sectionTitles[sectionName] ? `ל${sectionTitles[sectionName]}` : ''}
                             </h4>
                             <div className="space-y-2">
-                              {section.ingredients.map((ingredient, index) => (
-                                <div key={index} className="flex gap-2 items-center group">
-                                  <div className="flex-shrink-0 w-4 h-4 bg-green-400 text-white rounded-full flex items-center justify-center text-xs font-medium">
-                                    {index + 1}
+                              {section.ingredients.map((ingredient, index) => {
+                                // Initialize refs for this section if not exists
+                                if (!sectionIngredientRefs.current[sectionName]) {
+                                  sectionIngredientRefs.current[sectionName] = [];
+                                }
+                                
+                                return (
+                                  <div key={index} className="flex gap-2 items-center group">
+                                    <div className="flex-shrink-0 w-4 h-4 bg-green-400 text-white rounded-full flex items-center justify-center text-xs font-medium">
+                                      {index + 1}
+                                    </div>
+                                    <input
+                                      ref={(el) => {
+                                        if (sectionIngredientRefs.current[sectionName]) {
+                                          sectionIngredientRefs.current[sectionName][index] = el;
+                                        }
+                                      }}
+                                      type="text"
+                                      value={ingredient}
+                                      onChange={(e) => updateSectionIngredient(sectionName, index, e.target.value)}
+                                      className="flex-1 p-1.5 bg-gray-50 border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-300 focus:border-blue-400 transition-all duration-150 text-sm"
+                                      placeholder={`רכיב ${index + 1}`}
+                                    />
+                                    {section.ingredients.length > 1 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => removeSectionIngredient(sectionName, index)}
+                                        className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    )}
                                   </div>
-                                  <input
-                                    type="text"
-                                    value={ingredient}
-                                    onChange={(e) => updateSectionIngredient(sectionName, index, e.target.value)}
-                                    className="flex-1 p-1.5 bg-gray-50 border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-300 focus:border-blue-400 transition-all duration-150 text-sm"
-                                    placeholder={`רכיב ${index + 1}`}
-                                  />
-                                  {section.ingredients.length > 1 && (
-                                    <button
-                                      type="button"
-                                      onClick={() => removeSectionIngredient(sectionName, index)}
-                                      className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100"
-                                    >
-                                      <X className="w-3 h-3" />
-                                    </button>
-                                  )}
-                                </div>
-                              ))}
+                                );
+                              })}
                               <button
                                 type="button"
                                 onClick={() => addSectionIngredient(sectionName)}
@@ -1450,29 +1498,41 @@ const EditRecipePage: React.FC = () => {
                               שלבי הכנה {sectionTitles[sectionName] ? `ל${sectionTitles[sectionName]}` : ''}
                             </h4>
                             <div className="space-y-2">
-                              {section.directions.map((direction, index) => (
-                                <div key={index} className="flex gap-2 group">
-                                  <div className="bg-blue-400 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-1">
-                                    {index + 1}
+                              {section.directions.map((direction, index) => {
+                                // Initialize refs for this section if not exists
+                                if (!sectionDirectionRefs.current[sectionName]) {
+                                  sectionDirectionRefs.current[sectionName] = [];
+                                }
+                                
+                                return (
+                                  <div key={index} className="flex gap-2 group">
+                                    <div className="bg-blue-400 text-white rounded-full w-4 h-4 flex items-center justify-center text-xs font-medium flex-shrink-0 mt-1">
+                                      {index + 1}
+                                    </div>
+                                    <textarea
+                                      ref={(el) => {
+                                        if (sectionDirectionRefs.current[sectionName]) {
+                                          sectionDirectionRefs.current[sectionName][index] = el;
+                                        }
+                                      }}
+                                      value={direction}
+                                      onChange={(e) => updateSectionDirection(sectionName, index, e.target.value)}
+                                      rows={2}
+                                      className="flex-1 p-1.5 bg-gray-50 border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-300 focus:border-blue-400 transition-all duration-150 text-sm resize-none"
+                                      placeholder={`שלב ${index + 1}`}
+                                    />
+                                    {section.directions.length > 1 && (
+                                      <button
+                                        type="button"
+                                        onClick={() => removeSectionDirection(sectionName, index)}
+                                        className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100 self-start"
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    )}
                                   </div>
-                                  <textarea
-                                    value={direction}
-                                    onChange={(e) => updateSectionDirection(sectionName, index, e.target.value)}
-                                    rows={2}
-                                    className="flex-1 p-1.5 bg-gray-50 border border-gray-200 rounded-md focus:ring-1 focus:ring-blue-300 focus:border-blue-400 transition-all duration-150 text-sm resize-none"
-                                    placeholder={`שלב ${index + 1}`}
-                                  />
-                                  {section.directions.length > 1 && (
-                                    <button
-                                      type="button"
-                                      onClick={() => removeSectionDirection(sectionName, index)}
-                                      className="p-1 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-md transition-all duration-200 opacity-0 group-hover:opacity-100 self-start"
-                                    >
-                                      <X className="w-3 h-3" />
-                                    </button>
-                                  )}
-                                </div>
-                              ))}
+                                );
+                              })}
                               <button
                                 type="button"
                                 onClick={() => addSectionDirection(sectionName)}

@@ -170,11 +170,14 @@ const AddRecipePage: React.FC = () => {
     setHasUnsavedChanges(true);
     
     // Focus the new input field immediately after render without losing focus
-    setTimeout(() => {
+    // Use requestAnimationFrame to ensure DOM is updated
+    requestAnimationFrame(() => {
       if (ingredientRefs.current[newIndex]) {
         ingredientRefs.current[newIndex]?.focus();
+        // Prevent keyboard from closing by ensuring focus stays
+        ingredientRefs.current[newIndex]?.click();
       }
-    }, 10); // Reduced timeout for smoother experience
+    });
   };
 
   const removeIngredient = (index: number) => {
@@ -202,11 +205,14 @@ const AddRecipePage: React.FC = () => {
     setHasUnsavedChanges(true);
     
     // Focus the new textarea field immediately after render without losing focus
-    setTimeout(() => {
+    // Use requestAnimationFrame to ensure DOM is updated
+    requestAnimationFrame(() => {
       if (directionRefs.current[newIndex]) {
         directionRefs.current[newIndex]?.focus();
+        // Prevent keyboard from closing by ensuring focus stays
+        directionRefs.current[newIndex]?.click();
       }
-    }, 10); // Reduced timeout for smoother experience
+    });
   };
 
   // Simple image compression function
@@ -630,11 +636,13 @@ const AddRecipePage: React.FC = () => {
       const newIndex = currentIngredients.length;
       
       // Focus the new input field after render
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         if (sectionIngredientRefs.current[sectionId]?.[newIndex]) {
           sectionIngredientRefs.current[sectionId][newIndex]?.focus();
+          // Prevent keyboard from closing by ensuring focus stays
+          sectionIngredientRefs.current[sectionId][newIndex]?.click();
         }
-      }, 10);
+      });
       
       return {
         ...prev,
@@ -678,11 +686,13 @@ const AddRecipePage: React.FC = () => {
       const newIndex = currentDirections.length;
       
       // Focus the new textarea field after render
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         if (sectionDirectionRefs.current[sectionId]?.[newIndex]) {
           sectionDirectionRefs.current[sectionId][newIndex]?.focus();
+          // Prevent keyboard from closing by ensuring focus stays
+          sectionDirectionRefs.current[sectionId][newIndex]?.click();
         }
-      }, 10);
+      });
       
       return {
         ...prev,
