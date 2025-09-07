@@ -45,6 +45,7 @@ const RecipeDetailPage: React.FC = () => {
   const [showImageModal, setShowImageModal] = React.useState(false);
   const [isLoadingRecipe, setIsLoadingRecipe] = React.useState(false);
   const [showShareFeedback, setShowShareFeedback] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
   // Main directions current step
   const [mainCurrentStep, setMainCurrentStep] = React.useState(0);
   
@@ -94,6 +95,7 @@ const RecipeDetailPage: React.FC = () => {
     if (id && !recipe && !isLoadingRecipe && !loading) {
       console.log('🔍 Recipe not found in context, attempting to load:', id);
       setIsLoadingRecipe(true);
+      setError(null);
       
       const loadRecipe = async () => {
         try {
@@ -106,11 +108,7 @@ const RecipeDetailPage: React.FC = () => {
             await refreshRecipes(true);
           } else {
             console.log('❌ Recipe not found in database:', id);
-            // Recipe doesn't exist, show error message and redirect
-            setTimeout(() => {
-              alert('המתכון לא נמצא או נמחק');
-              navigate('/recipes');
-            }, 1000);
+            setError('המתכון לא נמצא או נמחק');
           }
         } catch (error) {
           console.error('Failed to load recipe:', error);
@@ -119,10 +117,7 @@ const RecipeDetailPage: React.FC = () => {
             await refreshRecipes(true);
           } catch (fallbackError) {
             console.error('Fallback refresh also failed:', fallbackError);
-            // If still not found after refresh, navigate to 404 or home
-            setTimeout(() => {
-              navigate('/recipes');
-            }, 2000);
+            setError('שגיאה בטעינת המתכון');
           }
         } finally {
           setIsLoadingRecipe(false);
@@ -143,6 +138,12 @@ const RecipeDetailPage: React.FC = () => {
       return () => clearTimeout(timeoutId);
     }
   }, [id, recipe, isLoadingRecipe, loading, refreshRecipes, navigate]);
+
+  // Reset loading state when ID changes
+  React.useEffect(() => {
+    setIsLoadingRecipe(false);
+    setError(null);
+  }, [id]);
 
   // Pastel background schemes for additional sections
   const additionalColorSchemes = [
@@ -225,15 +226,26 @@ const RecipeDetailPage: React.FC = () => {
       );
     }
     
+    // Show error state for recipe not found
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 flex items-center justify-center">
         <div className="text-center">
           <div className="text-gray-400 text-6xl mb-4">🍽️</div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">מתכון לא נמצא</h2>
-          <p className="text-gray-600 mb-4">המתכון שחיפשת לא קיים או הוסר</p>
-          <Link to="/" className="text-amber-600 hover:text-amber-700">
-            חזור לדף הבית
-          </Link>
+          <p className="text-gray-600 mb-4">{error || 'המתכון שחיפשת לא קיים או הוסר'}</p>
+          <div className="space-y-3">
+            <Link 
+              to="/recipes" 
+              className="inline-block bg-amber-600 text-white px-6 py-3 rounded-lg font-semibold hover:bg-amber-700 transition-colors"
+            >
+              חזרה למתכונים
+            </Link>
+            <div>
+              <Link to="/" className="text-amber-600 hover:text-amber-700 text-sm">
+                חזור לדף הבית
+              </Link>
+            </div>
+          </div>
         </div>
       </div>
     );
