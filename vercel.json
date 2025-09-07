@@ -23,18 +23,12 @@
         "dest": "/server.js"
       },
       {
-        "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|webp))",
+        "src": "/(.*\\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot))",
         "dest": "/dist/$1"
       },
       {
         "src": "/(.*)",
         "dest": "/dist/index.html"
-      }
-    ],
-    "rewrites": [
-      {
-        "source": "/((?!api|health|_next|_static|favicon.ico).*)",
-        "destination": "/index.html"
       }
     ]
   }
