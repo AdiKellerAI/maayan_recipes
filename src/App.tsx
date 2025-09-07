@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { RecipeProvider } from './contexts/RecipeContext';
 import { AuthProvider } from './contexts/AuthContext';
 import { NavigationProvider } from './contexts/NavigationContext';
@@ -206,6 +206,18 @@ function App() {
                     <Route path="/add" element={<AddRecipePage />} />
                     <Route path="/edit/:id" element={<EditRecipePage />} />
                     <Route path="/search" element={<SearchResultsPage />} />
+                    <Route path="*" element={
+                      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                        <div className="text-center">
+                          <div className="text-gray-400 text-6xl mb-4">🍽️</div>
+                          <h2 className="text-2xl font-bold text-gray-900 mb-2">דף לא נמצא</h2>
+                          <p className="text-gray-600 mb-4">הדף שחיפשת לא קיים</p>
+                          <Link to="/" className="text-amber-600 hover:text-amber-700">
+                            חזור לדף הבית
+                          </Link>
+                        </div>
+                      </div>
+                    } />
                   </Routes>
                 </main>
                 
